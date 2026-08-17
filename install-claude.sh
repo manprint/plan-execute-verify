@@ -3,7 +3,7 @@
 # Idempotent: re-running refreshes the link. Removes nothing it didn't create.
 set -euo pipefail
 
-SKILL_NAME="plan-analize"
+SKILL_NAME="plan-execute-verify"
 SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEST_ROOT="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
 DEST="$DEST_ROOT/$SKILL_NAME"

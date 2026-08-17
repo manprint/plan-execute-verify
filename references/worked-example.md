@@ -1,10 +1,15 @@
 # Worked example — multi-file plan
 
 Feature: **add per-API-key rate limiting to an HTTP gateway** (`gw`).
-Shows all four files produced. Real plans are longer; copy the *structure* and
-*per-sub-phase discipline*, not the content.
+Shows every file type produced (overview, resume, phase files, STATE). Real
+plans are longer; copy the *structure* and *per-sub-phase discipline*, not the
+content.
 
-Folder: `docs/plans/plan_RateLimit/`
+Folder: `docs/plans/001_plan-RateLimit/`
+
+Note: the mandatory closing `Update README.md` sub-phase of each phase is shown
+only in phase 3 below to keep this example short. Real plans carry it at the end
+of **every** phase.
 
 ---
 
@@ -14,7 +19,7 @@ Folder: `docs/plans/plan_RateLimit/`
 # Per-API-key Rate Limiting — Overview
 
 > **Status:** planning | **Opus authored:** 2026-06-25
-> **Folder:** `docs/plans/plan_RateLimit/`
+> **Folder:** `docs/plans/001_plan-RateLimit/`
 
 ## Goal
 Reject requests from a key that exceeds its configured rate with `429`, without
@@ -263,13 +268,21 @@ T-RL0 + T-RL1 + T-RL2 all pass. Gates green. Reference scenario in overview.md i
 - **e2e tests:** none (bench is not a test)
 - **Done:** bench runs; numbers ≤ +50µs p99; recorded in `docs/PERF.md`.
 
-### 3.2 Docs
+### 3.2 Operator reference
 - **Model:** Haiku (with Opus final read)
-- **Files:** `README.md`, `docs/CONFIG.md`
-- **Change:** document `--rate-limit <PATH>`, TOML format (`[limits]\n k1 = 10`), `429`/`Retry-After` behavior, default-off note.
+- **Files:** `docs/CONFIG.md`
+- **Change:** document the TOML limits file format (`[limits]\n k1 = 10`), the `429`/`Retry-After` contract, and the default-off note.
 - **Unit tests:** none
 - **e2e tests:** none
-- **Done:** Opus reads both docs; gates green.
+- **Done:** Opus reads it; gates green.
+
+### 3.3 Update README.md
+- **Model:** Haiku (with Opus final read — last phase)
+- **Files:** `README.md`
+- **Change:** update **Usage** (`--rate-limit <PATH>`, with a runnable example and its output), **Configuration** (TOML limits file, defaults, rate limiting off unless the flag is passed), **Notes** (over-limit requests get `429` with `Retry-After` in seconds), **Limitations** (limits are per process, not shared across instances; counters reset on restart). No module names, no algorithm description, no phase references. Keep the existing README structure and tone; edit the affected sections only.
+- **Unit tests:** none (documentation)
+- **e2e tests:** none — the README example was executed and produced the documented output
+- **Done:** a new user can enable and use rate limiting from the README alone, with no source reading; no implementation detail present; Opus signed off; `STATE.md` and `resume.md` updated.
 
 ---
 
@@ -278,7 +291,92 @@ T-RL0 + T-RL1 + T-RL2 all pass. Gates green. Reference scenario in overview.md i
 - **Lint:** `cargo clippy -- -D warnings`
 - **Test:** `cargo test` (full suite)
 - **Regression guard:** T-RL0 + T-RL1 + T-RL2 still pass
+- **README:** updated for the flag, config file, `429` behavior, and limits; free of implementation detail
 
 ## Phase done criterion
-Latency bench ≤ +50µs p99. Both docs readable and accurate (Opus signed off). All e2e tests still green.
+Latency bench ≤ +50µs p99. Both docs readable and accurate (Opus signed off). All e2e tests still green. README.md reflects this phase's shipped behavior.
+````
+
+---
+
+## File 7 — STATE.md (as initialized by the planner, before any code)
+
+````markdown
+# Per-API-key Rate Limiting — Implementation State
+
+> **READ THIS FILE FIRST at the start of every session, before any other plan
+> file. UPDATE IT after every sub-phase and before any session ends.**
+> **Last updated:** 2026-06-25 | **By:** agent-1:opus | **Session:** 1
+
+## 0. Protocol
+
+**Resume (cold start):**
+1. Read this file end to end.
+2. Re-run §3 gates to verify the repo matches §1 and §7. The repo is the truth.
+3. Open only the phase file in §1 `Next action:`, at the named sub-phase.
+4. If §6 is non-empty, finish or revert that work before starting anything new.
+
+**Update (after every sub-phase):** rewrite §1, append to §4, update §5 §6 §7,
+add §8 rows on any deviation, refresh §9 §10, bump the timestamp, sync
+`resume.md`. A sub-phase is not `DONE` until this is written.
+
+## 1. Current position
+- **Phase:** 0 — Config + error scaffolding (`phase_01.md`) — `TODO`
+- **Sub-phase:** 0.1 — Add Quota/RateConfig/config parsing — `TODO`
+- **Next action:** `phase_01.md` § 0.1 — add `Quota` and `RateConfig` to `src/config.rs`
+- **Assigned:** `agent-2:sonnet`
+- **Repo state:** branch `main` | working tree `clean` | last commit `a1b2c3d init`
+
+## 2. Feature context
+Per-API-key rate limiting in the `gw` gateway. Opt-in via `--rate-limit <toml>`;
+default off. Keys under their limit must not slow down; over-limit requests get
+429 + `Retry-After`.
+
+**Reference scenario:** 20 req/s against a 10 req/s key k1 → ~10 pass, rest 429.
+**Hard constraints:** backward compatible; no new runtime deps; zero latency
+regression when the flag is absent.
+**Key decisions in force:** D1 token bucket per key; D2 flag-gated, default off;
+D3 429 + Retry-After header.
+
+## 3. Environment and commands
+- **Repo root:** `./gw`
+- **Build:** `cargo build` · **Fmt:** `cargo fmt --check` · **Lint:** `cargo clippy -- -D warnings`
+- **Unit tests:** `cargo test` · **E2E:** `cargo test --test e2e`
+- **Setup / caveats:** e2e binds port 8080; run serially with `--test-threads=1`.
+
+## 4. Work ledger
+| # | Phase.Sub | Agent | What changed | Files | Gates | Commit |
+|---|-----------|-------|--------------|-------|-------|--------|
+| — | — | — | not started | — | — | — |
+
+## 5. Files touched
+| Path | What was done | Phase.Sub |
+|------|---------------|-----------|
+| — | — | — |
+
+## 6. In-flight work
+none — tree consistent
+
+## 7. Verification state
+| Gate / test | Command | Last result | When |
+|-------------|---------|-------------|------|
+| fmt | `cargo fmt --check` | `not-run` | — |
+| lint | `cargo clippy -- -D warnings` | `not-run` | — |
+| unit | `cargo test` | `not-run` | — |
+| T-RL0/1/2 | `cargo test --test e2e` | `not-run` | — |
+
+**Failing output (verbatim, trimmed to the error):**
+```
+none
+```
+
+## 8. Runtime deviations from the plan
+| # | Plan said | What was done | Why | Impact on later phases |
+|---|-----------|---------------|-----|------------------------|
+
+## 9. Blockers and open questions
+- none
+
+## 10. Do-not-repeat
+- none
 ````

@@ -73,3 +73,9 @@ it is front-loaded work (once, on the supervisor) that prevents repeated re-expl
 spend (many times, across every implementation turn and every implementer).
 Optimize total tokens across the whole feature, not the size of any one file.
 Keep overview.md and resume.md small — their value is fast cold-start, not detail.
+
+`STATE.md` follows the same logic one level down: it is medium-sized and
+bounded (one line per ledger entry, no code dumps, verbatim text only for
+failing gate output), and it is the single file a cleared session reads to
+resume. Writing it after every sub-phase costs little; skipping it costs a full
+re-exploration plus the risk of redoing or clobbering in-flight work.
