@@ -4,14 +4,16 @@ Run this before declaring the plan done. It is fast and it is not optional. If
 any item fails, fix it in the plan file before returning. This is an `agent-1`
 task, or a self-review when one configured agent performs the whole plan.
 
-**Verify, execute, task, and bug modes use the separate checklists at the end of
-this file.**
+This first checklist covers **plan mode**. The modes that write code and the
+audit mode have their own checklists further down: **Coherence checklist
+(execute · task · bug)** and **Verify-mode checklist**.
 
 ## Completeness
 
 - [ ] Every template section is present (or explicitly marked N/A with a reason).
-- [ ] The **reference scenario** (§1) is concrete and observable — it maps
-      one-to-one to acceptance tests in §6/§9.
+- [ ] The **reference scenario** in `overview.md` is concrete and observable, and
+      maps one-to-one onto the acceptance tests named in the **Verification
+      summary** and in the phase files' e2e fields.
 - [ ] Every non-obvious design choice has a `D*` row with a *consequence*.
 - [ ] The **clarification gate (D2) was run before any file was written**: the
       user saw the phase skeleton and one batched, grouped, numbered set of
@@ -38,16 +40,19 @@ this file.**
       an open question — no invented APIs, flags, or signatures.
 - [ ] No documentation pages are pasted into the plan; only one-line facts plus
       URLs (verbatim only for signatures/headers/wire formats to reproduce).
-- [ ] Interface (§4) gives exact names, types, defaults, and conflict rules.
-- [ ] Protocol/schema changes (§5) state the backward-compat strategy explicitly.
+- [ ] The `overview.md` **Interface** table gives exact names, types, defaults,
+      and conflict rules — or states that no user-facing surface changes.
+- [ ] The `overview.md` **Protocol and data-structure changes** section states
+      the backward-compat strategy explicitly — or states that nothing crosses a
+      boundary.
 
 ## Decomposition
 
 - [ ] Phase 0 is pure-additive / no-behavior-change where the design allows.
 - [ ] Each phase is **independently shippable** and ordered so each builds on
       the last.
-- [ ] Every sub-phase has all six fields: Model · Files · Change · Unit tests ·
-      e2e tests · Done.
+- [ ] Every sub-phase has all seven fields: Model · Assignment · Files · Change ·
+      Unit tests · e2e tests · Done.
 - [ ] **Files** carry line anchors. **Change** cites reuse anchors.
 - [ ] Tests are **named** and each has a **checkable assertion** (no "add tests").
 - [ ] Done-criteria are verifiable by someone who didn't write the plan.
@@ -88,15 +93,18 @@ this file.**
 - [ ] Exploration and mechanical work is assigned to `agent-3+` when present,
       otherwise `agent-2`; non-trivial implementation is assigned to `agent-2`
       when present, otherwise `agent-1`.
-- [ ] The assignment summary table is present and consistent with the
-      per-sub-phase tags.
+- [ ] The **Model-assignment summary** table is the last section of
+      `overview.md` and is consistent with the per-sub-phase tags.
 
 ## Verification
 
-- [ ] §9 names the exact gate commands (fmt / lint / test).
+- [ ] The `overview.md` **Verification summary** names the exact gate commands
+      (fmt / lint / unit / e2e).
+- [ ] Those commands are identical to `STATE.md` §3 and to the per-phase gate
+      blocks — no drift between the three.
 - [ ] Unit + e2e test locations and run instructions are stated, including any
       rebuild/permission caveats.
-- [ ] Acceptance criteria list the T-IDs that prove the reference scenario.
+- [ ] Acceptance criteria list the `T-*` IDs that prove the reference scenario.
 
 ## Token discipline
 
@@ -110,8 +118,48 @@ this file.**
 - [ ] Folder `docs/plans/<NNN>_plan-<FeatureName>/` created under the repo root,
       with `docs/` and `docs/plans/` created if they were missing. No plan
       folder in the repo root.
-- [ ] `<NNN>` is the next free 3-digit number (`001` if `docs/plans/` was empty),
-      zero-padded, and no existing plan folder was reused or renumbered.
+- [ ] `<NNN>` is the highest existing plan number plus one (`001` if
+      `docs/plans/` was empty), zero-padded, and no existing plan folder was
+      reused or renumbered.
+- [ ] `overview.md` present, with: goal and reference scenario, `D*` decisions,
+      open questions, architecture summary, interface, protocol/data-structure
+      changes, phase table with file links, reuse map, references, invariants,
+      risk register, verification summary, model-assignment summary.
+- [ ] `resume.md` present: phase status table, test status table, per-phase docs
+      table, open blockers, `Next:` pointer.
+- [ ] One `phase_NN.md` per phase (1-indexed, zero-padded; phase 0 →
+      `phase_01.md`).
+- [ ] `overview.md` and `resume.md` are **small** — detail belongs only in phase
+      files.
+- [ ] Phase files are fully self-contained (can be read cold without
+      `overview.md`).
+- [ ] `resume.md` `Next:` pointer is accurate (first TODO sub-phase).
+- [ ] No production code was written by this skill.
+- [ ] Closing message is terse: folder path + one-line phase/assignment summary.
+
+## State file (STATE.md)
+
+- [ ] `STATE.md` present and **initialized by this skill**, not left as a stub.
+- [ ] §0 protocol present: read-first-on-session-start and
+      update-after-every-sub-phase rules, written so an agent with no other
+      context can follow them.
+- [ ] §2 feature recap is self-contained — the first sub-phase is executable
+      without opening `overview.md`.
+- [ ] §3 lists the real build / fmt / lint / unit / e2e commands and setup
+      caveats, identical to the phase gate commands and to the `overview.md`
+      verification summary (no drift).
+- [ ] §1 `Next action:` names an existing `phase_NN.md` and sub-phase, and
+      matches the `resume.md` `Next:` pointer.
+- [ ] §4–§10 exist and are empty-but-shaped at init (`none`, empty tables);
+      §6 in-flight reads `none — tree consistent`. The one exception is §9,
+      which already carries every question the user deferred at the
+      clarification gate, with the default applied and the sub-phase it affects.
+- [ ] `overview.md` header and **every** phase file carry the state contract
+      (read `STATE.md` first, run the §3 gates to check §1/§7, update after
+      every sub-phase).
+- [ ] Every sub-phase `Done` field requires `STATE.md` and `resume.md` updated.
+- [ ] `STATE.md` has no code dumps and no narrative — one line per ledger entry;
+      verbatim text only for failing gate output.
 
 ---
 
@@ -128,7 +176,7 @@ finding caused by this work.
 - [ ] Gates run and green (full suite for bug fixes); failures reported, never
       hidden.
 - [ ] `STATE.md` updated: §1 position, §4 ledger, §5 files, §6 in-flight,
-      §7 verification, §8 deviations, §9 blockers, timestamp.
+      §7 verification, §8 deviations, §9 blockers, §10 dead ends, timestamp.
 - [ ] `resume.md` updated: phase / test / docs tables and `Next:` pointer.
 - [ ] `README.md` updated when user-visible behavior changed — user guide only,
       no implementation detail.
@@ -147,6 +195,12 @@ finding caused by this work.
       marked `FIXED`, findings that could not be closed left `OPEN` with the
       reason, and phases reopened (`IN_PROGRESS`) where a `DONE` phase was
       corrected.
+- [ ] Ad-hoc work in `docs/plans/000_adhoc/` (no plan in the repo): only the
+      ledger entry, the tests, the repo's own gates, and the `README.md` update
+      are required — no `STATE.md`, `resume.md`, or plan files are invented
+      there, and the ledger's **Plan impact** reads `n/a — no plan`.
+- [ ] Nothing was committed unless the user asked; the ledger `Commit` column
+      says `uncommitted` when that is the truth.
 - [ ] Ambiguities were raised to the user instead of resolved by guessing.
 
 ---
@@ -155,7 +209,8 @@ finding caused by this work.
 
 Run this before returning a `/plan-execute-verify verify` report.
 
-- [ ] The audited plan folder was resolved explicitly and named in the report.
+- [ ] The audited plan folder was resolved explicitly and named in the report,
+      and it is a real plan (never `000_adhoc`, which holds no phases).
 - [ ] Every phase not marked `TODO` was audited against its phase file.
 - [ ] Ground truth came from the **repo and the gates**, not from `STATE.md` /
       `resume.md` claims.
@@ -186,8 +241,9 @@ Run this before returning a `/plan-execute-verify verify` report.
       and flags corrections that reopen a phase already marked `DONE`.
 - [ ] **State re-sync** states the exact `STATE.md` / `resume.md` edits needed.
 - [ ] The report was written to
-      `<plan-folder>/verify/verify_<VNNN>_<YYYY-MM-DD>.md` with the next free
-      `<VNNN>`, without overwriting or renumbering an earlier report.
+      `<plan-folder>/verify/verify_<NNN>_<YYYY-MM-DD>.md`, where `<NNN>` is the
+      highest existing report number plus one, without overwriting or
+      renumbering an earlier report.
 - [ ] `verify/index.md` updated: report row added, new findings added as `OPEN`,
       carried-over findings re-statused with evidence, open blockers listed.
 - [ ] `STATE.md` §7 / §9 and `resume.md` corrected where they claimed something
@@ -197,31 +253,3 @@ Run this before returning a `/plan-execute-verify verify` report.
 - [ ] Full report given in chat; closing line terse (verdict, counts by
       severity, report path, findings still `OPEN` from earlier audits) with an
       offer to run `/plan-execute-verify execute verify`.
-- [ ] `overview.md` present: goal, D* decisions, phase table with file links, reuse map, invariants, risks.
-- [ ] `resume.md` present: phase status table, test status table, docs status, next pointer.
-- [ ] One `phase_NN.md` per phase (1-indexed, zero-padded).
-- [ ] `overview.md` and `resume.md` are **small** — detail belongs only in phase files.
-- [ ] Phase files are fully self-contained (can be read cold without overview.md).
-- [ ] `resume.md` `Next:` pointer is accurate (first TODO sub-phase).
-- [ ] No production code was written by this skill.
-- [ ] Closing message is terse: folder path + one-line phase/model summary.
-
-## State file (STATE.md)
-
-- [ ] `STATE.md` present and **initialized by this skill**, not left as a stub.
-- [ ] §0 protocol present: read-first-on-session-start and
-      update-after-every-sub-phase rules, written so an agent with no other
-      context can follow them.
-- [ ] §2 feature recap is self-contained — the first sub-phase is executable
-      without opening `overview.md`.
-- [ ] §3 lists the real build / fmt / lint / unit / e2e commands and setup
-      caveats, identical to the phase gate commands (no drift).
-- [ ] §1 `Next action:` names an existing `phase_NN.md` and sub-phase, and
-      matches the `resume.md` `Next:` pointer.
-- [ ] §4–§10 exist and are empty-but-shaped at init (`none`, empty tables);
-      §6 in-flight reads `none — tree consistent`.
-- [ ] `overview.md` header and **every** phase file carry the state contract
-      (read `STATE.md` first, update it after every sub-phase).
-- [ ] Every sub-phase `Done` field requires `STATE.md` and `resume.md` updated.
-- [ ] `STATE.md` has no code dumps and no narrative — one line per ledger entry;
-      verbatim text only for failing gate output.

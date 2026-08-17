@@ -3,11 +3,15 @@
 The plan is a **folder**, not a single file.
 Path: always `docs/plans/<NNN>_plan-<FeatureName>/` under the repo root.
 `docs/` and `docs/plans/` are created if missing — plans never land in the repo
-root. `<NNN>` is the next free zero-padded 3-digit sequence number (`001` first,
-then `002`, …), so the folder listing shows the plan order.
+root. `<NNN>` is the highest existing plan number plus one, zero-padded to 3
+digits (`001` first, then `002`, …), so the folder listing shows the plan order;
+gaps are never refilled and existing folders are never renumbered.
 
 Files to produce (plan mode; verify writes §5's report and the §8 register under
-`verify/`; task/bug append to the §6/§7 ledgers — all created on demand):
+`verify/`; task/bug append to the §6/§7 ledgers — all created on demand). The
+numbers below are this file's section numbers, not the writing order: write
+`overview.md`, then the phase files, then `resume.md`, then `STATE.md`.
+
 1. `overview.md` — routing doc, small
 2. `resume.md` — progress tracker, small, LLM-readable
 3. `phase_01.md`, `phase_02.md`, … — one per phase, detailed
@@ -26,8 +30,13 @@ docs/plans/<NNN>_plan-<FeatureName>/
 ├── bugs.md                        # §7 — created by the first `bug`
 └── verify/                        # created by the first `verify`
     ├── index.md                   # §8 — audit register, statuses of every finding
-    └── verify_<VNNN>_<date>.md    # §5 — one durable report per audit
+    └── verify_<NNN>_<date>.md     # §5 — one durable report per audit
 ```
+
+Repos with no plan yet keep ad-hoc work in `docs/plans/000_adhoc/`, which is
+**ledger-only**: it holds `tasks.md` and `bugs.md` (§6 and §7) and nothing else
+— no overview, no phase files, no `resume.md`, no `STATE.md`. It is never a
+`verify` or `execute` target.
 
 `<angle brackets>` = replace. `…` = repeat block as needed.
 
@@ -42,7 +51,7 @@ where to go.
 ````markdown
 # <Feature name> — Plan Overview
 
-> **Status:** planning | **Supervisor authored:** <date>
+> **Status:** planning | **Authored:** <date> by `agent-1:<name>`
 > **Folder:** `docs/plans/<NNN>_plan-<FeatureName>/`
 > **Executing this plan? Read [STATE.md](STATE.md) FIRST** — it holds the live
 > position, environment, in-flight work, and the next action. Update it after
@@ -76,11 +85,27 @@ Rows answered by the user at the clarification gate carry the source, e.g.
 ## Architecture summary
 <2–4 lines. Core mechanism, data flow, key constraints. No detail — details live in phase files.>
 
+## Interface
+
+| Surface | Name | Type / values | Default | Notes |
+|---------|------|---------------|---------|-------|
+| <CLI flag / API / config key / env var> | `<exact name>` | `<type>` | `<default>` | <conflict rules, validation> |
+
+<"none — no user-facing surface changes" when the work adds no interface.>
+
+## Protocol and data-structure changes
+
+| Change | Shape | Backward-compat strategy |
+|--------|-------|--------------------------|
+| <wire format, schema, on-disk layout, public struct> | <new/changed shape, one line> | <version gate, migration, default that preserves old behavior> |
+
+<"none — no protocol or persisted-data change" when nothing crosses a boundary.>
+
 ## Phases
 
 | Phase | File | Primary assignment | Shippable alone? |
-|-------|------|-------|-----------------|
-| 0 — <Scaffolding> | [phase_01.md](phase_01.md) | `agent-1:<name>` | yes |
+|-------|------|--------------------|------------------|
+| 0 — <Scaffolding> | [phase_01.md](phase_01.md) | `agent-3:<name>` | yes |
 | 1 — <First slice> | [phase_02.md](phase_02.md) | `agent-2:<name>` | yes |
 | … | … | … | … |
 
@@ -106,6 +131,27 @@ Unverified points are marked `UNVERIFIED` and appear in **Open questions**.
 | Risk | Mitigation |
 |------|-----------|
 | <risk> | <mitigation + which phase proves it> |
+
+## Verification summary
+
+| Gate | Command | Where it runs |
+|------|---------|---------------|
+| fmt / lint / unit / e2e | `<cmd>` | <every phase, or the phase that introduces it> |
+
+**Acceptance:** the reference scenario is proven by <T-ID, T-ID> — <one line
+each on the assertion that makes it observable>.
+**Run caveats:** <rebuild, ports, credentials, serial execution — or "none">.
+These commands are the same ones written into `STATE.md` §3; they must not drift.
+
+## Model-assignment summary
+
+| Phase | Sub-phases by assignment | Primary | `agent-1` review gates |
+|-------|--------------------------|---------|------------------------|
+| 0 | <N.1, N.2 → `agent-3:<name>`> | `agent-3:<name>` | — |
+| 1 | <1.1 → `agent-2:<name>`> | `agent-2:<name>` | 1.1 (hot path) |
+
+<In single-agent mode every row names the same `agent:<name>` and the review
+column reads "self-review".>
 ````
 
 ---
@@ -140,15 +186,23 @@ Status values: `TODO` · `IN_PROGRESS` · `DONE` · `SKIPPED` · `BLOCKED`
 | T-<ID>2 | e2e | `TODO` | <observable criterion> |
 
 ## Docs
-| File | Status | Notes |
-|------|--------|-------|
-| README.md | `TODO` | user guide — updated at the end of every phase |
-| <doc> | `TODO` | — |
+
+One row per phase README sub-phase, so a partially documented feature is
+visible; other docs get their own rows.
+
+| Doc | Phase | Status | Notes |
+|-----|-------|--------|-------|
+| README.md | 0 | `TODO` | <sections that phase touches, or "no user-visible change"> |
+| README.md | 1 | `TODO` | <sections> |
+| <other doc> | <N> | `TODO` | — |
 
 ## Open blockers
 - none
 
 ## Decisions changed at runtime
+
+One line per superseding `D*` row added during execution; the reason and the
+impact live in `STATE.md` §8, not here.
 - none
 ````
 
@@ -169,8 +223,9 @@ One file per phase. Detailed, self-contained. Implementer opens only this file.
 ## State contract (mandatory)
 
 1. Before touching anything: read [STATE.md](STATE.md) and confirm it points at
-   a sub-phase in this phase. Re-run the gate commands in STATE.md §7 to verify
-   the recorded state matches the repo.
+   a sub-phase in this phase. Run the gate commands listed in STATE.md **§3**
+   and check the result against what §1 and §7 claim; the repo wins, so correct
+   the file when they disagree.
 2. After **every** sub-phase below: update `STATE.md` (position, ledger, files
    touched, in-flight work, verification, deviations, `Next action:`,
    timestamp) and sync `resume.md`. A sub-phase is not done until this is done.
@@ -240,7 +295,8 @@ detail.
 ## 4. STATE.md
 
 The live execution state. `agent-1` **initializes this file at plan creation**
-(sections 0–3 filled, 4–9 empty, `Next action:` = first sub-phase). Every
+(sections 0–3 filled, 4–10 empty-but-shaped, `Next action:` = first sub-phase,
+§9 carrying any question the user deferred at the clarification gate). Every
 implementer rewrites it after every sub-phase. It is self-describing on
 purpose: an agent with an empty context that opens only this file must be able
 to continue correctly.
@@ -260,8 +316,8 @@ compress older rows to one line each rather than deleting them.
 
 **Resume (cold start):**
 1. Read this file end to end.
-2. Re-run the commands in §3 gates / §7 to verify the repo matches what §1 and
-   §7 claim. The repo is the truth; correct this file if it drifted.
+2. Run the gate commands listed in §3 and compare the result with what §1 and §7
+   claim. The repo is the truth; correct this file if it drifted.
 3. Open only the phase file named in §1 `Next action:`, at the named sub-phase.
    Read `overview.md` only if §2 is insufficient for the work at hand.
 4. If §6 is non-empty, finish or revert that in-flight work before starting
@@ -290,12 +346,19 @@ this is written.
 
 ## 3. Environment and commands
 
+The authoritative gate commands. Identical to the phase gates and to
+`overview.md`'s verification summary — no drift.
+
 - **Repo root:** `<path>`
 - **Build:** `<cmd>` · **Fmt:** `<cmd>` · **Lint:** `<cmd>`
 - **Unit tests:** `<cmd>` · **E2E:** `<cmd>`
 - **Setup / caveats:** <env vars, services, ports, rebuild or permission quirks>
 
-## 4. Work ledger (append-only, one line per sub-phase)
+## 4. Work ledger (append-only, one line per sub-phase, task, or bug fix)
+
+`Phase.Sub` carries the sub-phase for planned work and the ledger ID
+(`T-A<NNN>` / `B-A<NNN>`) for ad-hoc work. `Commit` is the sha when one exists,
+`uncommitted` otherwise — this skill does not commit on its own.
 
 | # | Phase.Sub | Agent | What changed | Files | Gates | Commit |
 |---|-----------|-------|--------------|-------|-------|--------|
@@ -343,12 +406,14 @@ resumed session from re-spending tokens on a known-bad path.>
 
 ---
 
-## 5. verify/verify_<VNNN>_<YYYY-MM-DD>.md (verify mode only)
+## 5. verify/verify_<NNN>_<YYYY-MM-DD>.md (verify mode only)
 
 Written by `/plan-execute-verify verify` into `<plan-folder>/verify/` (created on
-demand), with the same content printed in chat. `<VNNN>` is the next free
-3-digit report number; earlier reports are never overwritten or renumbered.
-Finding IDs are global and stable: `V<NNN>-F<n>`.
+demand), with the same content printed in chat. `<NNN>` is the highest existing
+report number plus one, zero-padded to 3 digits; earlier reports are never
+overwritten or renumbered. The filename carries the bare number, the report ID
+carries the prefix (`V<NNN>`), and finding IDs are global and stable:
+`V<NNN>-F<n>`.
 
 The report is a durable artifact: its correction plan must be executable later
 by `/plan-execute-verify execute verify`, from this file alone, in a fresh session.
@@ -385,7 +450,7 @@ Write the corrections to the same standard as a phase file's sub-phase.
 
 | ID | From | Severity | Title | Status now | Evidence |
 |----|------|----------|-------|------------|----------|
-| V<NNN>-F<n> | `verify_<VNNN>_<date>.md` | `MAJOR` | <title> | `FIXED | OPEN | ACCEPTED | OBSOLETE` | <path:line or command output> |
+| V<NNN>-F<n> | `verify_<NNN>_<date>.md` | `MAJOR` | <title> | `FIXED | OPEN | ACCEPTED | OBSOLETE` | <path:line or command output> |
 
 ## Verified clean
 
@@ -409,8 +474,9 @@ Write the corrections to the same standard as a phase file's sub-phase.
 
 ## Correction plan
 
-Executable by `/plan-execute-verify execute verify` from this file alone. One block per
-correction, ordered blockers first.
+Executable by `/plan-execute-verify execute verify` (or `execute verify V<NNN>`
+for an older report) from this file alone. One block per correction, ordered
+blockers first.
 
 ### C<n> — closes <V<NNN>-F<n>>
 - **Severity:** `BLOCKER | MAJOR | MINOR`
@@ -438,7 +504,9 @@ correction, ordered blockers first.
 
 Created on demand in the plan folder by the first `/plan-execute-verify task`. Append
 only; entries are never edited away. This is what tells a later `verify` that an
-out-of-plan change was intentional.
+out-of-plan change was intentional. In `docs/plans/000_adhoc/` (no plan in the
+repo) this file and `bugs.md` are the only files, and **Plan impact** reads
+`n/a — no plan`.
 
 ````markdown
 # <Feature name> — Task ledger
@@ -465,7 +533,8 @@ out-of-plan change was intentional.
 ## 7. bugs.md (bug mode ledger)
 
 Same rules as `tasks.md`, plus the diagnosis. A bug entry without a root cause
-and a regression test is incomplete.
+and a regression test is incomplete. In `docs/plans/000_adhoc/`, **Plan impact**
+reads `n/a — no plan`.
 
 ````markdown
 # <Feature name> — Bug ledger

@@ -3,23 +3,16 @@ name: plan-execute-verify
 description: >
   Turn a feature request into a rigorous, agent-assigned, phased implementation
   plan (phases/sub-phases, internal + e2e tests, quality gates, doc
-  deliverables) at minimum token cost. Use WHENEVER the user wants to plan,
+  deliverables) at minimum token cost. Use whenever the user wants to plan,
   scope, design, break down, or analyze a feature/refactor/migration before
-  coding: "plan this", "make a work plan", "analyze and break this into
-  phases", "design doc", "implementation plan", "handoff plan", "spec this
-  out", "architecture for X", or any request that should produce a phased plan
-  rather than immediate code. Also trigger when tasks split across
-  models/agents. Produces a
-  plan folder (overview.md + resume.md + STATE.md + one phase_NN.md per phase);
-  STATE.md is the detailed live state file that lets a fresh/cleared session
-  resume exactly where execution stopped. Writes no production code itself.
-  Also exposes four sub-commands: `verify` ("check the implementation against
-  the plan", "audit what has been built") hard-reviews the work done so far and
-  reports missing pieces, divergences and corrections; `execute` ("implement the
-  plan", "continue the plan") implements a plan sub-phase by sub-phase;
-  `task` implements one small change; `bug` diagnoses and fixes one defect.
-  execute/task/bug write code and keep every plan file, state file, and the
-  task/bug ledgers coherent so a later verify stays accurate.
+  coding: "plan this", "make a work plan", "break this into phases", "design
+  doc", "implementation plan", "handoff plan", "spec this out", "architecture
+  for X". Produces a plan folder (overview.md, resume.md, STATE.md, one
+  phase_NN.md per phase) that a cleared session can resume from. Also exposes
+  four sub-commands: `execute` implements the plan sub-phase by sub-phase,
+  `task` implements one small change, `bug` diagnoses and fixes one defect,
+  `verify` audits the implementation against the plan and reports findings.
+  Every mode keeps the plan folder coherent with the code.
 ---
 
 # plan-execute-verify
@@ -67,11 +60,12 @@ the user for the feature.
 
 ### Modes
 
-The first token after the optional agent prefix selects the mode:
+The first token after the optional agent prefix may select the mode (see the
+disambiguation rule below the examples):
 
 | Token | Mode | What it does |
 |-------|------|--------------|
-| `verify` | **Verify** | Hard review of the implementation done so far against an existing plan. Read-only; produces a findings report. |
+| `verify` | **Verify** | Hard review of the implementation done so far against an existing plan. Writes no production code; produces a findings report plus the state-file corrections of §V5. |
 | `execute` | **Execute** | Implements an existing plan, sub-phase by sub-phase, keeping every plan file coherent. `execute verify` applies a stored verify report's correction plan. |
 | `task` | **Task** | Implements one small change with an in-memory mini-plan; logged in the task ledger. |
 | `bug` | **Bug** | Diagnoses and fixes one bug with an in-memory mini-plan; logged in the bug ledger. |
@@ -94,17 +88,32 @@ The first token after the optional agent prefix selects the mode:
 /plan-execute-verify bug the CLI exits 0 when the config file is missing
 ```
 
+**Mode-token disambiguation.** A leading `verify` / `execute` / `task` / `bug`
+selects a mode **only when what follows is mode-shaped**: nothing, a plan
+selector, a phase/sub-phase selector, or — for `task` and `bug` — a description
+of a change or defect in code that already exists. When the token instead reads
+as part of a feature to build (`verify the login flow before refactoring`,
+`task queue for background jobs`, `bug reporting dashboard`), it belongs to the
+feature description and the invocation is **Plan**. State in one line which
+reading you took; ask only when the two readings would produce materially
+different work.
+
 **Plan selection.** For `verify` and `execute`, the token after the mode
-optionally selects the plan: a 3-digit number, a feature name, or a folder path;
-for `execute` a further token may narrow it to one phase or one sub-phase.
-Without a selector, use the plan folder with the highest `NNN` in `docs/plans/`;
-if several plans are in progress, list them and ask which one.
+optionally selects the plan: a 3-digit number, a feature name, or a folder path.
+For `execute` a further token may narrow it to one phase (`phase_02`) or one
+sub-phase, written as `1.2`, `§ 1.2`, or `phase_02 § 1.2` — all three forms are
+accepted. Without a selector, use the plan folder with the highest `NNN` in
+`docs/plans/`, **ignoring `000_adhoc`** (it holds no phases and is never a valid
+target for `verify` or `execute`); if several plans are in progress, list them
+and ask which one. `execute verify` always means "apply a verify report"; a plan
+whose feature name is literally `verify` must be selected by number or path.
 
 For `task` and `bug`, everything after the mode token is the description. They
 attach to the **active plan** (the one `STATE.md` shows as in progress, or the
 highest `NNN`) so the ledgers live with it; if the repo has no plan folder, they
 use `docs/plans/000_adhoc/` (created on demand, `000` is reserved for work with
-no plan).
+no plan). See "Ad-hoc work without a plan" under the coherence contract for what
+is required there.
 
 ---
 
@@ -146,8 +155,8 @@ re-pays context-load and re-reads overlapping files.
   record them as decisions.
 3. Locate the target: which repo/dir, what the gates command is (`cargo test`,
    `pytest`, `npm test`, …), and **resolve the plan folder now**: list
-   `docs/plans/` from the repo root, compute the next 3-digit sequence number,
-   and fix the path as `docs/plans/<NNN>_plan-<FeatureName>/` (see §E). One
+   `docs/plans/` from the repo root, take the highest existing plan number plus
+   one, and fix the path as `docs/plans/<NNN>_plan-<FeatureName>/` (see §E). One
    cheap listing here; do not recompute it later.
 
 ### B — Recon (one batched exploration agent)
@@ -233,9 +242,10 @@ Break the work into **phases → sub-phases**. Ordering rules:
 - Phase 0 is **pure-additive, no behavior change** when possible (scaffolding
   that lands safely on its own).
 - Each phase **independently shippable**; **zero regressions** tolerated.
-- Each sub-phase is a self-contained block with **exactly** these fields:
-  **Model** · **Files** (with line anchors) · **Change** · **Unit tests** ·
-  **e2e tests** · **Done-criteria**.
+- Each sub-phase is a self-contained block with **exactly** these seven fields:
+  **Model** · **Assignment** (responsibility, and the `agent-1` review gate when
+  one applies) · **Files** (with line anchors) · **Change** · **Unit tests** ·
+  **e2e tests** · **Done**.
 - Tag the exact configured assignment per sub-phase. Mark **agent-1 review gates** explicitly (hot-path
   refactors, concurrency/lifecycle, data-model design, acceptance assertions,
   final docs read).
@@ -336,24 +346,32 @@ technical prose only.
 Emit the plan as a **folder** using `references/output-template.md`. Write four
 file types in this order:
 
-1. **`overview.md`** — `agent-1` writes inline. Small routing doc: goal, reference
-   scenario, D* decisions, phase list with file links, reuse map, invariants,
-   risks. Must stay small. If detail creeps in, push it to the phase file.
+1. **`overview.md`** — `agent-1` writes inline. Small routing doc: goal,
+   reference scenario, `D*` decisions, open questions, architecture summary,
+   phase list with file links, reuse map, the interface (exact names, types,
+   defaults, conflict rules), protocol/data-structure changes with their
+   backward-compat strategy, references, invariants, risks, the verification
+   summary (gate commands plus the `T-*` IDs that prove the reference scenario),
+   and — as its last section — the model-assignment summary table. Must stay
+   small: one table or a few lines per section. If detail creeps in, push it to
+   the phase file.
 
 2. **`phase_01.md`, `phase_02.md`, …** — one file per phase (1-indexed,
-   zero-padded). Each is fully self-contained: sub-phases with all six fields,
+   zero-padded). Each is fully self-contained: sub-phases with all seven fields,
   phase gates, done criterion. `agent-1` writes these directly because it
   holds the design context. Delegate prose to a lower-priority configured
   agent only when phases are many and purely mechanical; then spot-check.
   These files are the only place allowed to be long.
   Every phase file opens with the **state contract** block (read `STATE.md`
-  first, update it after every sub-phase) and every sub-phase `Done` field ends
-  with `+ STATE.md updated`.
+  first, run its §3 gates against the §1/§7 claims, update it after every
+  sub-phase) and every sub-phase `Done` field ends with `+ STATE.md and
+  resume.md updated`.
 
 3. **`resume.md`** — `agent-1` writes inline, after all phase files exist.
    Small machine-readable progress tracker: phase status table (all TODO at
-   init), test status table, docs status, `Next:` pointer to the first
-   sub-phase. Implementer updates this file after every sub-phase.
+   init), test status table, one docs row per phase README sub-phase, open
+   blockers, `Next:` pointer to the first sub-phase. Implementer updates this
+   file after every sub-phase.
 
 4. **`STATE.md`** — `agent-1` writes inline last, initialized at plan creation
    (never left for the implementer to create). This is the **detailed live
@@ -372,9 +390,10 @@ directory). Rules:
   in the repo root.
 - `<NNN>` is a zero-padded 3-digit sequence number giving the plan order. List
   the existing entries of `docs/plans/`, take the highest leading `NNN`, and use
-  `NNN + 1`. First plan in a repo is `001`. Ignore entries without a numeric
-  prefix when computing the maximum, and never reuse or renumber an existing
-  plan folder.
+  `NNN + 1` — never the lowest unused number, so a gap left by a deleted plan is
+  never refilled. First plan in a repo is `001` (`000_adhoc`, when present,
+  counts as `000`). Ignore entries without a numeric prefix when computing the
+  maximum, and never reuse or renumber an existing plan folder.
 - `<FeatureName>` is short and PascalCase or kebab-case, no spaces.
 - Example: `docs/plans/001_plan-RateLimit/`, then `docs/plans/002_plan-Multitenancy/`.
 - Honor any path the user gives explicitly; if the user gives only a name, still
@@ -404,9 +423,9 @@ skill.
 
 **Session start (any agent, any context state):**
 1. Read `STATE.md` **first**, before any other plan file.
-2. Verify reality against `STATE.md` §7 (re-run the gate commands) before
-   editing anything. The file describes intent; the repo is the truth. Fix the
-   file if they disagree.
+2. Verify reality before editing anything: run the gate commands listed in
+   `STATE.md` **§3** and compare the result with what §1 and §7 claim. The file
+   describes intent; the repo is the truth. Fix the file if they disagree.
 3. Read only the phase file named in `Next action:`, and only the named
    sub-phase. Read `overview.md` only when `STATE.md` flags missing design
    context.
@@ -414,7 +433,8 @@ skill.
 **After every sub-phase (mandatory, not optional):**
 1. Update `STATE.md`: current position, work ledger row, files touched,
    in-flight work (`none` when clean), verification results, runtime
-   deviations, blockers, `Next action:`, timestamp.
+   deviations, blockers, dead ends worth not retrying, `Next action:`,
+   timestamp.
 2. Update `resume.md` status tables and `Next:` pointer to match.
 3. Only then start the next sub-phase.
 
@@ -449,7 +469,7 @@ After **every** unit of work (a sub-phase, a task, a bug fix), update:
 
 1. **`STATE.md`** — §1 position, §4 ledger row, §5 files touched, §6 in-flight
    (`none` when clean), §7 verification results, §8 runtime deviations, §9
-   blockers, header timestamp.
+   blockers, §10 dead ends worth not retrying, header timestamp.
 2. **`resume.md`** — phase/test/docs status tables and the `Next:` pointer.
 3. **The ad-hoc ledgers** — `tasks.md` for `task` mode, `bugs.md` for `bug`
    mode, in the plan folder. Every out-of-plan change gets an entry with a
@@ -489,6 +509,23 @@ before reporting done.
 by reading the highest existing ID in the ledger and adding one. IDs are never
 reused, even after a revert.
 
+**Ad-hoc work without a plan (`docs/plans/000_adhoc/`).** When the repo has no
+plan folder, `task` and `bug` write into `000_adhoc`, which is a **ledger-only
+folder**: it contains `tasks.md` and `bugs.md` and nothing else — no
+`overview.md`, no `resume.md`, no `STATE.md`, no phase files. There the
+checklist above reduces to items **3** (the ledger entry) and **4** (`README.md`
+when behavior is user-visible), plus the tests and the repo's own gate commands.
+Items 1, 2, 5, and 6 do not apply: there is no plan or state file to keep in
+sync, and `verify` never audits `000_adhoc` because it is not a plan. As soon as
+a real plan exists, new `task` / `bug` work attaches to that plan folder and the
+full checklist applies again; entries already in `000_adhoc` stay where they are.
+
+**Commits.** None of these modes commits on its own. Gates are run on the
+working tree and the work is reported; committing is the user's call unless the
+user asked for it explicitly in this session. The ledger and `STATE.md` §4
+`Commit` column record the commit sha when one exists and `uncommitted`
+otherwise — a truthful `uncommitted` is never a defect, a stale sha is.
+
 ---
 
 ## Execute mode
@@ -518,10 +555,14 @@ its preconditions are not `DONE`.
   user — never a silent extra change.
 - Stop and ask when the plan is ambiguous, contradicts the code, or a decision
   outside the plan's `D*` set is needed. Cheaper than an unwinding.
+- **A defective sub-phase is a plan bug, not an excuse to improvise.** If one of
+  the seven fields is missing, or the named files, anchors, or symbols no longer
+  exist, say exactly what is wrong, repair that phase file first (recording the
+  edit in `STATE.md` §8), and only then execute it.
 - Apply the **coherence contract** after every sub-phase, before starting the
   next one. At the end of each phase, the README sub-phase runs like any other.
 
-### E4 — Executing a correction plan (`/plan-execute-verify execute verify [<VNNN>]`)
+### E4 — Executing a correction plan (`/plan-execute-verify execute verify [V<NNN>]`)
 The correction plan of a verify report is executable work like any other, and it
 lives on disk precisely so it can be run later or in a fresh session.
 
@@ -568,6 +609,8 @@ not deserve a plan folder: a flag, a message, a small refactor, a doc fix.
 5. **Apply the coherence contract**: append a `T-A<NNN>` entry to `tasks.md`,
    update `STATE.md` and `resume.md`, update `README.md` if the change is
    user-visible, and reconcile the plan files if the task invalidated anything.
+   In `000_adhoc` there is no plan or state file: the ledger entry and the
+   `README.md` update are the whole contract.
 6. Close with: what changed, `T-A<NNN>`, files, tests, gate results.
 
 ---
@@ -595,7 +638,8 @@ lightweight shape as `task`, with a mandatory diagnosis step.
    `STATE.md` and `resume.md`, update `README.md` if user-visible behavior or a
    documented limit changed, and reconcile the plan when the bug proves a
    planned assumption wrong — including phases not yet executed that share the
-   faulty assumption.
+   faulty assumption. In `000_adhoc` there is no plan or state file: the ledger
+   entry and the `README.md` update are the whole contract.
 7. Close with: symptom → root cause → fix → regression test → gate results,
    `B-A<NNN>`.
 
@@ -605,8 +649,10 @@ lightweight shape as `task`, with a mandatory diagnosis step.
 
 `/plan-execute-verify verify [<plan>]` — a **hard review** of the work done so far
 against the plan. It answers one question: *does the implementation match the
-plan, completely and exactly?* It is **read-only**: it never writes production
-code, never fixes what it finds, and never rewrites phase files. It reports.
+plan, completely and exactly?* It **never writes production code**, never fixes
+what it finds, and never rewrites phase files. Its only writes are the audit
+trail under `verify/` and the state-file corrections of §V5 — the report is the
+deliverable.
 
 Adversarial stance: assume the plan was followed sloppily and try to prove it.
 A clean report must be earned by evidence, not by the absence of looking. Treat
@@ -704,8 +750,12 @@ docs/plans/<NNN>_plan-<FeatureName>/verify/
 └── …
 ```
 
-- Create `verify/` on demand. `<VNNN>` is the next free zero-padded 3-digit
-  report number in that folder — never overwrite or renumber an earlier report.
+- Create `verify/` on demand. The report number `<NNN>` is the highest existing
+  report number in `verify/` plus one, zero-padded to 3 digits (`001` for the
+  first audit). The file is `verify_<NNN>_<YYYY-MM-DD>.md` and the report ID is
+  `V<NNN>` — the `V` prefix belongs to the ID and to the selector
+  (`execute verify V002`), never to the filename. Earlier reports are never
+  overwritten or renumbered.
 - **Finding IDs are global and stable**: `V<NNN>-F<n>` (e.g. `V002-F03`). They
   are referenced by later runs, by `execute verify`, by `STATE.md` §9, and by
   the ledgers — never reused for a different finding.
@@ -786,7 +836,7 @@ long output, and it is written once.
 The contract below applies to **plan mode**. The other modes:
 
 - **Verify** produces no plan folder. It writes the durable audit trail:
-  `<plan-folder>/verify/verify_<VNNN>_<YYYY-MM-DD>.md` plus the
+  `<plan-folder>/verify/verify_<NNN>_<YYYY-MM-DD>.md` plus the
   `<plan-folder>/verify/index.md` register, and the state-file corrections that
   keep `STATE.md` / `resume.md` from lying. Never production code, never a
   phase-file rewrite. The same report is printed in chat in full.
@@ -799,11 +849,14 @@ The contract below applies to **plan mode**. The other modes:
 - **Folder, not a single file.** Always
   `docs/plans/<NNN>_plan-<FeatureName>/` under the repo root, creating `docs/`
   and `docs/plans/` if they do not exist; never the repo root itself. `<NNN>` is
-  the next free zero-padded 3-digit sequence number (`001` for the first plan).
-  Honor any path the user gives. Confirm the folder path in your closing
-  message.
+  the highest existing plan number plus one, zero-padded to 3 digits (`001` for
+  the first plan). Honor any path the user gives. Confirm the folder path in
+  your closing message.
 - Required files (all must be present):
-  - `overview.md` — small routing doc (goal, decisions, phase table, reuse map)
+  - `overview.md` — small routing doc, with every section listed in §E step 1
+    (goal, decisions, open questions, architecture, interface, protocol changes,
+    phase table, reuse map, references, invariants, risks, verification summary,
+    model-assignment summary)
   - `resume.md` — small LLM-readable progress tracker (all phases TODO at init)
   - `STATE.md` — detailed live state file, initialized by this skill; read
     first at every session start, updated after every sub-phase

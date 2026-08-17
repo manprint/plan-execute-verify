@@ -5,6 +5,11 @@
 > sub-phases, internal + e2e tests, quality gates, and documentation
 > deliverables — using the **fewest tokens possible** to produce it.
 
+It then carries that plan through to shipped code: `execute` implements it
+sub-phase by sub-phase, `task` and `bug` handle work the plan never foresaw, and
+`verify` audits the result against the plan. Every mode leaves the plan folder
+telling the truth about the repository.
+
 It supports either one configured agent or a small ordered team:
 
 | Assignment | Role |
@@ -15,8 +20,8 @@ It supports either one configured agent or a small ordered team:
 | `agent:<name>` | Single agent — performs the complete workflow and self-reviews. |
 
 The output is a **self-contained plan folder** that any downstream agent can
-execute with zero re-exploration, with **every sub-phase tagged with the cheapest
-model that can do it correctly**.
+execute with zero re-exploration, with **every sub-phase tagged with the
+configured agent whose position matches the work**.
 
 ---
 
@@ -48,7 +53,7 @@ discovers skills under `~/.claude/skills/` (personal) or a project's
 ```bash
 git clone https://github.com/<you>/plan-execute-verify.git
 cd plan-execute-verify
-./install.sh            # symlinks this repo into ~/.claude/skills/plan-execute-verify
+./install-claude.sh     # symlinks this repo into ~/.claude/skills/plan-execute-verify
 ```
 
 ### Option B — copy
@@ -93,7 +98,13 @@ You can also invoke it explicitly: **`/plan-execute-verify`**.
 | `/plan-execute-verify execute [<plan>] [<phase>]` | **Execute** | Implements the plan sub-phase by sub-phase, keeping every plan and state file coherent. |
 | `/plan-execute-verify task <description>` | **Task** | One small change, planned in memory, logged in `tasks.md`. |
 | `/plan-execute-verify bug <description>` | **Bug** | One defect: reproduce, root cause, regression test, fix, logged in `bugs.md`. |
-| `/plan-execute-verify verify [<plan>]` | **Verify** | Audits everything built so far against the plan and reports what is missing, divergent, or broken. Read-only. |
+| `/plan-execute-verify verify [<plan>]` | **Verify** | Audits everything built so far against the plan and reports what is missing, divergent, or broken. Writes no production code. |
+| `/plan-execute-verify execute verify [V<NNN>]` | **Execute a correction plan** | Applies the correction plan of a verify report and updates the finding statuses. |
+
+A leading `verify` / `execute` / `task` / `bug` is read as a mode only when what
+follows is mode-shaped (a plan selector, a phase selector, or a change/defect in
+existing code). `plan a task queue for background jobs` stays a **Plan** request;
+the skill says in one line which reading it took.
 
 ### Configure agents explicitly
 
@@ -167,10 +178,11 @@ its recommended defaults and tells you which ones it took.
 
 ### What you get back
 A folder at `docs/plans/<NNN>_plan-<FeatureName>/` — always under `docs/plans/`
-(created if missing, never the repo root), numbered with the next free 3-digit
-sequence so the listing shows plan order (`001_plan-RateLimit`,
+(created if missing, never the repo root), numbered with the highest existing
+plan number plus one so the listing shows plan order (`001_plan-RateLimit`,
 `002_plan-Multitenancy`, …). It contains:
-- `overview.md` — routing doc: goal, decisions, phase table, reuse map (small)
+- `overview.md` — routing doc: goal, decisions, interface, phase table, reuse
+  map, verification and model-assignment summaries (small)
 - `resume.md` — LLM-readable progress tracker, all phases TODO at init (small)
 - `STATE.md` — detailed live execution state: current position, self-contained
   feature recap, environment and gate commands, work ledger, files touched,
@@ -178,10 +190,10 @@ sequence so the listing shows plan order (`001_plan-RateLimit`,
 - `phase_01.md`, `phase_02.md`, … — one per phase, detailed, self-contained
 - A terse chat summary: the folder path, phase count, and assignment split.
 
-The other modes add to the same folder as they run: `tasks.md` and `bugs.md`
-(out-of-plan work ledgers) and `verify/` (audit register plus one durable report
-per audit).
-- **No code is written** — this skill plans; implementers execute phase by phase.
+**Plan mode writes no code** — it plans; `execute` (or another implementer)
+codes. The other modes add to the same folder as they run: `tasks.md` and
+`bugs.md` (out-of-plan work ledgers) and `verify/` (audit register plus one
+durable report per audit).
 
 ### Documentation keeps pace with the code
 
@@ -205,6 +217,8 @@ feature from the README alone.
 /plan-execute-verify execute 003 phase_02     # only that phase
 /plan-execute-verify execute 003 § 1.2        # only that sub-phase
 ```
+
+The sub-phase selector also accepts `1.2` and `phase_02 § 1.2`.
 
 It reads `STATE.md` first, re-runs the gates to confirm the recorded state is
 real, finishes any in-flight work, then executes sub-phases in order: the exact
@@ -230,7 +244,9 @@ and stating the root cause with `path:line` evidence.
 Each is then logged in an append-only ledger inside the plan folder —
 `tasks.md` (`T-A001`, `T-A002`, …) or `bugs.md` (`B-A001`, …) — with files,
 tests, gate results, README impact, and **plan impact**. Repos with no plan yet
-use `docs/plans/000_adhoc/`.
+use `docs/plans/000_adhoc/`, a ledger-only folder: it holds just `tasks.md` and
+`bugs.md`, there is no state file to keep in sync, and `verify` never audits it.
+Neither mode commits on its own.
 
 ### The coherence contract
 
@@ -359,23 +375,34 @@ are updated — so just say *"resume the plan"* in a fresh session.
 
 ## What the plan contains
 
-Every plan follows this structure (see `references/output-template.md`):
+Every plan follows this structure (see `references/output-template.md`).
 
-1. Header — status, authoring/implementation models, target (incl. token goal)
-2. Context & problem — current state with `file:line` anchors, goal, **reference
-   scenario** (the acceptance test)
-3. Approved design decisions — `D1..Dn` table with consequences
-4. Target architecture — data model, mechanisms, diagrams, **reuse map**
-5. New interface — CLI/API/config, exact names/types/defaults
-6. New protocol / data structures — with backward-compat strategy
-7. Implementation phases — each sub-phase: **Model · Files · Change · Unit tests
-   · e2e tests · Done**
-8. References — external documentation consulted (`R-*`), with URL and version
-9. Invariants to preserve / add (`I-*`)
-10. Open questions — deferred clarifications and the defaults applied
-11. Risk register
-12. Verification summary — gates, unit, e2e, acceptance
-13. Model-assignment summary table
+**`overview.md`** — the routing doc, deliberately small:
+
+1. Goal and **reference scenario** (the acceptance test), with `file:line`
+   anchors for the current state
+2. Approved design decisions — `D1..Dn` table with consequences
+3. Open questions — deferred clarifications and the defaults applied
+4. Architecture summary — core mechanism, data flow, constraints
+5. Interface — CLI / API / config, exact names, types, defaults, conflict rules
+6. Protocol and data-structure changes — with the backward-compat strategy
+7. Phase table with links to the phase files, and the **reuse map**
+8. References — external documentation consulted (`R<n>`), with URL and version
+9. Invariants to preserve or add (`I-*`)
+10. Risk register
+11. Verification summary — gate commands and the `T-*` IDs that prove the
+    reference scenario
+12. Model-assignment summary table (last section)
+
+**`phase_NN.md`** — one per phase, the only files allowed to be long: the state
+contract, then every sub-phase as **Model · Assignment · Files · Change · Unit
+tests · e2e tests · Done**, the phase gates, and the phase done-criterion.
+
+**`resume.md`** — status board: phase table, test table, per-phase docs table,
+open blockers, `Next:` pointer.
+
+**`STATE.md`** — the live execution state (§0–§10), detailed under *Resuming
+after `/clear` or in a new session* above.
 
 ---
 
@@ -386,7 +413,7 @@ plan-execute-verify/
 ├── SKILL.md                        # the skill (frontmatter + workflow)
 ├── README.md                       # this file
 ├── LICENSE                         # MIT
-├── install.sh                      # symlink into ~/.claude/skills/
+├── install-claude.sh               # symlink into ~/.claude/skills/
 └── references/
     ├── output-template.md          # the canonical plan skeleton
     ├── agent-roster.md             # model roles + delegation + dispatch

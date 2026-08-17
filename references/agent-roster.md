@@ -3,6 +3,7 @@
 The skill accepts either one configured agent or an ordered list. The position
 in the list determines responsibility; the configured name is opaque and may
 be a vendor model name, a local alias, or any other host-supported identifier.
+
 ## The positions
 
 ### agent-1 - architect and supervisor
@@ -24,6 +25,7 @@ be a vendor model name, a local alias, or any other host-supported identifier.
 - Performs scope, recon, design, implementation, documentation, testing, and
   review with the same configured name.
 - The final review is a self-review and must be labelled as such.
+
 ## The legacy vendor aliases
 
 ### Opus
@@ -51,7 +53,6 @@ If the configured list has one agent, use that agent for every branch. If a
 configured name is not recognized by the host, pass it through unchanged and
 let the host report the model error.
 
-```
 ---
 
 ## agent-1 review gates - when supervisor review is required
@@ -102,6 +103,6 @@ a saving.
 Show the configured assignment used for each task/sub-task.
 - In the conversation: identify the position and configured name, for example
   `Recon (agent-3:gpt5-6-luna)` and `Design (agent-1:gpt5-6-sol)`.
-- In the plan file: every sub-phase has a `**Model:**` line containing the
-  exact configured assignment, and the document ends with the assignment
+- In the plan files: every sub-phase has a `**Model:**` line containing the
+  exact configured assignment, and `overview.md` ends with the model-assignment
   summary table.
