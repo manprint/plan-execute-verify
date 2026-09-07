@@ -1,7 +1,7 @@
 # Worked example — multi-file plan
 
 Feature: **add per-API-key rate limiting to an HTTP gateway** (`gw`).
-Shows every file type produced (overview, resume, phase files, STATE) with the
+Shows every file type produced (overview, phase files, STATE) with the
 configured assignment `agent-1:opus,agent-2:sonnet,agent-3:haiku`. Real plans are
 longer; copy the *structure* and *per-sub-phase discipline*, not the content.
 
@@ -133,59 +133,7 @@ These commands are the same ones written into `STATE.md` §3; they must not drif
 
 ---
 
-## File 2 — resume.md
-
-````markdown
-# RateLimit — Resume
-
-> **Next:** phase_01.md § 0.1 — Add Quota/RateConfig/config parsing
-> **Last updated:** 2026-06-25
-> Status board only. Full execution state lives in [STATE.md](STATE.md); on any
-> disagreement, STATE.md wins. Update both after every sub-phase.
-
-## Phase status
-
-| Phase | File | Status | Notes |
-|-------|------|--------|-------|
-| 0 — Config + error scaffolding | phase_01.md | `TODO` | — |
-| 1 — Limiter core | phase_02.md | `TODO` | — |
-| 2 — Wire middleware | phase_03.md | `TODO` | — |
-| 3 — Hardening + docs + bench | phase_04.md | `TODO` | — |
-
-Status values: `TODO` · `IN_PROGRESS` · `DONE` · `SKIPPED` · `BLOCKED`
-
-## Tests
-
-| ID | Type | Status | Notes |
-|----|------|--------|-------|
-| T-RL0 | e2e | `TODO` | no --rate-limit → all pass, latency == baseline |
-| T-RL1 | e2e | `TODO` | k1@20req/s → ~10 pass, rest 429+Retry-After |
-| T-RL2 | e2e | `TODO` | k2 unlimited → all pass |
-
-## Docs
-
-| Doc | Phase | Status | Notes |
-|-----|-------|--------|-------|
-| README.md | 0 | `TODO` | no user-visible change — verify still accurate |
-| README.md | 1 | `TODO` | no user-visible change — verify still accurate |
-| README.md | 2 | `TODO` | Usage: `--rate-limit`; Configuration: TOML limits |
-| README.md | 3 | `TODO` | Notes: 429/Retry-After; Limitations: per-process counters |
-| docs/CONFIG.md | 3 | `TODO` | operator reference for the limits file |
-| docs/PERF.md | 3 | `TODO` | latency bench numbers |
-
-## Open blockers
-- none
-
-## Decisions changed at runtime
-
-One line per superseding `D*` row added during execution; the reason and the
-impact live in `STATE.md` §8, not here.
-- none
-````
-
----
-
-## File 3 — phase_01.md (Phase 0 — Config + error scaffolding)
+## File 2 — phase_01.md (Phase 0 — Config + error scaffolding)
 
 ````markdown
 # Phase 0 — Config + error scaffolding
@@ -196,14 +144,18 @@ impact live in `STATE.md` §8, not here.
 
 ## State contract (mandatory)
 
-1. Before touching anything: read [STATE.md](STATE.md) and confirm it points at
+1. Before touching anything: read [STATE.md](STATE.md). If §1 `Status` is `OPEN`,
+   finish or revert that unit first (§6 says how far it got). Confirm §1 points at
    a sub-phase in this phase. Run the gate commands in STATE.md §3 and check the
-   result against what §1 and §7 claim; the repo wins.
-2. After **every** sub-phase below: update `STATE.md` (position, ledger, files
-   touched, in-flight work, verification, deviations, `Next action:`, timestamp)
-   and sync `resume.md`. A sub-phase is not done until this is done.
-3. If the session ends mid-sub-phase, write exactly what is half-finished into
-   `STATE.md` §6 before stopping.
+   result against what §1, §7, and §11 claim; the repo wins.
+2. **Open** each sub-phase in `STATE.md` §1 before editing any code
+   (`Type: sub-phase`, its ID, `Status: OPEN`, `Intent`, `Next action:`, §6
+   `claimed — nothing written yet`).
+3. **Close** it once the gates pass: §4 ledger row, §6 back to `none`, §5 §7 §8
+   §9 §10 and the §11 board updated, §1 pointing at the next unit. A sub-phase is
+   not done until this is written.
+4. If the session ends mid-sub-phase, leave §1 `OPEN` and write exactly what is
+   half-finished into `STATE.md` §6 before stopping.
 
 ---
 
@@ -216,7 +168,7 @@ impact live in `STATE.md` §8, not here.
 - **Change:** parse an optional `[limits]` table into `RateConfig`; absent → `None`. Mirror `Config::from_file` at `src/config.rs:31 — fn from_file`. Follow the existing module layout; add no new directory.
 - **Unit tests:** `parses_limits_table` — `HashMap` populated from valid TOML; `absent_limits_is_none` — missing section yields `None`; `zero_quota_parses` — `0` is valid and means "reject all" (D5).
 - **e2e tests:** none (no behavior change)
-- **Done:** gates green (`cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test config::`) + existing `config::tests::*` unchanged and passing + `STATE.md` and `resume.md` updated
+- **Done:** gates green (`cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test config::`) + existing `config::tests::*` unchanged and passing + closed in `STATE.md`
 
 ### 0.2 Add `GwError::RateLimited` + `429` mapping
 - **Model:** `agent-3:haiku`
@@ -225,7 +177,7 @@ impact live in `STATE.md` §8, not here.
 - **Change:** additive enum variant `RateLimited { retry_after: u32 }`; extend `into_response` at `src/error.rs:88` → status `429` plus a `Retry-After` header carrying integer seconds. `R1 — Retry-After accepts an integer number of seconds (<https://www.rfc-editor.org/rfc/rfc9110#field.retry-after>)`.
 - **Unit tests:** `rate_limited_maps_to_429_with_retry_after` — `GwError::RateLimited{retry_after:5}` → status 429, header `Retry-After: 5`.
 - **e2e tests:** none (variant not reachable yet)
-- **Done:** gates green + no existing error mapping changed + `STATE.md` and `resume.md` updated
+- **Done:** gates green + no existing error mapping changed + closed in `STATE.md`
 
 ### 0.3 Update README.md
 - **Model:** `agent-3:haiku`
@@ -234,7 +186,7 @@ impact live in `STATE.md` §8, not here.
 - **Change:** no user-visible change in this phase — verify the README is still accurate and leave it unchanged; record that verification in `STATE.md`.
 - **Unit tests:** none (documentation)
 - **e2e tests:** none
-- **Done:** README confirmed still accurate, nothing added about unshipped behavior + `STATE.md` and `resume.md` updated
+- **Done:** README confirmed still accurate, nothing added about unshipped behavior + closed in `STATE.md`
 
 ---
 
@@ -253,7 +205,7 @@ this phase's shipped behavior (nothing new).
 
 ---
 
-## File 4 — phase_02.md (Phase 1 — Limiter core)
+## File 3 — phase_02.md (Phase 1 — Limiter core)
 
 ````markdown
 # Phase 1 — Limiter core (token bucket)
@@ -267,7 +219,8 @@ this phase's shipped behavior (nothing new).
 1. Before touching anything: read [STATE.md](STATE.md) and confirm it points at
    a sub-phase in this phase. Run the gate commands in STATE.md §3 and check the
    result against what §1 and §7 claim; the repo wins.
-2. After **every** sub-phase: update `STATE.md` and sync `resume.md`.
+2. Open each sub-phase in `STATE.md` §1 before editing; close it after the
+   gates pass.
 3. If the session ends mid-sub-phase, write what is half-finished into
    `STATE.md` §6 before stopping.
 
@@ -282,7 +235,7 @@ this phase's shipped behavior (nothing new).
 - **Change:** lock-free atomic token bucket; `try_take(now: Instant) -> Option<u32>` (`None` = allowed, `Some(secs)` = denied plus retry-after). Monotonic clock only. No `DashMap` here — just the per-key struct. `R2 — a DashMap entry guard must not be held across an await (<https://docs.rs/dashmap/5.5.3/dashmap/struct.DashMap.html>)` applies to § 2.1, not here.
 - **Unit tests:** `refills_at_rate` — bucket at 0 tokens refills to quota after 1s; `denies_over_limit` — the 11th take on quota=10 returns `Some(_)`; `retry_after_correct` — returned seconds match the next refill window; `concurrent_takes_never_exceed_quota` — 4 threads × 100 takes on quota=10/s → at most 10 pass (I-3).
 - **e2e tests:** none (not wired)
-- **Done:** gates green (`cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test ratelimit::`) + `concurrent_takes_never_exceed_quota` passes + `agent-1:opus` signed off on the concurrency design + `STATE.md` and `resume.md` updated
+- **Done:** gates green (`cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test ratelimit::`) + `concurrent_takes_never_exceed_quota` passes + `agent-1:opus` signed off on the concurrency design + closed in `STATE.md`
 
 ### 1.2 Update README.md
 - **Model:** `agent-3:haiku`
@@ -291,7 +244,7 @@ this phase's shipped behavior (nothing new).
 - **Change:** no user-visible change in this phase (the module is not wired) — verify the README is still accurate and leave it unchanged; record that verification in `STATE.md`.
 - **Unit tests:** none (documentation)
 - **e2e tests:** none
-- **Done:** README confirmed still accurate + `STATE.md` and `resume.md` updated
+- **Done:** README confirmed still accurate + closed in `STATE.md`
 
 ---
 
@@ -310,7 +263,7 @@ reflects this phase's shipped behavior (nothing new).
 
 ---
 
-## File 5 — phase_03.md (Phase 2 — Wire middleware)
+## File 4 — phase_03.md (Phase 2 — Wire middleware)
 
 ````markdown
 # Phase 2 — Wire into middleware stack
@@ -324,7 +277,8 @@ reflects this phase's shipped behavior (nothing new).
 1. Before touching anything: read [STATE.md](STATE.md) and confirm it points at
    a sub-phase in this phase. Run the gate commands in STATE.md §3 and check the
    result against what §1 and §7 claim; the repo wins.
-2. After **every** sub-phase: update `STATE.md` and sync `resume.md`.
+2. Open each sub-phase in `STATE.md` §1 before editing; close it after the
+   gates pass.
 3. If the session ends mid-sub-phase, write what is half-finished into
    `STATE.md` §6 before stopping.
 
@@ -342,7 +296,7 @@ reflects this phase's shipped behavior (nothing new).
   - **T-RL1:** k1 at 20 req/s → ~10/s pass, rest `429` + `Retry-After`. Proves the reference scenario in `overview.md`.
   - **T-RL2:** k2 unlimited → all pass.
   - **T-RL0 (regression, I-1):** no `--rate-limit` flag → all pass, latency within baseline ±5%.
-- **Done:** T-RL0, T-RL1, T-RL2 pass + gates green (`cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test`, `cargo test --test e2e`) + limiter-off path byte-identical + `STATE.md` and `resume.md` updated
+- **Done:** T-RL0, T-RL1, T-RL2 pass + gates green (`cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test`, `cargo test --test e2e`) + limiter-off path byte-identical + closed in `STATE.md`
 
 ### 2.2 Update README.md
 - **Model:** `agent-3:haiku`
@@ -351,7 +305,7 @@ reflects this phase's shipped behavior (nothing new).
 - **Change:** update **Usage** (the `--rate-limit <PATH>` flag with a runnable example and its output) and **Configuration** (the TOML limits file, one `<key> = <req/s>` line per key, `0` rejects all, rate limiting off unless the flag is passed). No module names, no algorithm description, no phase references. Preserve the existing README structure and tone; edit only those sections.
 - **Unit tests:** none (documentation)
 - **e2e tests:** none — the README example was executed and produced the documented output
-- **Done:** a new user can enable rate limiting from the README alone + no implementation detail present + `STATE.md` and `resume.md` updated
+- **Done:** a new user can enable rate limiting from the README alone + no implementation detail present + closed in `STATE.md`
 
 ---
 
@@ -372,7 +326,7 @@ behavior.
 
 ---
 
-## File 6 — phase_04.md (Phase 3 — Hardening + docs + bench)
+## File 5 — phase_04.md (Phase 3 — Hardening + docs + bench)
 
 ````markdown
 # Phase 3 — Hardening + docs + bench
@@ -386,7 +340,8 @@ behavior.
 1. Before touching anything: read [STATE.md](STATE.md) and confirm it points at
    a sub-phase in this phase. Run the gate commands in STATE.md §3 and check the
    result against what §1 and §7 claim; the repo wins.
-2. After **every** sub-phase: update `STATE.md` and sync `resume.md`.
+2. Open each sub-phase in `STATE.md` §1 before editing; close it after the
+   gates pass.
 3. If the session ends mid-sub-phase, write what is half-finished into
    `STATE.md` §6 before stopping.
 
@@ -401,7 +356,7 @@ behavior.
 - **Change:** criterion bench comparing under-limit p99 against the baseline; assert within +50µs. Record the numbers in `docs/PERF.md`.
 - **Unit tests:** none
 - **e2e tests:** none (a bench is not a test)
-- **Done:** bench runs + p99 within +50µs + numbers recorded in `docs/PERF.md` + `STATE.md` and `resume.md` updated
+- **Done:** bench runs + p99 within +50µs + numbers recorded in `docs/PERF.md` + closed in `STATE.md`
 
 ### 3.2 Operator reference
 - **Model:** `agent-3:haiku`
@@ -410,7 +365,7 @@ behavior.
 - **Change:** document the TOML limits format (`[limits]` then `k1 = 10`), the `429` / `Retry-After` contract (integer seconds, R1), that `0` rejects all (D5), and the default-off note.
 - **Unit tests:** none
 - **e2e tests:** none
-- **Done:** operator can configure limits from this file alone + gates green + `STATE.md` and `resume.md` updated
+- **Done:** operator can configure limits from this file alone + gates green + closed in `STATE.md`
 
 ### 3.3 Update README.md
 - **Model:** `agent-3:haiku`
@@ -419,7 +374,7 @@ behavior.
 - **Change:** update **Notes** (over-limit requests get `429` with `Retry-After` in seconds) and **Limitations** (limits are per process, not shared across instances; counters reset on restart; limits load at boot and do not reload on SIGHUP — open question Q3). Re-check the Usage and Configuration sections written in phase 2 against the shipped behavior. No module names, no algorithm description, no phase or plan references, no unshipped roadmap. Keep the existing README structure and tone; edit the affected sections only.
 - **Unit tests:** none (documentation)
 - **e2e tests:** none — the README examples were executed and produced the documented output
-- **Done:** a new user can install, enable, and operate rate limiting from the README alone, with no source reading + no implementation detail present + `agent-1:opus` signed off + gates green + `STATE.md` and `resume.md` updated
+- **Done:** a new user can install, enable, and operate rate limiting from the README alone, with no source reading + no implementation detail present + `agent-1:opus` signed off + gates green + closed in `STATE.md`
 
 ---
 
@@ -440,33 +395,45 @@ phase's shipped behavior.
 
 ---
 
-## File 7 — STATE.md (as initialized by the planner, before any code)
+## File 6 — STATE.md (as initialized by the planner, before any code)
 
 ````markdown
 # Per-API-key Rate Limiting — Implementation State
 
 > **READ THIS FILE FIRST at the start of every session, before any other plan
-> file. UPDATE IT after every sub-phase and before any session ends.**
+> file. OPEN a unit in §1 before touching code; CLOSE it after the gates pass.**
 > **Last updated:** 2026-06-25 | **By:** `agent-1:opus` | **Session:** 1
 
 ## 0. Protocol
 
+This is the only execution-state file. A **unit of work** is one sub-phase, one
+`task`, one `bug`, one `verify` audit, or one correction from a verify report.
+
 **Resume (cold start):**
 1. Read this file end to end.
-2. Run the gate commands listed in §3 and compare the result with what §1 and §7
-   claim. The repo is the truth; correct this file if it drifted.
-3. Open only the phase file named in §1 `Next action:`, at the named sub-phase.
-   Read `overview.md` only if §2 is insufficient for the work at hand.
-4. If §6 is non-empty, finish or revert that work before starting anything new.
+2. Read §1 `Status`: `OPEN` means a unit was claimed and may be half-written —
+   read §6, then finish or revert it before starting anything new. `none` means
+   nothing is in flight: open the unit named in §1 `Next action:`.
+3. Run the gate commands listed in §3 and compare the result with what §1, §7,
+   and §11 claim. The repo is the truth; correct this file if it drifted.
+4. Open only the file §1 points at, at the named sub-phase. Read `overview.md`
+   only if §2 is insufficient for the work at hand.
 
-**Update (after every sub-phase, mandatory):** rewrite §1, append to §4, update
-§5 §6 §7, add §8 rows on any deviation, refresh §9 §10, bump the header
-timestamp, then sync `resume.md`. A sub-phase is not `DONE` until this is
-written.
+**Open a unit — before touching code:** set §1 `Type`, `ID`, `Status: OPEN`,
+`Intent`, `Next action:`, `Assigned`; set §6 to `claimed — nothing written yet`;
+bump the timestamp.
 
-## 1. Current position
-- **Phase:** 0 — Config + error scaffolding (`phase_01.md`) — `TODO`
-- **Sub-phase:** 0.1 — Add Quota/RateConfig/config parsing — `TODO`
+**Close a unit — after its gates are green:** append a §4 row, reset §6 to
+`none — tree consistent`, update §5 §7 §8 §9 §10 and the §11 board, set §1 to the
+next unit with `Status: none`, bump the timestamp. A unit is not `DONE` until
+this is written.
+
+## 1. Current unit
+- **Type:** `sub-phase`
+- **ID:** 0.1 — Add Quota/RateConfig/config parsing
+- **Status:** `none`
+- **Intent:** add the `Quota` / `RateConfig` types and their TOML parsing
+- **Phase:** 0 — Config + error scaffolding (`phase_01.md`)
 - **Next action:** `phase_01.md` § 0.1 — add `Quota` and `RateConfig` to `src/config.rs`
 - **Assigned:** `agent-3:haiku`
 - **Repo state:** branch `main` | working tree `clean` | last commit `a1b2c3d init`
@@ -488,15 +455,16 @@ rejects all.
 - **Build:** `cargo build` · **Fmt:** `cargo fmt --check` · **Lint:** `cargo clippy -- -D warnings`
 - **Unit tests:** `cargo test` · **E2E:** `cargo test --test e2e`
 - **Setup / caveats:** e2e binds port 8080; run serially with `--test-threads=1`.
+- **WIP commits:** `off`
 
-## 4. Work ledger
-| # | Phase.Sub | Agent | What changed | Files | Gates | Commit |
-|---|-----------|-------|--------------|-------|-------|--------|
-| — | — | — | not started | — | — | — |
+## 4. Work ledger (append-only, one row per closed unit)
+| # | Type | ID | Agent | What changed | Files | Gates | Commit |
+|---|------|----|-------|--------------|-------|-------|--------|
+| — | — | — | — | not started | — | — | — |
 
 ## 5. Files touched
-| Path | What was done | Phase.Sub |
-|------|---------------|-----------|
+| Path | What was done | Unit |
+|------|---------------|------|
 | — | — | — |
 
 ## 6. In-flight work
@@ -525,4 +493,38 @@ none
 
 ## 10. Do-not-repeat
 - none
+
+## 11. Progress board
+
+### Phases
+| Phase | File | Status | Notes |
+|-------|------|--------|-------|
+| 0 — Config + error scaffolding | phase_01.md | `TODO` | — |
+| 1 — Limiter core | phase_02.md | `TODO` | — |
+| 2 — Wire middleware | phase_03.md | `TODO` | — |
+| 3 — Hardening + docs + bench | phase_04.md | `TODO` | — |
+
+Status values: `TODO` · `IN_PROGRESS` · `DONE` · `SKIPPED` · `BLOCKED`
+
+### Tests
+| ID | Type | Status | Notes |
+|----|------|--------|-------|
+| T-RL0 | e2e | `TODO` | no --rate-limit → all pass, latency == baseline |
+| T-RL1 | e2e | `TODO` | k1@20req/s → ~10 pass, rest 429+Retry-After |
+| T-RL2 | e2e | `TODO` | k2 unlimited → all pass |
+
+### Docs
+| Doc | Phase | Status | Notes |
+|-----|-------|--------|-------|
+| README.md | 0 | `TODO` | no user-visible change — verify still accurate |
+| README.md | 1 | `TODO` | no user-visible change — verify still accurate |
+| README.md | 2 | `TODO` | Usage: `--rate-limit`; Configuration: TOML limits |
+| README.md | 3 | `TODO` | Notes: 429/Retry-After; Limitations: per-process counters |
+| docs/CONFIG.md | 3 | `TODO` | operator reference for the limits file |
+| docs/PERF.md | 3 | `TODO` | latency bench numbers |
+
+### Audits
+| Report | Date | Verdict | Open findings |
+|--------|------|---------|---------------|
+| none yet | — | — | — |
 ````

@@ -106,6 +106,44 @@ follows is mode-shaped (a plan selector, a phase selector, or a change/defect in
 existing code). `plan a task queue for background jobs` stays a **Plan** request;
 the skill says in one line which reading it took.
 
+### Track progress with commits — `--wip-commit`
+
+Off by default: the skill runs the gates on the working tree and leaves
+committing to you. Enable it and the modes that write production code
+(`execute`, `task`, `bug`, `execute verify`) commit **locally** at two points:
+
+```text
+/plan-execute-verify --wip-commit execute 003
+/plan-execute-verify --wip-commit agent-1:opus,agent-2:sonnet task add a --json flag
+/plan-execute-verify --no-wip-commit execute 003        # turn it back off
+```
+
+| Point | Commit | Gates |
+|-------|--------|-------|
+| a unit closes | `sub-phase(1.1): add tenant column`, `task(T-A004): …`, `bug(B-A002): …`, `correction(V001-C2): …` | green |
+| a session is interrupted mid-unit | `wip(1.1): repo trait added, middleware wiring pending` | red or not run |
+
+The second one is the point of the flag. Without it, a session that dies halfway
+leaves a dirty tree and a prose description of it in `STATE.md` §6; with it, the
+next session inherits an inspectable diff — §6 explains *why* it stopped, git
+proves *what* was written. On resume the `wip:` commit is either finished and
+amended into the proper commit, or reverted.
+
+Details worth knowing:
+
+- **One commit is one closed unit** — code, tests, `STATE.md`, `README.md`, and
+  the ledger go in together, so a commit is never half a unit.
+- **It persists.** The setting is written to `STATE.md` §3 on first use, so a
+  fresh session after `/clear` keeps the same convention instead of producing a
+  half-committed history. An explicit flag on a later invocation overrides it.
+- **Staging is explicit.** Only the unit's own files plus the plan files are
+  staged — never `git add -A`. Unrelated dirty files are reported and left alone.
+- **It commits on the branch you are on**, with no branch check and no branch
+  creation, and says which branch that was. If that branch is `main`, that is
+  where the commits land.
+- **It never pushes.** Pushing stays your call.
+- `plan` and `verify` never commit: they write no production code.
+
 ### Configure agents explicitly
 
 The assignment prefix is optional and must appear before the feature request:
@@ -183,10 +221,11 @@ plan number plus one so the listing shows plan order (`001_plan-RateLimit`,
 `002_plan-Multitenancy`, …). It contains:
 - `overview.md` — routing doc: goal, decisions, interface, phase table, reuse
   map, verification and model-assignment summaries (small)
-- `resume.md` — LLM-readable progress tracker, all phases TODO at init (small)
-- `STATE.md` — detailed live execution state: current position, self-contained
-  feature recap, environment and gate commands, work ledger, files touched,
-  in-flight work, verification results, runtime deviations, blockers, dead ends
+- `STATE.md` — the single live execution state: current unit and its `OPEN`/`none`
+  status, self-contained feature recap, environment and gate commands, work
+  ledger, files touched, in-flight work, verification results, runtime
+  deviations, blockers, dead ends, and the progress board (phases, tests, docs,
+  audits)
 - `phase_01.md`, `phase_02.md`, … — one per phase, detailed, self-contained
 - A terse chat summary: the folder path, phase count, and assignment split.
 
@@ -255,8 +294,8 @@ repository.** `plan` creates it, `execute` / `task` / `bug` keep it in sync with
 the code they write, `verify` records what it found and the status of every
 finding. Every unit of work updates
 
-- `STATE.md` (position, ledger, files, in-flight, verification, deviations),
-- `resume.md` (statuses, `Next:`),
+- `STATE.md` (the unit closed: position, ledger, files, in-flight, verification,
+  deviations, progress board),
 - `tasks.md` / `bugs.md` for out-of-plan changes,
 - `verify/index.md` when a known finding is closed, reopened, or made obsolete,
 - `README.md` when user-visible behavior changed,
@@ -283,8 +322,8 @@ Run it from the repository at any point during implementation:
 ```
 
 It hard-reviews what has actually been built against the plan, treating
-`STATE.md` and `resume.md` as claims to be disproved rather than evidence. It
-checks, per audited phase:
+`STATE.md` as a claim to be disproved rather than evidence. It checks, per
+audited phase:
 
 - **completeness** — sub-phases, files, tests, and done-criteria that were
   marked done but are missing or partial
@@ -353,23 +392,28 @@ ledgers, and the plan itself in sync.
 
 ### Resuming after `/clear` or in a new session
 
-`STATE.md` is the resume point. It is created with the plan and rewritten after
-every sub-phase, and it carries its own protocol, so an agent with an empty
-context can open it alone and continue correctly:
+`STATE.md` is the resume point, and the **only** state file — there is no second
+status board that could disagree with it. It is created with the plan and carries
+its own protocol, so an agent with an empty context can open it alone and
+continue correctly:
 
-- **§0** — how to resume and what to update (self-describing).
-- **§1** — current phase / sub-phase, `Next action:`, branch and commit.
+- **§0** — how to resume, how to open a unit, how to close one (self-describing).
+- **§1** — the current unit: its type (sub-phase, task, bug, verify, correction),
+  its ID, its `Status` (`OPEN` or `none`), `Next action:`, branch and commit.
 - **§2 §3** — feature recap and the exact build / test / lint commands, so no
   re-exploration is needed.
-- **§4 §5** — what has already been done and which files were touched.
+- **§4 §5** — the ledger of every closed unit, and which files were touched.
 - **§6** — in-flight work: exactly what is half-finished after an interruption.
 - **§7 §8 §9 §10** — verification results (with failing output verbatim),
   runtime deviations from the plan, blockers, and dead ends not to retry.
+- **§11** — the progress board: phases, tests, per-phase docs, audits.
 
-`resume.md` stays the compact status board; `STATE.md` is the deep state. Both
-are updated after every sub-phase, and `STATE.md` wins if they disagree. A
-sub-phase counts as done only when the gates are green **and** the state files
-are updated — so just say *"resume the plan"* in a fresh session.
+**Every unit of work is opened before the code is touched and closed after the
+gates pass.** That is what makes the resume safe: a session that died mid-work
+leaves §1 `OPEN` with §6 spelling out exactly how far it got, and a session that
+finished leaves §1 pointing at the next unit with §6 empty. There is no third,
+ambiguous state to guess at — so just say *"resume the plan"* in a fresh
+session.
 
 ---
 
@@ -398,11 +442,9 @@ Every plan follows this structure (see `references/output-template.md`).
 contract, then every sub-phase as **Model · Assignment · Files · Change · Unit
 tests · e2e tests · Done**, the phase gates, and the phase done-criterion.
 
-**`resume.md`** — status board: phase table, test table, per-phase docs table,
-open blockers, `Next:` pointer.
-
-**`STATE.md`** — the live execution state (§0–§10), detailed under *Resuming
-after `/clear` or in a new session* above.
+**`STATE.md`** — the single live execution state (§0–§11), detailed under
+*Resuming after `/clear` or in a new session* above. Includes the §11 progress
+board: phase table, test table, per-phase docs table, audit table.
 
 ---
 
@@ -410,17 +452,28 @@ after `/clear` or in a new session* above.
 
 ```
 plan-execute-verify/
-├── SKILL.md                        # the skill (frontmatter + workflow)
+├── SKILL.md                        # the skill: dispatch + shared contracts
 ├── README.md                       # this file
 ├── LICENSE                         # MIT
 ├── install-claude.sh               # symlink into ~/.claude/skills/
 └── references/
-    ├── output-template.md          # the canonical plan skeleton
+    ├── mode-plan.md                # plan mode: the A -> F workflow
+    ├── mode-execute.md             # execute mode: E1 -> E5
+    ├── mode-taskbug.md             # task and bug modes
+    ├── mode-verify.md              # verify mode: V1 -> V5
+    ├── output-template.md          # skeletons of the four plan files
+    ├── templates-ledger.md         # skeletons of tasks.md / bugs.md
+    ├── templates-audit.md          # skeletons of the verify report / register
     ├── agent-roster.md             # model roles + delegation + dispatch
     ├── token-economy.md            # token-minimization tactics
-    ├── quality-checklist.md        # the pre-return quality gate
+    ├── quality-checklist.md        # the pre-return quality gates
     └── worked-example.md           # a compact, project-agnostic filled plan
 ```
+
+`SKILL.md` carries only what every invocation needs — mode dispatch, agent
+assignment, the plan-folder convention, the session protocol, the coherence
+contract, token discipline. The per-mode operating manual is loaded after the
+mode is resolved, so a run pays for one mode, not five.
 
 ---
 
@@ -429,10 +482,12 @@ plan-execute-verify/
 - **Phase files are intentionally long.** That is front-loaded work (once, on
    the supervisor) that prevents repeated re-exploration spend (many times, across every
   implementation turn). Optimize total tokens across the whole feature, not the
-  size of individual files. overview.md and resume.md stay small by design.
+  size of individual files. overview.md stays small by design.
   See `references/token-economy.md`.
 - **Progressive disclosure.** `SKILL.md` stays lean; detail lives in
-  `references/` and is loaded only when needed.
+  `references/` and is loaded only when needed. The five modes are mutually
+  exclusive, so each one's workflow lives in its own reference file and only the
+  invoked mode's manual is read.
 - **Project-agnostic.** The examples use generic stacks; the skill works on any
   codebase and any test/lint/gate toolchain.
 

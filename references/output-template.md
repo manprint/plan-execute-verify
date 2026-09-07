@@ -1,61 +1,50 @@
-# Output templates — multi-file plan structure
+# Plan file templates — the multi-file plan structure
 
-The plan is a **folder**, not a single file.
-Path: always `docs/plans/<NNN>_plan-<FeatureName>/` under the repo root.
-`docs/` and `docs/plans/` are created if missing — plans never land in the repo
-root. `<NNN>` is the highest existing plan number plus one, zero-padded to 3
-digits (`001` first, then `002`, …), so the folder listing shows the plan order;
-gaps are never refilled and existing folders are never renumbered.
+The plan is a **folder**, not a single file, at the path given by SKILL.md's
+plan-folder convention. This file holds the three templates plan mode writes;
+`templates-ledger.md` holds the `task` / `bug` ledgers and
+`templates-audit.md` the `verify` report and register.
 
-Files to produce (plan mode; verify writes §5's report and the §8 register under
-`verify/`; task/bug append to the §6/§7 ledgers — all created on demand). The
-numbers below are this file's section numbers, not the writing order: write
-`overview.md`, then the phase files, then `resume.md`, then `STATE.md`.
+Writing order in plan mode: `overview.md`, then the phase files, then `STATE.md`.
+The section numbers below are this file's, not the writing order.
 
-1. `overview.md` — routing doc, small
-2. `resume.md` — progress tracker, small, LLM-readable
-3. `phase_01.md`, `phase_02.md`, … — one per phase, detailed
-4. `STATE.md` — detailed live execution state, initialized at plan creation,
-   read first at every session start, updated after every sub-phase
+`STATE.md` is the **single** execution-state file: position, progress board,
+ledger, in-flight work, deviations, blockers. There is no second status file.
 
 Full folder shape once the other modes have run:
 
 ```
 docs/plans/<NNN>_plan-<FeatureName>/
-├── overview.md
-├── resume.md
-├── STATE.md
-├── phase_01.md, phase_02.md, …
-├── tasks.md                       # §6 — created by the first `task`
-├── bugs.md                        # §7 — created by the first `bug`
-└── verify/                        # created by the first `verify`
-    ├── index.md                   # §8 — audit register, statuses of every finding
-    └── verify_<NNN>_<date>.md     # §5 — one durable report per audit
+├── overview.md                    # §1 — routing doc, small
+├── phase_01.md, phase_02.md, …    # §2 — one per phase, detailed
+├── STATE.md                       # §3 — the live execution state, read first
+├── tasks.md                       # created by the first `task`  (templates-ledger.md)
+├── bugs.md                        # created by the first `bug`   (templates-ledger.md)
+└── verify/                        # created by the first `verify` (templates-audit.md)
+    ├── index.md                   # audit register, status of every finding
+    └── verify_<NNN>_<date>.md     # one durable report per audit
 ```
 
-Repos with no plan yet keep ad-hoc work in `docs/plans/000_adhoc/`, which is
-**ledger-only**: it holds `tasks.md` and `bugs.md` (§6 and §7) and nothing else
-— no overview, no phase files, no `resume.md`, no `STATE.md`. It is never a
-`verify` or `execute` target.
+Repos with no plan keep ad-hoc work in `docs/plans/000_adhoc/`, **ledger-only**:
+`tasks.md` and `bugs.md` and nothing else. Never a `verify` or `execute` target.
 
-`<angle brackets>` = replace. `…` = repeat block as needed.
+`<angle brackets>` = replace. `…` = repeat the block as needed.
 
 ---
 
 ## 1. overview.md
 
-Small routing doc. `agent-1` authors this, or the single configured agent in
-single-agent mode. Goal: an agent can cold-start from this file alone and know
-where to go.
+Small routing doc, authored by `agent-1` (or the single configured agent). Goal:
+an agent can cold-start from this file alone and know where to go.
 
 ````markdown
 # <Feature name> — Plan Overview
 
 > **Status:** planning | **Authored:** <date> by `agent-1:<name>`
 > **Folder:** `docs/plans/<NNN>_plan-<FeatureName>/`
-> **Executing this plan? Read [STATE.md](STATE.md) FIRST** — it holds the live
-> position, environment, in-flight work, and the next action. Update it after
-> every sub-phase.
+> **Executing this plan? Read [STATE.md](STATE.md) FIRST** — it is the only
+> execution-state file: live position, progress board, environment, in-flight
+> work, next action. Open a unit in it before touching code, close it after.
 
 ## Goal
 <One paragraph. End state. Observable acceptance criterion.>
@@ -72,7 +61,9 @@ where to go.
 | **D2** | … | … |
 
 Rows answered by the user at the clarification gate carry the source, e.g.
-`D7 (user, Q3)`. Anything the user deferred goes below, not into a silent guess.
+`D7 (user, Q3)`. Anything the user deferred goes below, never into a silent guess.
+A decision superseded during execution gets a new row marked as superseding the
+old one, with reason and date; the deviation itself is recorded in `STATE.md` §8.
 
 ## Open questions
 
@@ -83,7 +74,7 @@ Rows answered by the user at the clarification gate carry the source, e.g.
 <"none — all clarifications resolved" when the user answered everything.>
 
 ## Architecture summary
-<2–4 lines. Core mechanism, data flow, key constraints. No detail — details live in phase files.>
+<2–4 lines. Core mechanism, data flow, key constraints. Details live in phase files.>
 
 ## Interface
 
@@ -107,9 +98,11 @@ Rows answered by the user at the clarification gate carry the source, e.g.
 |-------|------|--------------------|------------------|
 | 0 — <Scaffolding> | [phase_01.md](phase_01.md) | `agent-3:<name>` | yes |
 | 1 — <First slice> | [phase_02.md](phase_02.md) | `agent-2:<name>` | yes |
-| … | … | … | … |
+
+Live status of every phase is in `STATE.md` §11, never duplicated here.
 
 ## Reuse map (top candidates)
+
 | Need | Reuse | Location |
 |------|-------|----------|
 | <capability> | <symbol> | `path:line` |
@@ -128,6 +121,7 @@ Unverified points are marked `UNVERIFIED` and appear in **Open questions**.
 - **I-2:** …
 
 ## Risk register
+
 | Risk | Mitigation |
 |------|-----------|
 | <risk> | <mitigation + which phase proves it> |
@@ -138,10 +132,10 @@ Unverified points are marked `UNVERIFIED` and appear in **Open questions**.
 |------|---------|---------------|
 | fmt / lint / unit / e2e | `<cmd>` | <every phase, or the phase that introduces it> |
 
-**Acceptance:** the reference scenario is proven by <T-ID, T-ID> — <one line
-each on the assertion that makes it observable>.
+**Acceptance:** the reference scenario is proven by <T-ID, T-ID> — <one line each
+on the assertion that makes it observable>.
 **Run caveats:** <rebuild, ports, credentials, serial execution — or "none">.
-These commands are the same ones written into `STATE.md` §3; they must not drift.
+These commands are identical to `STATE.md` §3; they must not drift.
 
 ## Model-assignment summary
 
@@ -156,81 +150,37 @@ column reads "self-review".>
 
 ---
 
-## 2. resume.md
+## 2. phase_XX.md
 
-Machine-readable progress tracker. Small. LLM-reads this to cold-start or resume.
-`agent-1` initializes; the assigned implementer updates after every sub-phase.
-
-````markdown
-# <Feature name> — Resume
-
-> **Next:** phase_<NN>.md § <X.Y> — <sub-phase title>
-> **Last updated:** <date>
-> Status board only. Full execution state lives in [STATE.md](STATE.md); on any
-> disagreement, STATE.md wins. Update both after every sub-phase.
-
-## Phase status
-
-| Phase | File | Status | Notes |
-|-------|------|--------|-------|
-| 0 — <title> | phase_01.md | `TODO` | — |
-| 1 — <title> | phase_02.md | `TODO` | — |
-
-Status values: `TODO` · `IN_PROGRESS` · `DONE` · `SKIPPED` · `BLOCKED`
-
-## Tests
-
-| ID | Type | Status | Notes |
-|----|------|--------|-------|
-| T-<ID>1 | unit | `TODO` | <what it asserts> |
-| T-<ID>2 | e2e | `TODO` | <observable criterion> |
-
-## Docs
-
-One row per phase README sub-phase, so a partially documented feature is
-visible; other docs get their own rows.
-
-| Doc | Phase | Status | Notes |
-|-----|-------|--------|-------|
-| README.md | 0 | `TODO` | <sections that phase touches, or "no user-visible change"> |
-| README.md | 1 | `TODO` | <sections> |
-| <other doc> | <N> | `TODO` | — |
-
-## Open blockers
-- none
-
-## Decisions changed at runtime
-
-One line per superseding `D*` row added during execution; the reason and the
-impact live in `STATE.md` §8, not here.
-- none
-````
-
----
-
-## 3. phase_XX.md
-
-One file per phase. Detailed, self-contained. Implementer opens only this file.
-`agent-1` authors all phase files before handing off.
+One file per phase, 1-indexed and zero-padded (phase 0 → `phase_01.md`).
+Detailed and self-contained — the implementer opens only this file, cold, without
+`overview.md`. `agent-1` authors all phase files before handing off. **The only
+files allowed to be long.**
 
 ````markdown
 # Phase <N> — <Title>
 
-> **Intent:** <one-line. What this phase accomplishes.>
+> **Intent:** <one line. What this phase accomplishes.>
 > **Shippable alone?** yes/no — <why>
 > **Preconditions:** phase_<prev> DONE (or "none")
 
 ## State contract (mandatory)
 
-1. Before touching anything: read [STATE.md](STATE.md) and confirm it points at
-   a sub-phase in this phase. Run the gate commands listed in STATE.md **§3**
-   and check the result against what §1 and §7 claim; the repo wins, so correct
-   the file when they disagree.
-2. After **every** sub-phase below: update `STATE.md` (position, ledger, files
-   touched, in-flight work, verification, deviations, `Next action:`,
-   timestamp) and sync `resume.md`. A sub-phase is not done until this is done.
-3. If the session ends mid-sub-phase, write exactly what is half-finished into
-   `STATE.md` §6 before stopping.
+1. Before touching anything: read [STATE.md](STATE.md). If §1 `Status` is `OPEN`,
+   finish or revert that unit first (§6 says how far it got). Run the gate
+   commands in STATE.md **§3** and check the result against what §1, §7, and §11
+   claim; the repo wins, so correct the file when they disagree.
+2. **Open the sub-phase in STATE.md §1 before editing any code**: `Type:
+   sub-phase`, its `ID`, `Status: OPEN`, `Intent`, `Next action:`, and §6 set to
+   `claimed — nothing written yet`.
+3. **Close it after the gates are green**: append the §4 ledger row, reset §6 to
+   `none — tree consistent`, update §5 §7 §8 §9 §10 and the §11 board, point §1
+   at the next unit with `Status: none`, bump the timestamp. When STATE.md §3 has
+   WIP commits on, commit the closed sub-phase and put its sha in the §4 row. A
+   sub-phase is not done until this is written.
+4. If the session ends mid-sub-phase, leave §1 `OPEN` and write exactly what is
+   half-finished into §6 before stopping — plus a `wip(<N.Y>)` commit when WIP
+   commits are on.
 
 ---
 
@@ -241,11 +191,11 @@ One file per phase. Detailed, self-contained. Implementer opens only this file.
 - **Assignment:** <agent-N:name — responsibility, or self-review in single-agent mode>
 - **Files:** `path:line`, …
 - **Change:** <precise change. Cite reuse anchors: `path:line — symbol`. Cite the
-  external facts this sub-phase depends on as `R<n> — <fact> (<URL>)`, so the
-  file stays self-contained.>
+  external facts this sub-phase depends on as `R<n> — <fact> (<URL>)`, so the file
+  stays self-contained.>
 - **Unit tests:** `test_name` — <what it asserts>; …
 - **e2e tests:** T-<ID> — <observable pass/fail criterion>; or "none (no behavior change)"
-- **Done:** gates green (`<fmt>`, `<lint -D warnings>`, `<test>`) + <specific regression that must still pass> + `STATE.md` and `resume.md` updated
+- **Done:** gates green (`<fmt>`, `<lint -D warnings>`, `<test>`) + <specific regression that must still pass> + closed in `STATE.md` (§1 → next unit, §4 ledger row, §6 `none`, §11 board)
 
 ### <N.2> …
 
@@ -258,22 +208,22 @@ detail.
 - **Assignment:** <agent-N:name — documentation; agent-1 reads it on the final phase>
 - **Files:** `README.md` (repo root, or the project's existing README)
 - **Change:** update these sections for what **this phase actually made usable**:
-  <list the exact sections, e.g. "Usage → new `<cmd>` sub-command", "Configuration
-  → `<VAR>` (default `<x>`)", "Limitations → <constraint>">.
-  Include: what it does, install/requirements, how to run, commands and flags
-  with realistic examples and expected output, configuration and defaults,
-  notes, known limits, troubleshooting.
-  Exclude: module/class/function names, file layout, algorithms, refactoring
-  notes, phase or plan references, unshipped roadmap.
+  <the exact sections, e.g. "Usage → new `<cmd>` sub-command", "Configuration →
+  `<VAR>` (default `<x>`)", "Limitations → <constraint>">.
+  Include: what it does, install/requirements, how to run, commands and flags with
+  realistic examples and expected output, configuration and defaults, notes, known
+  limits, troubleshooting.
+  Exclude: module/class/function names, file layout, algorithms, refactoring notes,
+  phase or plan references, unshipped roadmap.
   Preserve the existing README structure, tone, and language; edit, do not rewrite.
-  <If the phase ships nothing user-visible: "No user-visible change in this
-  phase — verify the README is still accurate and leave it unchanged; record
-  that verification in STATE.md.">
+  <If the phase ships nothing user-visible: "No user-visible change in this phase —
+  verify the README is still accurate and leave it unchanged; record that
+  verification in STATE.md.">
 - **Unit tests:** none (documentation) — <or a docs/link/example check if the repo has one>
 - **e2e tests:** none — the examples in the README were executed and produced the documented output
 - **Done:** a new user can install and use this phase's feature from the README
   alone, with no source reading; no implementation detail present; gates green;
-  `STATE.md` and `resume.md` updated
+  closed in `STATE.md` with the §11 docs row set for this phase
 
 ---
 
@@ -287,58 +237,83 @@ detail.
   verified as still accurate), free of implementation detail
 
 ## Phase done criterion
-<Concrete, checkable statement. Observable behavior or test ID that proves this phase is complete.> README.md reflects this phase's shipped behavior.
+<Concrete, checkable statement. Observable behavior or test ID that proves this
+phase is complete.> README.md reflects this phase's shipped behavior, and
+`STATE.md` §11 shows this phase `DONE` with every sub-phase closed.
 ````
 
 ---
 
-## 4. STATE.md
+## 3. STATE.md
 
-The live execution state. `agent-1` **initializes this file at plan creation**
-(sections 0–3 filled, 4–10 empty-but-shaped, `Next action:` = first sub-phase,
-§9 carrying any question the user deferred at the clarification gate). Every
-implementer rewrites it after every sub-phase. It is self-describing on
-purpose: an agent with an empty context that opens only this file must be able
-to continue correctly.
+The **single** live execution-state file. `agent-1` **initializes it at plan
+creation** (§0–§3 and §11 filled, §4–§10 empty-but-shaped, §1 `Status: none` with
+`Next action:` = first sub-phase, §9 carrying any question the user deferred at
+the clarification gate). Every unit of work opens and closes in it.
+Self-describing on purpose: an agent with an empty context that opens only this
+file must be able to continue correctly.
 
-Rules: one line per ledger entry, no code dumps, no narrative. The only
-verbatim text allowed is failing gate/test output. Keep the ledger append-only;
-compress older rows to one line each rather than deleting them.
+Bounded: one line per ledger entry, no code dumps, no narrative. The only
+verbatim text allowed is failing gate/test output. The ledger is append-only —
+compress older rows to one line rather than deleting them.
 
 ````markdown
 # <Feature name> — Implementation State
 
 > **READ THIS FILE FIRST at the start of every session, before any other plan
-> file. UPDATE IT after every sub-phase and before any session ends.**
+> file. OPEN a unit in §1 before touching code; CLOSE it after the gates pass.**
 > **Last updated:** <date time> | **By:** <agent-N:name> | **Session:** <n>
 
 ## 0. Protocol
 
+This is the only execution-state file — position, progress, ledger, and blockers
+all live here. A **unit of work** is one sub-phase, one `task`, one `bug`, one
+`verify` audit, or one correction from a verify report.
+
 **Resume (cold start):**
 1. Read this file end to end.
-2. Run the gate commands listed in §3 and compare the result with what §1 and §7
+2. Read §1 `Status`:
+   - `OPEN` — a unit was claimed and may be half-written. Read §6, then finish or
+     revert it before starting anything new. If §3 has WIP commits on and `HEAD`
+     is a `wip:` commit, that commit is the in-flight work: its diff is what got
+     written, §6 says why it stopped. Finish and `amend` into the close commit,
+     or revert it.
+   - `none` — nothing in flight. Open the unit named in §1 `Next action:`.
+3. Run the gate commands in §3 and compare the result with what §1, §7, and §11
    claim. The repo is the truth; correct this file if it drifted.
-3. Open only the phase file named in §1 `Next action:`, at the named sub-phase.
-   Read `overview.md` only if §2 is insufficient for the work at hand.
-4. If §6 is non-empty, finish or revert that in-flight work before starting
-   anything new.
+4. Open only the file §1 points at: the phase file at the named sub-phase, or the
+   verify report for a correction. Read `overview.md` only if §2 is insufficient.
 
-**Update (after every sub-phase, mandatory):** rewrite §1, append to §4, update
-§5 §6 §7, add rows to §8 if the plan was deviated from, refresh §9 §10, bump
-the header timestamp, then sync `resume.md`. A sub-phase is not `DONE` until
-this is written.
+**Open a unit — before touching code, mandatory:** set §1 `Type`, `ID`,
+`Status: OPEN`, `Intent`, `Next action:`, `Assigned`; set §6 to `claimed —
+nothing written yet`; bump the header timestamp. Only then edit anything.
 
-## 1. Current position
+**Close a unit — after its gates are green, mandatory:** append a §4 ledger row;
+reset §6 to `none — tree consistent`; update §5, §7, §8, §9, §10 and the §11
+board; set §1 to the next unit with `Status: none`; bump the timestamp. When §3
+has WIP commits on, commit the closed unit — code, tests, this file, docs, ledger
+together — staging only the files in §5 plus the plan files, never `git add -A`,
+and record the sha in the §4 row. A unit is not `DONE` until this is written.
 
-- **Phase:** <N — title> (`phase_<NN>.md`) — status `<TODO|IN_PROGRESS|DONE>`
-- **Sub-phase:** <N.Y — title> — status `<...>`
-- **Next action:** `phase_<NN>.md` § <N.Y> — <first concrete step, imperative>
+**Interrupted mid-unit:** leave §1 `OPEN` and write into §6 exactly what is
+half-finished — files written, edits still pending, temporary code to remove.
+`OPEN` with an empty §6 is an execution bug. With WIP commits on, also commit
+that state as `wip(<id>): <what remains>`.
+
+## 1. Current unit
+
+- **Type:** `sub-phase | task | bug | verify | correction`
+- **ID:** <N.Y | T-A<NNN> | B-A<NNN> | V<NNN> | V<NNN>-C<n>>
+- **Status:** `OPEN` | `none`
+- **Intent:** <one line: what this unit changes>
+- **Phase:** <N — title> (`phase_<NN>.md`) — or `n/a — out-of-plan work`
+- **Next action:** <the next concrete step, imperative. When `Status: none`, the next unit to open.>
 - **Assigned:** `agent-N:<name>`
 - **Repo state:** branch `<branch>` | working tree `<clean|dirty>` | last commit `<sha> <subject>`
 
 ## 2. Feature context (self-contained recap)
 
-<3-6 lines: goal and end state. Enough to execute without opening overview.md.>
+<3–6 lines: goal and end state. Enough to execute without opening overview.md.>
 
 **Reference scenario:** <concrete observable acceptance test>
 **Hard constraints:** <backward-compat, perf, no-new-deps, …>
@@ -353,27 +328,35 @@ The authoritative gate commands. Identical to the phase gates and to
 - **Build:** `<cmd>` · **Fmt:** `<cmd>` · **Lint:** `<cmd>`
 - **Unit tests:** `<cmd>` · **E2E:** `<cmd>`
 - **Setup / caveats:** <env vars, services, ports, rebuild or permission quirks>
+- **WIP commits:** `off` <or `on` — set <date> by `agent-N:<name>`. When `on`,
+  every closed unit is committed locally on the current branch and an
+  interruption leaves a `wip(<id>)` commit. Never pushed.>
 
-## 4. Work ledger (append-only, one line per sub-phase, task, or bug fix)
+## 4. Work ledger (append-only, one row per closed unit)
 
-`Phase.Sub` carries the sub-phase for planned work and the ledger ID
-(`T-A<NNN>` / `B-A<NNN>`) for ad-hoc work. `Commit` is the sha when one exists,
-`uncommitted` otherwise — this skill does not commit on its own.
+Every unit type shares this ledger, in the order it closed. `ID` is the sub-phase
+(`N.Y`), the ad-hoc ledger ID (`T-A<NNN>` / `B-A<NNN>`), the report (`V<NNN>`), or
+the correction (`V<NNN>-C<n>`). `Commit` is the sha when one exists, `uncommitted`
+otherwise — with WIP commits off this skill does not commit on its own, so
+`uncommitted` is the honest value.
 
-| # | Phase.Sub | Agent | What changed | Files | Gates | Commit |
-|---|-----------|-------|--------------|-------|-------|--------|
-| 1 | <N.Y> | `agent-N:<name>` | <one line> | <n files> | `green|red` | `<sha|uncommitted>` |
+| # | Type | ID | Agent | What changed | Files | Gates | Commit |
+|---|------|----|-------|--------------|-------|-------|--------|
+| 1 | `sub-phase` | <N.Y> | `agent-N:<name>` | <one line> | <n> | `green|red` | `<sha|uncommitted>` |
+| 2 | `task` | T-A001 | `agent-N:<name>` | <one line> | <n> | `green` | `uncommitted` |
+| 3 | `verify` | V001 | `agent-1:<name>` | <verdict + finding counts> | 0 | `red` | — |
 
 ## 5. Files touched
 
-| Path | What was done | Phase.Sub |
-|------|---------------|-----------|
-| `<path>` | <created / modified: what> | <N.Y> |
+| Path | What was done | Unit |
+|------|---------------|------|
+| `<path>` | <created / modified: what> | <N.Y | T-A<NNN> | …> |
 
 ## 6. In-flight work
 
-<`none — tree consistent`, or: exactly what is half-finished — edits written,
-edits still pending, temporary code or TODO markers to remove, why it stopped.>
+<`none — tree consistent`, or `claimed — nothing written yet`, or: exactly what is
+half-finished — edits written, edits still pending, temporary code or TODO markers
+to remove, why it stopped.>
 
 ## 7. Verification state
 
@@ -388,13 +371,17 @@ edits still pending, temporary code or TODO markers to remove, why it stopped.>
 
 ## 8. Runtime deviations from the plan
 
+One row per deviation, including a superseded `D*` decision (the new row itself
+goes in `overview.md`) and every edit made to a not-yet-executed phase file.
+
 | # | Plan said | What was done | Why | Impact on later phases |
 |---|-----------|---------------|-----|------------------------|
 
 ## 9. Blockers and open questions
 
 <Questions the user deferred at the clarification gate, each with the default
-applied and the sub-phase it affects; plus anything blocking execution now.>
+applied and the unit it affects; every `OPEN` `BLOCKER` finding by ID; plus
+anything blocking execution now.>
 - none
 
 ## 10. Do-not-repeat
@@ -402,214 +389,67 @@ applied and the sub-phase it affects; plus anything blocking execution now.>
 <Dead ends already tried and rejected, with the one-line reason. Prevents a
 resumed session from re-spending tokens on a known-bad path.>
 - none
+
+## 11. Progress board
+
+Whole-plan status at a glance. Updated when a unit closes; never allowed to
+disagree with §1 and §4.
+
+### Phases
+
+| Phase | File | Status | Notes |
+|-------|------|--------|-------|
+| 0 — <title> | phase_01.md | `TODO` | — |
+| 1 — <title> | phase_02.md | `TODO` | — |
+
+Status values: `TODO` · `IN_PROGRESS` · `DONE` · `SKIPPED` · `BLOCKED`
+A `SKIPPED` sub-phase or phase keeps its row and carries the reason.
+
+### Tests
+
+| ID | Type | Status | Notes |
+|----|------|--------|-------|
+| T-<ID>1 | unit | `TODO` | <what it asserts> |
+| T-<ID>2 | e2e | `TODO` | <observable criterion> |
+
+### Docs
+
+One row per phase README sub-phase, so a partially documented feature is visible;
+other docs get their own rows.
+
+| Doc | Phase | Status | Notes |
+|-----|-------|--------|-------|
+| README.md | 0 | `TODO` | <sections that phase touches, or "no user-visible change"> |
+| <other doc> | <N> | `TODO` | — |
+
+### Audits
+
+One row per verify report, so the audit history is visible from the entry point.
+Findings themselves live in `verify/index.md`.
+
+| Report | Date | Verdict | Open findings |
+|--------|------|---------|---------------|
+| <none yet> | — | — | — |
 ````
 
 ---
 
-## 5. verify/verify_<NNN>_<YYYY-MM-DD>.md (verify mode only)
-
-Written by `/plan-execute-verify verify` into `<plan-folder>/verify/` (created on
-demand), with the same content printed in chat. `<NNN>` is the highest existing
-report number plus one, zero-padded to 3 digits; earlier reports are never
-overwritten or renumbered. The filename carries the bare number, the report ID
-carries the prefix (`V<NNN>`), and finding IDs are global and stable:
-`V<NNN>-F<n>`.
-
-The report is a durable artifact: its correction plan must be executable later
-by `/plan-execute-verify execute verify`, from this file alone, in a fresh session.
-Write the corrections to the same standard as a phase file's sub-phase.
-
-````markdown
-# <Feature name> — Verification report
-
-> **Report:** `V<NNN>` | **Verdict:** `PASS | PASS WITH FINDINGS | FAIL`
-> **Date:** <date> | **Auditor:** <agent-1:name>
-> **Plan:** `docs/plans/<NNN>_plan-<FeatureName>/` | **Register:** [index.md](index.md)
-> **Reviewed:** phases <list> | commits `<sha>..<sha>` | tree `<clean|dirty>`
-> **Carried over:** <n> findings still `OPEN` from earlier reports
-
-## Phase results
-
-| Phase | Claimed | Verified | Findings |
-|-------|---------|----------|----------|
-| <N — title> | `DONE` | `DONE | PARTIAL | DIVERGENT | NOT_DONE` | <n> (<b> blocker) |
-
-## Findings
-
-### V<NNN>-F<n> — <one-line title>
-- **Status:** `OPEN` <updated to `FIXED` / `ACCEPTED` / `OBSOLETE` when closed, with date and evidence>
-- **Severity:** `BLOCKER | MAJOR | MINOR`
-- **Category:** missing · divergent · untested · failing-gate · rule-violation · scope-creep · regression · stale-state · unfixed-regression
-- **Where:** `path:line` — plan ref `phase_<NN>.md § <N.Y>` (or `D<n>` / `I-<n>` / `T-<ID>` / `R<n>` / `T-A<NNN>` / `B-A<NNN>`)
-- **Expected:** <one line, quoted from the plan>
-- **Actual:** <one line, evidence from the repo>
-- **Impact:** <why it matters>
-- **Correction:** <the concrete fix>
-
-## Findings carried over
-
-| ID | From | Severity | Title | Status now | Evidence |
-|----|------|----------|-------|------------|----------|
-| V<NNN>-F<n> | `verify_<NNN>_<date>.md` | `MAJOR` | <title> | `FIXED | OPEN | ACCEPTED | OBSOLETE` | <path:line or command output> |
-
-## Verified clean
-
-| Dimension | Result | Evidence |
-|-----------|--------|----------|
-| Completeness / Fidelity / Tests / Gates / Decisions / Invariants / External facts / Plan rules / Scope / State / Ad-hoc reconciliation / Previous findings | `ok` | <command output or `path:line`> |
-
-## Gate results
-
-| Gate | Command | Result |
-|------|---------|--------|
-| fmt / lint / unit / e2e | `<cmd>` | `pass | fail | could-not-run` |
-
-## Ad-hoc work
-
-| ID | What it changed | Reconciled with the plan? | Findings |
-|----|-----------------|---------------------------|----------|
-| T-A<NNN> / B-A<NNN> | <one line> | yes / no — <what is missing> | <finding IDs or none> |
-
-<Plus any diff hunk explained by neither the plan nor a ledger entry.>
-
-## Correction plan
-
-Executable by `/plan-execute-verify execute verify` (or `execute verify V<NNN>`
-for an older report) from this file alone. One block per correction, ordered
-blockers first.
-
-### C<n> — closes <V<NNN>-F<n>>
-- **Severity:** `BLOCKER | MAJOR | MINOR`
-- **Belongs to:** `phase_<NN>.md § <N.Y>` (or `T-A<NNN>` / outside any phase)
-- **Reopens a DONE phase:** yes/no — <if yes, the phase goes back to `IN_PROGRESS`>
-- **Files:** `path:line`, …
-- **Change:** <the smallest change that closes the finding, step by step>
-- **Test:** `<test name>` — <assertion that proves the finding is closed>
-- **Done:** <checkable condition> + gates green + `STATE.md` / `resume.md` /
-  `index.md` updated
-
-## State re-sync
-
-<Exact edits `STATE.md`, `resume.md`, and the ledgers need to match reality. "none — state accurate" when they already do.>
-
-## Not verifiable
-
-<What could not be checked and why. Flagged doubts with no repo evidence go here, never in Findings.>
-- none
-````
-
----
-
-## 6. tasks.md (task mode ledger)
-
-Created on demand in the plan folder by the first `/plan-execute-verify task`. Append
-only; entries are never edited away. This is what tells a later `verify` that an
-out-of-plan change was intentional. In `docs/plans/000_adhoc/` (no plan in the
-repo) this file and `bugs.md` are the only files, and **Plan impact** reads
-`n/a — no plan`.
-
-````markdown
-# <Feature name> — Task ledger
-
-> Out-of-plan changes made with `/plan-execute-verify task`. Append-only.
-> IDs are never reused. Every entry must be reconciled with the plan.
-
-## T-A<NNN> — <one-line title>
-- **Date:** <date> | **Agent:** <agent-N:name>
-- **Request:** <what the user asked for, one line>
-- **Change:** <what was actually done, one line per file group>
-- **Files:** `path:line`, …
-- **Tests:** `<test name>` — <assertion>; or "none — <explicit reason>"
-- **Gates:** `<cmd>` → pass | fail
-- **README:** updated `<sections>` | not user-visible
-- **Plan impact:** none | <what was reconciled: superseding `D<n>`, adjusted
-  `I-<n>`, edited `phase_<NN>.md § <N.Y>`, sub-phase marked `SKIPPED`, new
-  sub-phase added>
-- **Related:** phase <N> § <N.Y> (or "outside any phase")
-````
-
----
-
-## 7. bugs.md (bug mode ledger)
-
-Same rules as `tasks.md`, plus the diagnosis. A bug entry without a root cause
-and a regression test is incomplete. In `docs/plans/000_adhoc/`, **Plan impact**
-reads `n/a — no plan`.
-
-````markdown
-# <Feature name> — Bug ledger
-
-> Defects fixed with `/plan-execute-verify bug`. Append-only.
-> IDs are never reused. Every entry must be reconciled with the plan.
-
-## B-A<NNN> — <one-line title>
-- **Date:** <date> | **Agent:** <agent-N:name> | **Severity:** <blocker|major|minor>
-- **Symptom:** <observable failure: command/input → wrong result>
-- **Reproduction:** `<command or test that showed it>`
-- **Root cause:** <one line> — `path:line`
-- **Fix:** <what changed, one line per file group>
-- **Files:** `path:line`, …
-- **Regression test:** `<test name>` — fails before the fix, passes after
-- **Gates:** `<cmd>` (full suite) → pass | fail
-- **README:** updated `<sections>` | not user-visible
-- **Plan impact:** none | <a plan assumption proved wrong: superseding `D<n>`,
-  adjusted `I-<n>`, edited pending `phase_<NN>.md § <N.Y>` that shared the
-  faulty assumption>
-- **Related:** phase <N> § <N.Y> (or "outside any phase")
-````
-
----
-
-## 8. verify/index.md (audit register)
-
-The entry point of the audit trail. `verify` creates it with the first report,
-appends to it on every run, and updates finding statuses; `execute verify`
-updates the status of every finding it closes. It must stay small — it is a
-register, not a copy of the reports.
-
-A later session reads **this file** to know what is still open, without opening
-any report.
-
-````markdown
-# <Feature name> — Audit register
-
-> Findings never disappear: they move to `FIXED`, `ACCEPTED`, or `OBSOLETE`,
-> always with evidence. Statuses here and in the reports must agree.
-
-## Reports
-
-| # | File | Date | Verdict | Blocker | Major | Minor | Auditor |
-|---|------|------|---------|---------|-------|-------|---------|
-| V001 | [verify_001_<date>.md](verify_001_<date>.md) | <date> | `PASS WITH FINDINGS` | 0 | 2 | 1 | <agent-1:name> |
-
-## Findings
-
-| ID | Severity | Category | Title | Status | Closed by | Evidence |
-|----|----------|----------|-------|--------|-----------|----------|
-| V001-F01 | `MAJOR` | divergent | <one-line title> | `OPEN` | — | — |
-| V001-F02 | `MAJOR` | untested | <one-line title> | `FIXED` | `execute verify` <date> | `<test name>` passes |
-
-Status values: `OPEN` · `FIXED` · `ACCEPTED` (user decided to live with it, with
-the reason) · `OBSOLETE` (no longer applies, with the reason)
-
-## Open blockers
-- none
-````
-
----
-
-## Notes on filling it well
+## Filling these well
 
 - **overview.md stays small.** If detail creeps in, move it to the phase file.
-- **resume.md is for the agent, not the user.** Dense, no prose. Update it after every sub-phase.
-- **STATE.md is initialized by the planner, never left empty.** It is the only
-  file guaranteed to be read on a cold start, so §0 §2 §3 must stand alone.
-- **resume.md = status board; STATE.md = execution state.** No duplication of
-  detail: resume.md holds statuses and the `Next:` line, STATE.md holds
-  position, ledger, in-flight work, deviations, failures, dead ends. On
-  disagreement, STATE.md wins.
-- **phase files are the only place allowed to be long.** Anchors, precise changes, named tests — length here saves downstream re-exploration.
-- **phase_NN numbering is 1-indexed, zero-padded** (`phase_01.md`, `phase_02.md`, …). Phase 0 (scaffolding) → `phase_01.md`.
+- **STATE.md is initialized by the planner, never a stub.** It is the only file
+  guaranteed to be read on a cold start, so §0 §2 §3 must stand alone.
+- **One state file, no second status board.** Position, progress, ledger,
+  blockers, and audit history are all in `STATE.md`. Nothing outside it may claim
+  a status, so nothing can disagree with it.
+- **§1 is a claim, not a report.** It is written before the work, so an
+  interrupted session finds either `OPEN` with §6 explaining how far it got, or
+  `none` with a `Next action:`. There is no third state. With WIP commits on, the
+  `wip:` commit at `HEAD` carries the same information as a diff, which is
+  stronger than prose: §6 explains, git proves.
+- **Phase files are the only place allowed to be long.** Anchors, precise changes,
+  named tests — length here saves downstream re-exploration.
 - **Tests are not optional and not vague.** Name them. State the assertion.
-- **Done-criteria must be checkable** by someone who didn't write the plan.
-- **Mark behavior changes loudly.** If a default flips or an existing test must change, call it out with a blockquote in that sub-phase.
+- **Done-criteria must be checkable** by someone who did not write the plan.
+- **Mark behavior changes loudly.** A flipped default or an existing test that
+  must change gets a blockquote in that sub-phase.
