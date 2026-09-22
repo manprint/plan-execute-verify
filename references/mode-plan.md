@@ -23,7 +23,7 @@ it, preserve that limitation rather than promising automatic review.
 Separate questions requiring the user's product decision from technical choices
 the strong supervisor is authorized to make.
 
-## B — Focused recon
+## B1 — Repository recon
 
 Gather exact paths, symbols/signatures, relevant callers, repository conventions,
 test fixtures, command syntax, setup requirements, existing failures, and reuse
@@ -35,17 +35,33 @@ boundaries, concurrency/lifecycle, schema compatibility, public interfaces, and
 acceptance assertions. A weaker agent's summary is a locator, not proof of those
 contracts. Read enough surrounding code and tests to validate the proposed change.
 
-Research official external documentation when touching a library/service API,
-protocol, version-specific behavior, migration, or security contract. Prefer the
-pinned version. Ask focused questions; record compact facts with URL/version as
-R<n>. Unconfirmed facts remain UNVERIFIED and block their dependent work. Purely
-internal changes can state that no external research was needed.
+## B2 — Targeted internet research
+
+After B1, read [research.md](research.md). Identify material external questions
+from the actual repository versions and constraints, then investigate the
+applicable primary sources before fixing the design. Compare approaches only
+where the choice affects correctness or the approved requirements.
+
+Record R<n> evidence in overview.md: question, source/version/dates, supported
+fact, separately labelled inference/local result, and decision impact. The strong
+planner checks critical passages directly. Preserve unresolved required questions
+as UNVERIFIED with scoped blockers; no executable READY plan depends on them.
+For entirely internal work with no external unknown, record justified N/A.
+
+Use the research stopping and privacy rules. Initialize the minimal DRAFT state
+described there before research starts; persist evidence as it is gathered and
+save the next question/lookup at checkpoints or interruption.
+This is a planning step, not an implementation sub-phase or a new commit unit;
+planning still writes no production code and makes no commits.
 
 ## C — Design and resolve ambiguity
 
 Write decisions D<n> with consequences; define interfaces, error behavior,
 compatibility, invariants I-<n>, and architecture. Decide algorithms and data
 representations before handing complex work to the weakest worker.
+Translate the R<n> results into these decisions and the later local phase
+contracts/tests. Record relevant alternatives rejected and why; do not hand a
+worker only links or an unresolved instruction to choose the best approach.
 
 Ask the user only about unresolved requirements, externally visible tradeoffs,
 scope, or authority that existing instructions do not settle. Present relevant
@@ -112,13 +128,17 @@ contract; lack of detail requires refinement before dispatch.
 
 ## E — Write the handoff
 
-Write overview.md, phase files, then STATE.md using output-template.md.
+Complete overview.md and phase files, then finish STATE.md using output-template.md.
+Preserve any DRAFT research checkpoint/evidence initialized in B2; do not discard
+it when expanding the state to the full handoff template.
 
 overview.md is a small design/routing reference: goal/reference scenario,
 decisions with authority/source, unresolved questions, architecture, interfaces,
 compatibility, phase/file map, reuse map, references, invariants, risks,
 verification strategy, and the roster summary as its last section. Link readers
 to STATE.md for all live progress.
+The research/evidence register in overview.md retains source provenance and
+question-to-decision traceability; phase excerpts carry its operative conclusions.
 
 Each phase file is independently understandable together with STATE.md and the
 relevant repository slices. Include local decision/invariant excerpts, dependency

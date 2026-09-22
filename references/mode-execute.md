@@ -23,6 +23,13 @@ Run applicable baseline/resume checks. A future gate whose owning unit has not
 created its target is not applicable yet, not a failure to repair by improvisation.
 A required active gate that cannot run remains blocked.
 
+Reuse the plan's applicable research instead of starting a new search per unit.
+For changed versions/environments, contradictory behavior, stale time-sensitive
+claims, or missing external contracts, follow [research.md](research.md): checkpoint
+the affected step and obtain targeted evidence plus supervisor-approved contract
+updates before dependent implementation. Record the revision and revalidation;
+full autonomy does not let a weak worker substitute an unapproved design.
+
 ## E2 — Select an eligible unit
 
 Use the next eligible unit in scope, respecting order and explicit dependencies.

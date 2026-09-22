@@ -230,11 +230,44 @@ The supervisor resolves technical plan defects and records revisions and affecte
 dependencies. These checks reduce ambiguity; they do not replace actual testing
 and review of the resulting software.
 
+## Internet research: where it fits
+
+Plan first inspects the repository, then performs targeted internet research
+before choosing the design and writing implementation sub-phases. The strong
+planner investigates concrete questions: API behavior, compatible versions,
+architectural alternatives, migration constraints, and security assumptions.
+Entirely internal, established changes can record that research is not needed.
+
+No new option is required. To request a particular focus, include it in the
+planning description, for example:
+
+```text
+/plan-execute-verify plan add resumable uploads; investigate the existing storage provider's official guarantees and compare retry strategies before choosing the design
+```
+
+The planner checks primary sources for the versions actually used and records
+questions, URLs/provenance, version/dates, conclusions, and decision impact in
+overview.md. Facts, inferences, and local experiments are labelled separately.
+The phase files contain the resulting concrete rules and tests: workers do not
+receive only links they must interpret or design questions they must settle.
+
+Research stops when the necessary questions are answered and the resulting
+decisions are explicit. Unresolved required facts prevent READY; unavailable
+browsing is disclosed, not treated as successful verification. Applicable local
+primary documentation/source can supply evidence, but cannot establish freshness
+it does not have. Private code, secrets, and identifying data stay out of queries.
+
+During Execute, Task or Bug, research is reopened only for relevant new evidence,
+changed versions, or missing/contradictory assumptions; design revisions stay with
+the supervisor. Verify checks relevant claims and records evidence or limitations
+without redesigning or fixing the code. `full-autonomous:true` changes neither
+these boundaries nor the requirement for sufficient evidence.
+
 ## Files you will see
 
 ```text
 docs/plans/003_plan-RateLimit/
-  overview.md       Goal, approved decisions, interfaces, and phase map
+  overview.md       Goal, decisions, research evidence, interfaces, phase map
   phase_01.md       Detailed sub-phases for logical phase 0
   phase_02.md       Detailed sub-phases for logical phase 1
   STATE.md          Readiness, scope, settings, checkpoints, evidence, progress
@@ -282,12 +315,17 @@ availability and the mechanism for starting subagents come from the host.
 
 [Skill entrypoint](SKILL.md) · [Execution contract](references/execution-contract.md) ·
 [Plan templates](references/output-template.md) ·
+[Research protocol](references/research.md) ·
 [Worked example](references/worked-example.md) ·
 [Quality checklist](references/quality-checklist.md)
 
-### Validation of this revision (2026-09-22)
+### Validation scope (2026-09-22)
 
 Skill structure validation, static local-link checks, and `git diff --check` pass.
+These checks include the research protocol and its templates; the research
+workflow has not yet been exercised end-to-end with live sources.
+
+The execution protocol was checked separately before the research addition:
 An independent scenario review checked scope limits, interrupted completion,
 disabled commits, audit suspension, and missing-design escalation.
 

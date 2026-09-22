@@ -29,6 +29,14 @@ Use focused repository inspection, optionally delegated in a batched read-only
 probe. The strong auditor inspects critical contracts, diffs, and assertions
 directly. State is a claim; worker summaries are evidence locators.
 
+For relevant external assumptions, use [research.md](research.md). Check recorded
+facts against the actual dependency versions/environment and refresh evidence
+when stale, conflicting, or insufficient. Keep new evidence in the report with
+source/version/dates and original R IDs; do not revise the plan's specifications
+or conduct an unrelated architecture survey. Distinguish documented facts from
+inferences/local observations. Missing required evidence is Not verifiable and
+prevents PASS; a proven contradiction is an evidenced finding.
+
 For each claimed completion verify the specified behavior, symbols/wiring, tests
 and their discovery, docs, dependencies, required review, and applicable gates.
 Resolve required completion commits by plan/unit/attempt/result trailers; legacy

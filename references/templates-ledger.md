@@ -25,6 +25,9 @@ Use execution-contract.md for ownership, settings, recovery, reviews, and commit
 - Files: <read/write paths, symbols, owned changes>
 - Contract: <inputs, outputs, errors, preserved behavior, exclusions>
 - Preconditions: <concrete prerequisites>
+- Research: <applicable plan R IDs, or in 000_adhoc the question, source/version/
+  dates, supported fact, labelled inference/local result and decision impact;
+  justified N/A when not needed. Required UNVERIFIED claims block implementation.>
 - Steps:
   1. S1 — <action>; expected <postcondition>.
   2. S2 — <action>; expected <postcondition>.
@@ -34,7 +37,8 @@ Use execution-contract.md for ownership, settings, recovery, reviews, and commit
 ### Checkpoint
 <In a real plan link STATE.md §6; do not duplicate live state here.
 In 000_adhoc: OPEN|DONE|BLOCKED, owner, completed steps, actual changes, next step,
-last checks, pending resources, and stop reason. Persist before handoff.>
+last checks, pending resources, and stop reason. If research is active, retain
+inspected sources, unanswered questions, and next lookup. Persist before handoff.>
 
 ### Outcome and evidence
 - Changes: <actual changes>

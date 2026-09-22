@@ -9,6 +9,12 @@ input/output/error contract, numbered steps with postconditions, named tests,
 review requirements, and done criterion. Save it before editing so a model/session
 handoff can resume without chat history.
 
+For a material external unknown, follow [research.md](research.md) before the
+dependent edit: reuse applicable evidence or run a targeted lookup, with design
+impact resolved by the supervisor. Record the evidence in the real plan's R
+register or, for 000_adhoc, in this unit's ledger entry. Research stays within
+the requested change; unavailable required evidence blocks the dependent work.
+
 With a real plan, open the unit in STATE.md and link its ledger entry. Without
 one, create an OPEN entry in docs/plans/000_adhoc/tasks.md or bugs.md before code
 edits; that entry holds settings, owner, baseline, mini-plan, checkpoint, and

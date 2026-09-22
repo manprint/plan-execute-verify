@@ -215,6 +215,15 @@ planner checks critical source contracts even when recon came from a weaker
 agent. Implementers inspect the exact symbols, callers, and tests they modify.
 Line numbers are hints; paths, symbols, and expected contracts are the anchors.
 
+Plan includes repository recon followed by targeted internet research before
+design decisions. Use [research.md](references/research.md) for material external
+questions: primary sources, version applicability, privacy, evidence records,
+and a stopping condition. The strong planner converts conclusions into local
+contracts/tests; links alone are not a worker handoff. Execute/task/bug revisit
+research only when needed; Verify checks relevant assumptions without redesign.
+Required unverified claims prevent READY or dependent implementation. No extra
+research flag is needed; research does not change full-autonomous or commit scope.
+
 Phase files must include the decisions and invariants they need, with their
 meaning, not unexplained tags. Preserve the seven top-level sub-phase fields,
 but give Change explicit prerequisites, contracts, ordered steps, checkpoints,
@@ -237,6 +246,8 @@ and evidence. See [token economy](references/token-economy.md).
   [ledger templates](references/templates-ledger.md),
   [audit templates](references/templates-audit.md): read the template being written
 - [Agent roster](references/agent-roster.md): assignments, handoffs, and reviews
+- [Research](references/research.md): Plan B2 and targeted external questions
+  during implementation/audit; preserve evidence without repeating discovery
 - [Quality checklist](references/quality-checklist.md): mode-specific final checks
 - [Token economy](references/token-economy.md): cost reductions that preserve correctness
 - [Worked example](references/worked-example.md): an authoring/evaluation aid;

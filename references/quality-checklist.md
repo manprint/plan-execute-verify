@@ -20,8 +20,15 @@ An unresolved required item prevents READY or implementation DONE.
       rereading overview.md or relying on the planner's conversation.
 - [ ] Critical source contracts were checked by the strong planner, not accepted
       solely from a weaker recon summary.
-- [ ] External facts are confirmed for pinned versions or explicitly N/A.
-      Required UNVERIFIED facts block readiness.
+- [ ] After repository recon, material external questions were researched with
+      applicable primary sources, or internal work has a justified N/A.
+- [ ] Research records include question, source/provenance, version/environment,
+      dates, decision impact, and separately labelled facts/inferences/local results.
+      Critical sources were checked by the supervisor; required UNVERIFIED claims
+      block readiness. Browsing limitations are not disguised as confirmation.
+- [ ] Research conclusions are translated into local contracts, steps and test
+      oracles; no worker must infer the design from a reading list. Material
+      alternatives/contradictions are resolved; no aimless source accumulation.
 - [ ] Named tests have locations, fixtures, exact assertions, valid commands,
       setup, activation stages, and intended discovery evidence.
 - [ ] Unit, phase, baseline, and final gates are distinguished; future gates do not
@@ -52,6 +59,9 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Required reviewer actually inspected the relevant design/diff/evidence.
 - [ ] Supervisor-authorized technical revisions preserve requirements and update
       dependent contracts; historical specifications were not rewritten to hide defects.
+- [ ] Version/environment changes or contradicted external assumptions triggered
+      targeted research where needed; evidence, contracts and affected tests were
+      updated under supervisor authority before dependent work continued.
 - [ ] README covers affected behavior or, for a planned implementation sub-phase,
       an exact pending README sub-phase owns the obligation. Phase closure never
       defers it; tasks/bugs/corrections finish their own affected docs. Language
@@ -77,6 +87,9 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Relevant modified units audited even if the board incorrectly says TODO.
 - [ ] All twelve dimensions in mode-verify.md covered with evidence.
 - [ ] Critical source and acceptance contracts inspected by the strong auditor.
+- [ ] Relevant research claims match actual versions and applicable primary
+      evidence; missing required proof prevents PASS. New evidence is recorded
+      in the report, not used to silently rewrite the plan or implement fixes.
 - [ ] Applicable gates actually ran; missing required evidence recorded.
 - [ ] Phase/sub-phase statuses, dependency claims, review records, and completion
       commit identities validated against the repository.

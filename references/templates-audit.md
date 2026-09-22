@@ -48,6 +48,14 @@ Scope limitations: <none or concrete missing evidence>.
 | Ledger ID / unexplained change | Plan impact | Evidence / findings |
 |-------------------------------|-------------|---------------------|
 
+## Research evidence checked
+<Relevant original R IDs, or V<NNN>-R<n> for new report-local questions; justified
+N/A if no external assumptions. For each, record the question, primary source/
+section or local provenance, version/environment, source/access dates, supported
+fact, separately labelled inference/local check, and affected audited unit/finding.
+Keep unavailable/conflicting required evidence under Not verifiable too. These
+records do not authorize editing overview.md or phase specifications during Verify.>
+
 ## Correction plan
 Readiness: READY | BLOCKED — <supervisor validation, or unresolved questions,
 affected correction IDs, resolution owner and exact next action>.
