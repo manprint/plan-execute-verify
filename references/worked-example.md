@@ -1,530 +1,199 @@
-# Worked example — multi-file plan
-
-Feature: **add per-API-key rate limiting to an HTTP gateway** (`gw`).
-Shows every file type produced (overview, phase files, STATE) with the
-configured assignment `agent-1:opus,agent-2:sonnet,agent-3:haiku`. Real plans are
-longer; copy the *structure* and *per-sub-phase discipline*, not the content.
-
-Folder: `docs/plans/001_plan-RateLimit/`
-
-Note: the mandatory closing `Update README.md` sub-phase is present in **every**
-phase, as the rules require; it is spelled out in full only in phase 3 to keep
-this example short.
-
----
-
-## File 1 — overview.md
-
-````markdown
-# Per-API-key Rate Limiting — Overview
-
-> **Status:** planning | **Authored:** 2026-06-25 by `agent-1:opus`
-> **Folder:** `docs/plans/001_plan-RateLimit/`
-> **Executing this plan? Read [STATE.md](STATE.md) FIRST** — it holds the live
-> position, environment, in-flight work, and the next action. Update it after
-> every sub-phase.
-
-## Goal
-Reject requests from a key that exceeds its configured rate with `429`, without
-measurably slowing keys under their limit.
-
-```
-config: key "k1" → 10 req/s, key "k2" → unlimited
-drive 20 req/s on k1  → ~10/s pass, rest 429 with Retry-After
-drive 20 req/s on k2  → all pass
-under-limit p99 latency within +50µs of baseline
-```
-
-## Design decisions
-
-| # | Decision | Consequence |
-|---|----------|-------------|
-| **D1** | Token-bucket per key, in-process | No external store v1; one `DashMap<KeyId, Bucket>` |
-| **D2** | Limiter opt-in via `--rate-limit` (default off) | Off = current behavior byte-for-byte |
-| **D3** | Unlimited keys skip the map entirely | No lock/alloc for unconfigured keys |
-| **D4 (user, Q1)** | `429` carries `Retry-After` in seconds | Clients can back off; header value is integer seconds (R1) |
-| **D5 (user, Q2)** | Quota `0` means "reject all", not "unlimited" | Documented in the README; `zero_quota_parses` asserts it |
-
-## Open questions
-
-| # | Question | Assumed default in this plan | Affects |
-|---|----------|------------------------------|---------|
-| Q3 | Should limits reload on SIGHUP? | no — limits load at boot only; deferred to a later plan | phase 2 § 2.1 |
-
-## Architecture summary
-Middleware after auth: look up the key's quota; no quota → pass (D3); quota →
-`bucket.try_take()` → pass or `429`. `RateConfig = HashMap<KeyId, Quota>` loaded
-at boot; `Buckets = Arc<DashMap<KeyId, AtomicBucket>>` filled lazily.
-
-## Interface
-
-| Surface | Name | Type / values | Default | Notes |
-|---------|------|---------------|---------|-------|
-| CLI flag | `--rate-limit <PATH>` | path to a TOML file | absent = limiter off | absent flag keeps the current fast path (D2) |
-| Config file | `[limits]` table | `<key> = <req/s>` (u32) | none | `0` rejects all requests for that key (D5) |
-
-## Protocol and data-structure changes
-
-| Change | Shape | Backward-compat strategy |
-|--------|-------|--------------------------|
-| Over-limit HTTP response | `429` + `Retry-After: <secs>` | New response only reachable when the flag is passed (D2); no existing status code changes |
-
-## Phases
-
-| Phase | File | Primary assignment | Shippable alone? |
-|-------|------|--------------------|------------------|
-| 0 — Config + error scaffolding | [phase_01.md](phase_01.md) | `agent-3:haiku` | yes |
-| 1 — Limiter core (token bucket) | [phase_02.md](phase_02.md) | `agent-2:sonnet` | yes |
-| 2 — Wire into middleware stack | [phase_03.md](phase_03.md) | `agent-2:sonnet` | yes |
-| 3 — Hardening + docs + bench | [phase_04.md](phase_04.md) | `agent-2:sonnet` | yes |
-
-## Reuse map
-| Need | Reuse | Location |
-|------|-------|----------|
-| Key extraction | `ApiKey` extension | `src/mw/auth.rs:22` |
-| Middleware wiring | `Layer` stack builder | `src/server.rs:55-70` |
-| Config loader | `Config::from_file` | `src/config.rs:31` |
-| Error→response | `into_response` for `GwError` | `src/error.rs:88` |
-
-## References (external documentation consulted)
-
-| # | What it settled | Source | Version / date |
-|---|-----------------|--------|----------------|
-| R1 | `Retry-After` accepts either an integer number of seconds or an HTTP-date | <https://www.rfc-editor.org/rfc/rfc9110#field.retry-after> | RFC 9110, 2022-06 |
-| R2 | `DashMap::entry` returns a shard-locked entry; the guard must not be held across an await | <https://docs.rs/dashmap/5.5.3/dashmap/struct.DashMap.html> | dashmap 5.5.3 (pinned in `Cargo.toml:24`) |
-
-## Invariants
-- **I-1:** limiter off (no `--rate-limit`) → byte-for-byte current behavior; T-RL0.
-- **I-2:** unlimited keys take no lock/alloc on the hot path (D3).
-- **I-3:** the bucket never lets more than quota through per window under concurrency.
-
-## Risk register
-| Risk | Mitigation |
-|------|-----------|
-| Map contention under high key cardinality | `DashMap` sharding; bench in phase_04 § 3.1 |
-| Clock skew breaks refill | monotonic clock only; `refills_at_rate` unit test |
-| Default-off regression | T-RL0 + I-1 |
-| Entry guard held across an await (R2) | `agent-1` review gate on § 1.1 and § 2.1 |
-
-## Verification summary
-
-| Gate | Command | Where it runs |
-|------|---------|---------------|
-| fmt | `cargo fmt --check` | every phase |
-| lint | `cargo clippy -- -D warnings` | every phase |
-| unit | `cargo test` | every phase |
-| e2e | `cargo test --test e2e` | phase 2 onward |
-
-**Acceptance:** the reference scenario is proven by T-RL1 (k1 at 20 req/s → ~10
-pass, rest `429` with `Retry-After`) and T-RL2 (unlimited k2 → all pass), with
-T-RL0 guarding I-1.
-**Run caveats:** e2e binds port 8080 — run with `--test-threads=1`.
-These commands are the same ones written into `STATE.md` §3; they must not drift.
-
-## Model-assignment summary
-
-| Phase | Sub-phases by assignment | Primary | `agent-1` review gates |
-|-------|--------------------------|---------|------------------------|
-| 0 | 0.1, 0.2, 0.3 → `agent-3:haiku` | `agent-3:haiku` | — |
-| 1 | 1.1 → `agent-2:sonnet` · 1.2 → `agent-3:haiku` | `agent-2:sonnet` | 1.1 (hot path, concurrency) |
-| 2 | 2.1 → `agent-2:sonnet` · 2.2 → `agent-3:haiku` | `agent-2:sonnet` | 2.1 (acceptance assertions) |
-| 3 | 3.1 → `agent-2:sonnet` · 3.2, 3.3 → `agent-3:haiku` | `agent-2:sonnet` | 3.3 (final docs read) |
-````
-
----
-
-## File 2 — phase_01.md (Phase 0 — Config + error scaffolding)
-
-````markdown
-# Phase 0 — Config + error scaffolding
-
-> **Intent:** Add config structs and error variant; no behavior change, no wiring.
-> **Shippable alone?** yes — pure additive
-> **Preconditions:** none
-
-## State contract (mandatory)
-
-1. Before touching anything: read [STATE.md](STATE.md). If §1 `Status` is `OPEN`,
-   finish or revert that unit first (§6 says how far it got). Confirm §1 points at
-   a sub-phase in this phase. Run the gate commands in STATE.md §3 and check the
-   result against what §1, §7, and §11 claim; the repo wins.
-2. **Open** each sub-phase in `STATE.md` §1 before editing any code
-   (`Type: sub-phase`, its ID, `Status: OPEN`, `Intent`, `Next action:`, §6
-   `claimed — nothing written yet`).
-3. **Close** it once the gates pass: §4 ledger row, §6 back to `none`, §5 §7 §8
-   §9 §10 and the §11 board updated, §1 pointing at the next unit. A sub-phase is
-   not done until this is written.
-4. If the session ends mid-sub-phase, leave §1 `OPEN` and write exactly what is
-   half-finished into `STATE.md` §6 before stopping.
-
----
-
-## Sub-phases
-
-### 0.1 Add `Quota`, `RateConfig`, config parsing
-- **Model:** `agent-3:haiku`
-- **Assignment:** `agent-3:haiku` — mechanical, mirrors the existing `Config::from_file` pattern
-- **Files:** `src/config.rs:31-60`
-- **Change:** parse an optional `[limits]` table into `RateConfig`; absent → `None`. Mirror `Config::from_file` at `src/config.rs:31 — fn from_file`. Follow the existing module layout; add no new directory.
-- **Unit tests:** `parses_limits_table` — `HashMap` populated from valid TOML; `absent_limits_is_none` — missing section yields `None`; `zero_quota_parses` — `0` is valid and means "reject all" (D5).
-- **e2e tests:** none (no behavior change)
-- **Done:** gates green (`cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test config::`) + existing `config::tests::*` unchanged and passing + closed in `STATE.md`
-
-### 0.2 Add `GwError::RateLimited` + `429` mapping
-- **Model:** `agent-3:haiku`
-- **Assignment:** `agent-3:haiku` — additive enum variant
-- **Files:** `src/error.rs:88`
-- **Change:** additive enum variant `RateLimited { retry_after: u32 }`; extend `into_response` at `src/error.rs:88` → status `429` plus a `Retry-After` header carrying integer seconds. `R1 — Retry-After accepts an integer number of seconds (<https://www.rfc-editor.org/rfc/rfc9110#field.retry-after>)`.
-- **Unit tests:** `rate_limited_maps_to_429_with_retry_after` — `GwError::RateLimited{retry_after:5}` → status 429, header `Retry-After: 5`.
-- **e2e tests:** none (variant not reachable yet)
-- **Done:** gates green + no existing error mapping changed + closed in `STATE.md`
-
-### 0.3 Update README.md
-- **Model:** `agent-3:haiku`
-- **Assignment:** `agent-3:haiku` — documentation
-- **Files:** `README.md` (repo root)
-- **Change:** no user-visible change in this phase — verify the README is still accurate and leave it unchanged; record that verification in `STATE.md`.
-- **Unit tests:** none (documentation)
-- **e2e tests:** none
-- **Done:** README confirmed still accurate, nothing added about unshipped behavior + closed in `STATE.md`
-
----
-
-## Phase gates
-
-- **Fmt:** `cargo fmt --check`
-- **Lint:** `cargo clippy -- -D warnings`
-- **Test subset:** `cargo test config:: error::`
-- **Regression guard:** existing `config::tests::*` must still pass
-- **README:** verified still accurate (this phase ships nothing user-visible)
-
-## Phase done criterion
-Gates green. New structs compile. No existing test changed. README.md reflects
-this phase's shipped behavior (nothing new).
-````
-
----
-
-## File 3 — phase_02.md (Phase 1 — Limiter core)
-
-````markdown
-# Phase 1 — Limiter core (token bucket)
-
-> **Intent:** Implement `AtomicBucket` + `try_take`; no middleware wiring yet.
-> **Shippable alone?** yes — new module, not wired
-> **Preconditions:** phase_01 DONE
-
-## State contract (mandatory)
-
-1. Before touching anything: read [STATE.md](STATE.md) and confirm it points at
-   a sub-phase in this phase. Run the gate commands in STATE.md §3 and check the
-   result against what §1 and §7 claim; the repo wins.
-2. Open each sub-phase in `STATE.md` §1 before editing; close it after the
-   gates pass.
-3. If the session ends mid-sub-phase, write what is half-finished into
-   `STATE.md` §6 before stopping.
-
----
-
-## Sub-phases
-
-### 1.1 `AtomicBucket` + `try_take`
-- **Model:** `agent-2:sonnet`
-- **Assignment:** `agent-1:opus` review gate (hot path, concurrency) → `agent-2:sonnet` implements
-- **Files:** new `src/ratelimit.rs` (module directory already exists — do not create a new one)
-- **Change:** lock-free atomic token bucket; `try_take(now: Instant) -> Option<u32>` (`None` = allowed, `Some(secs)` = denied plus retry-after). Monotonic clock only. No `DashMap` here — just the per-key struct. `R2 — a DashMap entry guard must not be held across an await (<https://docs.rs/dashmap/5.5.3/dashmap/struct.DashMap.html>)` applies to § 2.1, not here.
-- **Unit tests:** `refills_at_rate` — bucket at 0 tokens refills to quota after 1s; `denies_over_limit` — the 11th take on quota=10 returns `Some(_)`; `retry_after_correct` — returned seconds match the next refill window; `concurrent_takes_never_exceed_quota` — 4 threads × 100 takes on quota=10/s → at most 10 pass (I-3).
-- **e2e tests:** none (not wired)
-- **Done:** gates green (`cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test ratelimit::`) + `concurrent_takes_never_exceed_quota` passes + `agent-1:opus` signed off on the concurrency design + closed in `STATE.md`
-
-### 1.2 Update README.md
-- **Model:** `agent-3:haiku`
-- **Assignment:** `agent-3:haiku` — documentation
-- **Files:** `README.md`
-- **Change:** no user-visible change in this phase (the module is not wired) — verify the README is still accurate and leave it unchanged; record that verification in `STATE.md`.
-- **Unit tests:** none (documentation)
-- **e2e tests:** none
-- **Done:** README confirmed still accurate + closed in `STATE.md`
-
----
-
-## Phase gates
-
-- **Fmt:** `cargo fmt --check`
-- **Lint:** `cargo clippy -- -D warnings`
-- **Test subset:** `cargo test ratelimit::`
-- **Regression guard:** phase_01 tests still green
-- **README:** verified still accurate (nothing user-visible yet)
-
-## Phase done criterion
-`cargo test ratelimit::` all pass, including the concurrency test. README.md
-reflects this phase's shipped behavior (nothing new).
-````
-
----
-
-## File 4 — phase_03.md (Phase 2 — Wire middleware)
-
-````markdown
-# Phase 2 — Wire into middleware stack
-
-> **Intent:** Insert the limiter layer after auth; wire the config flag.
-> **Shippable alone?** yes — behind `--rate-limit` (D2)
-> **Preconditions:** phase_01 DONE, phase_02 DONE
-
-## State contract (mandatory)
-
-1. Before touching anything: read [STATE.md](STATE.md) and confirm it points at
-   a sub-phase in this phase. Run the gate commands in STATE.md §3 and check the
-   result against what §1 and §7 claim; the repo wins.
-2. Open each sub-phase in `STATE.md` §1 before editing; close it after the
-   gates pass.
-3. If the session ends mid-sub-phase, write what is half-finished into
-   `STATE.md` §6 before stopping.
-
----
-
-## Sub-phases
-
-### 2.1 Limiter middleware after auth
-- **Model:** `agent-2:sonnet`
-- **Assignment:** `agent-1:opus` review gate (acceptance assertions) → `agent-2:sonnet` implements
-- **Files:** `src/server.rs:55-70`, new `src/mw/ratelimit_mw.rs` (place it in the existing `src/mw/` directory)
-- **Change:** insert the layer after auth at `src/mw/auth.rs:40` using the `Layer` stack builder at `src/server.rs:55`. Read the `ApiKey` extension (reuse `src/mw/auth.rs:22 — struct ApiKey`). No quota → pass without touching the map (D3, I-2); quota → `try_take` → pass or `GwError::RateLimited`. Build the layer only when `--rate-limit` is given (D2). Take and drop the `DashMap` entry guard inside a synchronous block: `R2 — the guard must not be held across an await`.
-- **Unit tests:** `unlimited_key_skips_map` — a key with no quota never reaches `try_take`; `limited_key_throttled` — a key with quota=1 gets `429` on the second request.
-- **e2e tests:**
-  - **T-RL1:** k1 at 20 req/s → ~10/s pass, rest `429` + `Retry-After`. Proves the reference scenario in `overview.md`.
-  - **T-RL2:** k2 unlimited → all pass.
-  - **T-RL0 (regression, I-1):** no `--rate-limit` flag → all pass, latency within baseline ±5%.
-- **Done:** T-RL0, T-RL1, T-RL2 pass + gates green (`cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test`, `cargo test --test e2e`) + limiter-off path byte-identical + closed in `STATE.md`
-
-### 2.2 Update README.md
-- **Model:** `agent-3:haiku`
-- **Assignment:** `agent-3:haiku` — documentation
-- **Files:** `README.md`
-- **Change:** update **Usage** (the `--rate-limit <PATH>` flag with a runnable example and its output) and **Configuration** (the TOML limits file, one `<key> = <req/s>` line per key, `0` rejects all, rate limiting off unless the flag is passed). No module names, no algorithm description, no phase references. Preserve the existing README structure and tone; edit only those sections.
-- **Unit tests:** none (documentation)
-- **e2e tests:** none — the README example was executed and produced the documented output
-- **Done:** a new user can enable rate limiting from the README alone + no implementation detail present + closed in `STATE.md`
-
----
-
-## Phase gates
-
-- **Fmt:** `cargo fmt --check`
-- **Lint:** `cargo clippy -- -D warnings`
-- **Test:** `cargo test` (full suite)
-- **e2e:** `cargo test --test e2e`
-- **Regression guard:** T-RL0 (invariant I-1)
-- **README:** Usage and Configuration updated for the flag and the limits file
-
-## Phase done criterion
-T-RL0 + T-RL1 + T-RL2 all pass. Gates green. The reference scenario in
-`overview.md` is fully exercised. README.md reflects this phase's shipped
-behavior.
-````
-
----
-
-## File 5 — phase_04.md (Phase 3 — Hardening + docs + bench)
-
-````markdown
-# Phase 3 — Hardening + docs + bench
-
-> **Intent:** Prove the latency target, write the operator docs, ship.
-> **Shippable alone?** yes
-> **Preconditions:** phase_03 DONE
-
-## State contract (mandatory)
-
-1. Before touching anything: read [STATE.md](STATE.md) and confirm it points at
-   a sub-phase in this phase. Run the gate commands in STATE.md §3 and check the
-   result against what §1 and §7 claim; the repo wins.
-2. Open each sub-phase in `STATE.md` §1 before editing; close it after the
-   gates pass.
-3. If the session ends mid-sub-phase, write what is half-finished into
-   `STATE.md` §6 before stopping.
-
----
-
-## Sub-phases
-
-### 3.1 Latency bench (hot-path guardrail)
-- **Model:** `agent-2:sonnet`
-- **Assignment:** `agent-2:sonnet` — implementation
-- **Files:** new `benches/ratelimit_hot_path.rs` (the `benches/` directory already exists)
-- **Change:** criterion bench comparing under-limit p99 against the baseline; assert within +50µs. Record the numbers in `docs/PERF.md`.
-- **Unit tests:** none
-- **e2e tests:** none (a bench is not a test)
-- **Done:** bench runs + p99 within +50µs + numbers recorded in `docs/PERF.md` + closed in `STATE.md`
-
-### 3.2 Operator reference
-- **Model:** `agent-3:haiku`
-- **Assignment:** `agent-3:haiku` — documentation
-- **Files:** `docs/CONFIG.md`
-- **Change:** document the TOML limits format (`[limits]` then `k1 = 10`), the `429` / `Retry-After` contract (integer seconds, R1), that `0` rejects all (D5), and the default-off note.
-- **Unit tests:** none
-- **e2e tests:** none
-- **Done:** operator can configure limits from this file alone + gates green + closed in `STATE.md`
-
-### 3.3 Update README.md
-- **Model:** `agent-3:haiku`
-- **Assignment:** `agent-3:haiku` — documentation; `agent-1:opus` reads it (final phase)
-- **Files:** `README.md`
-- **Change:** update **Notes** (over-limit requests get `429` with `Retry-After` in seconds) and **Limitations** (limits are per process, not shared across instances; counters reset on restart; limits load at boot and do not reload on SIGHUP — open question Q3). Re-check the Usage and Configuration sections written in phase 2 against the shipped behavior. No module names, no algorithm description, no phase or plan references, no unshipped roadmap. Keep the existing README structure and tone; edit the affected sections only.
-- **Unit tests:** none (documentation)
-- **e2e tests:** none — the README examples were executed and produced the documented output
-- **Done:** a new user can install, enable, and operate rate limiting from the README alone, with no source reading + no implementation detail present + `agent-1:opus` signed off + gates green + closed in `STATE.md`
-
----
-
-## Phase gates
-
-- **Fmt:** `cargo fmt --check`
-- **Lint:** `cargo clippy -- -D warnings`
-- **Test:** `cargo test` (full suite)
-- **Regression guard:** T-RL0 + T-RL1 + T-RL2 still pass
-- **README:** updated for the `429` behavior and the known limits; free of
-  implementation detail
-
-## Phase done criterion
-Latency bench p99 within +50µs. Both docs readable and accurate
-(`agent-1:opus` signed off). All e2e tests still green. README.md reflects this
-phase's shipped behavior.
-````
-
----
-
-## File 6 — STATE.md (as initialized by the planner, before any code)
-
-````markdown
-# Per-API-key Rate Limiting — Implementation State
-
-> **READ THIS FILE FIRST at the start of every session, before any other plan
-> file. OPEN a unit in §1 before touching code; CLOSE it after the gates pass.**
-> **Last updated:** 2026-06-25 | **By:** `agent-1:opus` | **Session:** 1
-
-## 0. Protocol
-
-This is the only execution-state file. A **unit of work** is one sub-phase, one
-`task`, one `bug`, one `verify` audit, or one correction from a verify report.
-
-**Resume (cold start):**
-1. Read this file end to end.
-2. Read §1 `Status`: `OPEN` means a unit was claimed and may be half-written —
-   read §6, then finish or revert it before starting anything new. `none` means
-   nothing is in flight: open the unit named in §1 `Next action:`.
-3. Run the gate commands listed in §3 and compare the result with what §1, §7,
-   and §11 claim. The repo is the truth; correct this file if it drifted.
-4. Open only the file §1 points at, at the named sub-phase. Read `overview.md`
-   only if §2 is insufficient for the work at hand.
-
-**Open a unit — before touching code:** set §1 `Type`, `ID`, `Status: OPEN`,
-`Intent`, `Next action:`, `Assigned`; set §6 to `claimed — nothing written yet`;
-bump the timestamp.
-
-**Close a unit — after its gates are green:** append a §4 row, reset §6 to
-`none — tree consistent`, update §5 §7 §8 §9 §10 and the §11 board, set §1 to the
-next unit with `Status: none`, bump the timestamp. A unit is not `DONE` until
-this is written.
-
-## 1. Current unit
-- **Type:** `sub-phase`
-- **ID:** 0.1 — Add Quota/RateConfig/config parsing
-- **Status:** `none`
-- **Intent:** add the `Quota` / `RateConfig` types and their TOML parsing
-- **Phase:** 0 — Config + error scaffolding (`phase_01.md`)
-- **Next action:** `phase_01.md` § 0.1 — add `Quota` and `RateConfig` to `src/config.rs`
-- **Assigned:** `agent-3:haiku`
-- **Repo state:** branch `main` | working tree `clean` | last commit `a1b2c3d init`
-
-## 2. Feature context (self-contained recap)
-Per-API-key rate limiting in the `gw` gateway. Opt-in via `--rate-limit <toml>`;
-default off. Keys under their limit must not slow down; over-limit requests get
-`429` plus `Retry-After`.
-
-**Reference scenario:** 20 req/s against a 10 req/s key k1 → ~10 pass, rest 429.
-**Hard constraints:** backward compatible; no new runtime deps; zero latency
-regression when the flag is absent.
-**Key decisions in force:** D1 token bucket per key; D2 flag-gated, default off;
-D3 unlimited keys skip the map; D4 `429` + `Retry-After` in seconds; D5 quota `0`
-rejects all.
-
-## 3. Environment and commands
-- **Repo root:** `./gw`
-- **Build:** `cargo build` · **Fmt:** `cargo fmt --check` · **Lint:** `cargo clippy -- -D warnings`
-- **Unit tests:** `cargo test` · **E2E:** `cargo test --test e2e`
-- **Setup / caveats:** e2e binds port 8080; run serially with `--test-threads=1`.
-- **WIP commits:** `off`
-
-## 4. Work ledger (append-only, one row per closed unit)
-| # | Type | ID | Agent | What changed | Files | Gates | Commit |
-|---|------|----|-------|--------------|-------|-------|--------|
-| — | — | — | — | not started | — | — | — |
-
-## 5. Files touched
-| Path | What was done | Unit |
-|------|---------------|------|
-| — | — | — |
-
-## 6. In-flight work
-none — tree consistent
-
-## 7. Verification state
-| Gate / test | Command | Last result | When |
-|-------------|---------|-------------|------|
-| fmt | `cargo fmt --check` | `not-run` | — |
-| lint | `cargo clippy -- -D warnings` | `not-run` | — |
-| unit | `cargo test` | `not-run` | — |
-| T-RL0/1/2 | `cargo test --test e2e` | `not-run` | — |
-
-**Failing output (verbatim, trimmed to the error):**
-```
-none
-```
-
-## 8. Runtime deviations from the plan
-| # | Plan said | What was done | Why | Impact on later phases |
-|---|-----------|---------------|-----|------------------------|
-
-## 9. Blockers and open questions
-- Q3 (deferred by the user): limits do not reload on SIGHUP; default applied,
-  affects phase 2 § 2.1. Not a blocker.
-
-## 10. Do-not-repeat
-- none
-
-## 11. Progress board
-
-### Phases
-| Phase | File | Status | Notes |
-|-------|------|--------|-------|
-| 0 — Config + error scaffolding | phase_01.md | `TODO` | — |
-| 1 — Limiter core | phase_02.md | `TODO` | — |
-| 2 — Wire middleware | phase_03.md | `TODO` | — |
-| 3 — Hardening + docs + bench | phase_04.md | `TODO` | — |
-
-Status values: `TODO` · `IN_PROGRESS` · `DONE` · `SKIPPED` · `BLOCKED`
-
-### Tests
-| ID | Type | Status | Notes |
-|----|------|--------|-------|
-| T-RL0 | e2e | `TODO` | no --rate-limit → all pass, latency == baseline |
-| T-RL1 | e2e | `TODO` | k1@20req/s → ~10 pass, rest 429+Retry-After |
-| T-RL2 | e2e | `TODO` | k2 unlimited → all pass |
-
-### Docs
-| Doc | Phase | Status | Notes |
-|-----|-------|--------|-------|
-| README.md | 0 | `TODO` | no user-visible change — verify still accurate |
-| README.md | 1 | `TODO` | no user-visible change — verify still accurate |
-| README.md | 2 | `TODO` | Usage: `--rate-limit`; Configuration: TOML limits |
-| README.md | 3 | `TODO` | Notes: 429/Retry-After; Limitations: per-process counters |
-| docs/CONFIG.md | 3 | `TODO` | operator reference for the limits file |
-| docs/PERF.md | 3 | `TODO` | latency bench numbers |
-
-### Audits
-| Report | Date | Verdict | Open findings |
-|--------|------|---------|---------------|
-| none yet | — | — | — |
-````
+# Worked example — a complex sub-phase for a weak implementer
+
+This is an illustrative contract, not an audited real repository or a claim that
+tests have run. It demonstrates the detail a strong planner supplies for complex
+work assigned to the weakest worker. A real plan uses output-template.md for all
+files and becomes READY only after its actual source contracts and gates are
+validated. Do not copy these invented paths into a different project.
+
+## Scenario and established repository facts
+
+Assume recon has confirmed this Python repository:
+- src/gw/limits.py contains the existing public exception InvalidLimit(ValueError).
+- tests/unit/test_limits.py tests existing configuration validation.
+- The pinned interpreter is Python 3.12; tests/conftest.py makes src/ importable.
+  pytest and the standard library are
+  available. Baseline command: python -m pytest tests/unit/test_limits.py.
+- Existing request handling is synchronous. Wiring into HTTP is a later unit 1.1.
+- No existing code exposes a quota primitive. No new third-party dependency is
+  allowed. The new implementation stays in src/gw/limits.py.
+- The roster is agent-1:opus, agent-2:sonnet, agent-3:haiku.
+- Execution uses handoff by default; the same unit can be delegated.
+
+The approved design is a fixed-window quota counter, not an unspecified token
+bucket. A user-visible rate limit can have different semantics; the supervisor
+must select one explicitly before implementation.
+
+## Local design context for phase_01.md
+
+Logical phase 0 introduces an internal primitive; it changes no HTTP behavior.
+Its sub-phases are 0.1 (the primitive) and 0.2 (README accuracy check).
+Its reviewed closure is P0. Phase 1 may use the primitive only after P0 is DONE.
+
+- D1: Each instance is one independent quota key and one fixed window counter.
+- D2: Time is an injected nonnegative integer in nanoseconds; no wall-clock calls,
+  sleeps, floats, or background refill thread inside the primitive.
+- D3: Synchronization uses one threading.Lock per instance; all counter/window
+  reads and writes involved in admission occur while that lock is held.
+- D4: Capacity zero permanently denies; retry_after_ns is None because no finite
+  retry can make the configuration allow a request.
+- I-1: Within a fixed window at most capacity calls return allowed=True.
+- I-2: Different instances do not share mutable counters or locks.
+- I-3: Backward time does not reset or replenish a window.
+- I-4: Imports and existing config validation retain their behavior.
+- R: N/A for external research here; implementation uses established repository
+  Python threading and integer arithmetic, with no new external API contract.
+
+### 0.1 Implement the synchronized fixed-window primitive
+
+- **Model:** agent-3:haiku
+- **Assignment:** implement the specified algorithm and tests. agent-1:opus
+  reviews the concurrency contract before work and the actual diff/test assertions
+  before completion. In delegated mode the coordinator owns STATE.md and commits;
+  in handoff mode the current session records progress and requests that review.
+- **Files:** READ src/gw/limits.py — InvalidLimit; tests/unit/test_limits.py;
+  tests/conftest.py. WRITE src/gw/limits.py and tests/unit/test_limits.py only.
+  Add symbols to the existing module; create no directory and change no HTTP code.
+- **Change:**
+
+  Preconditions: G-BASE passed; no earlier implementation dependency; supervisor
+  approved D1–D4. Confirm InvalidLimit is still the public exception before editing.
+
+  Contract:
+  - Add an immutable dataclass Admission with fields allowed: bool and
+    retry_after_ns: int | None.
+  - Add FixedWindowLimiter(capacity: int, window_ns: int, start_ns: int).
+    Require exact integer inputs (bool is rejected), capacity >= 0,
+    window_ns > 0, start_ns >= 0; otherwise raise InvalidLimit.
+  - Add try_take(now_ns: int) -> Admission. Reject a non-integer, bool, or
+    negative now_ns with InvalidLimit before changing shared state.
+  - Initially remaining=capacity and window_start=start_ns.
+  - Return Admission(True, None) after consuming one slot.
+  - At positive capacity with no remaining slots, deny with the positive integer
+    nanoseconds until the next window boundary.
+  - At zero capacity, always return Admission(False, None).
+  - For a valid time earlier than the current window_start, use
+    effective_now=window_start for the entire decision; never move time backward.
+  - Window boundaries are aligned to the original start, not to the latest
+    request. An exact boundary belongs to the next window.
+
+  S1 — Add Admission with @dataclass(frozen=True); validate each numeric input
+  with type(value) is int and the stated range before storing it. Store capacity, window_ns,
+  window_start, remaining, and a fresh per-instance threading.Lock.
+  Expected: existing imports/config tests still pass; invalid constructor inputs
+  raise InvalidLimit; instances do not share mutable state.
+
+  S2 — Implement try_take. Validate now_ns, then acquire the instance lock with
+  a context manager and perform this algorithm entirely inside it:
+  1. If capacity == 0, return Admission(False, None).
+  2. effective_now = max(now_ns, window_start).
+  3. elapsed = effective_now - window_start.
+  4. If elapsed >= window_ns, advance window_start by
+     (elapsed // window_ns) * window_ns and set remaining = capacity.
+  5. If remaining > 0, decrement remaining and return Admission(True, None).
+  6. Otherwise return Admission(False, window_start + window_ns - effective_now).
+  Expected: no negative remaining, retry delay strictly positive on finite denial,
+  O(1) refill even after many windows, no unlocked admission state access.
+  Do not invoke callbacks, I/O, sleep, or another lock while holding the lock.
+
+  S3 — Add the exact tests below using injected integer time.
+  Expected: all named tests discovered; assertions prove admission and denial,
+  boundaries, backward time, independence, and concurrent exhaustion.
+
+  S4 — Run G-U01, inspect the full owned diff, and request the supervisor's review
+  with revision/diff identity and actual test output.
+  Expected: required review records I-1 through I-4 and passes before closure.
+
+  Checkpoints: after S1, S2, S3, and the S4 test run, record actual files,
+  completed steps/postconditions, failed checks, and the next unverified step.
+  If interrupted, inspect existing symbols/tests before repeating an edit.
+
+  Scope/failure handling: do not wire HTTP, add a new dependency, change quota
+  semantics, replace the lock with atomics, or loosen a test. A changed baseline
+  contract, missing design, or two failed fixes of the same error goes to agent-1.
+
+- **Unit tests:** all live in tests/unit/test_limits.py; G-U01 is
+  python -m pytest tests/unit/test_limits.py -v. Confirm these named tests execute,
+  in addition to the pre-existing suite:
+  - test_admission_immutable: Admission(True, None) exposes those exact fields;
+    assigning allowed or retry_after_ns raises dataclasses.FrozenInstanceError.
+  - test_constructor_validation: reject capacity=-1, capacity=True,
+    window_ns=0, window_ns=1.5, start_ns=-1, and start_ns=False.
+  - test_time_validation: try_take(-1), try_take(True), and try_take(1.5)
+    raise InvalidLimit and leave the two slots of a fresh capacity=2 instance.
+  - test_exact_window_boundary: capacity=2, window_ns=100, start_ns=1000.
+    Calls at 1000 and 1000 allow; at 1050 deny with retry_after_ns=50;
+    at 1100 allow; at 1100 allow; at 1100 deny with retry_after_ns=100.
+  - test_large_time_jump: the same exhausted initial instance at 1350 allows
+    exactly twice, then denies with retry_after_ns=50, proving alignment to 1300.
+  - test_backward_time: exhaust two slots at 1100, then call at 1050;
+    deny with retry_after_ns=100 and do not reopen an older window.
+  - test_zero_capacity: capacity=0 at start and many future windows always
+    yields Admission(False, None).
+  - test_instances_are_independent: exhausting one capacity=1 instance does not
+    deny the first request to another instance at the same time.
+  - test_concurrent_window_exhaustion: capacity=10, fixed now_ns=1000 and
+    window_ns=100. Start four workers through a barrier; each calls try_take(1000)
+    100 times, collecting thread-local results. Run this threaded scenario in a
+    child process with a 5-second parent-enforced timeout and captured errors;
+    terminate/reap only that owned child if it hangs. Fail on any worker exception
+    or non-termination, then assert exactly 10
+    allowed, 390 denied, and every denial retry_after_ns=100. No real-time window
+    assumptions or sleeps. The parent must fail promptly even if a worker deadlocks;
+    do not rely on unbounded thread joins or executor shutdown during cleanup.
+- **e2e tests:** N/A — the primitive is not wired into request handling. Unit 1.1
+  owns HTTP integration tests; they are not required before 0.1 exists.
+- **Done:** S1–S4 postconditions hold; G-BASE and G-U01 pass with all listed tests
+  executed; strong review of the actual diff passes; I-1–I-4 preserved; state
+  closed. With full-autonomous:true or WIP completion enabled, the completion
+  commit resolves before 0.2 starts.
+
+### 0.2 Check README accuracy
+
+- **Model:** agent-3:haiku
+- **Assignment:** inspect user-facing documentation; supervisor checks at P0.
+- **Files:** READ README.md and the owned phase-0 diff. WRITE README.md only if
+  phase 0 actually invalidated an existing statement.
+- **Change:** prerequisite 0.1 DONE. S1 — compare current documented usage/defaults
+  with unchanged public behavior; expected: no new public rate-limit feature
+  documented. S2 — correct only an actual inaccuracy, otherwise leave the README
+  unchanged; expected: record sections inspected and result. Checkpoint before
+  handing off to P0. Escalate unexpected public behavior to agent-1.
+- **Unit tests:** N/A — documentation inspection; no examples changed.
+- **e2e tests:** N/A — no request behavior changed.
+- **Done:** README remains accurate, verification recorded, unit closed. In commit
+  modes the state/evidence change supplies the nonempty completion commit even
+  when README itself did not change.
+
+## Gates and progress initialization
+
+G-BASE: existing configuration tests in tests/unit/test_limits.py, active at
+baseline. G-U01: the same test command after S3, now also requiring the named
+new tests. G-P0: python -m pytest tests/unit, at P0 after both sub-phases.
+There is no requirement to run future HTTP tests during phase 0.
+
+Initial sub-phase rows:
+| ID | Phase file | Depends on | Status | Attempt | Evidence |
+|----|------------|------------|--------|---------|----------|
+| 0.1 | phase_01.md | none | TODO | 1 | — |
+| 0.2 | phase_01.md | 0.1 | TODO | 1 | — |
+
+P0 additionally requires G-P0 and agent-1's phase review. When full autonomy is
+true, its phase completion is a separate commit after the two sub-phase commits.
+
+## Example interruption and commit recovery
+
+Suppose S1 and S2 were written but the process ended before S3:
+- 0.1 remains OPEN; completed steps are S1/S2 only if their postconditions were
+  checked. The next action is writing/running the named S3 tests.
+- A resumed session inspects the current diff even if the last checkpoint still
+  says S1; it does not duplicate the class or reset the whole file.
+- No completion commit exists until tests, review, and coherence pass.
+- If full autonomy is true and WIP is off, interruption requires a checkpoint,
+  not a broken-code commit.
+
+At verified completion, the ledger uses unit:0.1:1 and the commit carries:
+PEV-Plan: 003_plan-RateLimit; PEV-Unit: 0.1; PEV-Attempt: 1;
+PEV-Result: complete. These are separate trailer lines in the actual message.
+A crash before that commit leaves an unresolved reference to finalize; a crash
+after it is resolved from Git and must not create a duplicate commit.

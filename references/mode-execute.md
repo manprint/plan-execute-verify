@@ -1,92 +1,102 @@
-# Execute mode — implement an existing plan
+# Execute mode — implement and resume a selected scope
 
-`/plan-execute-verify execute [<plan>] [<phase|sub-phase>]`. This is the mode
-that writes production code. It follows SKILL.md's **session protocol** and
-**coherence contract** throughout.
+Read execution-contract.md and agent-roster.md. Use the Coherence checklist in
+quality-checklist.md. These rules apply to both ordinary execution and
+`execute verify`.
 
----
+## E1 — Resolve and recover
 
-## E1 — Load and verify the starting point
+Resolve the plan, scope, roster, execution style, full-autonomous setting, and WIP
+setting per SKILL.md. Read STATE.md first. Preserve the previous scope on a
+handoff; an explicit new selector supersedes it without abandoning OPEN work.
 
-Read `STATE.md` first, then only the phase file to execute. Check §1 `Status`
-before anything else: `OPEN` means a unit was claimed and may be half-written —
-read §6 and finish or revert it before starting anything new. When §3 has WIP
-commits on and `HEAD` is a `wip:` commit, that diff is the authoritative record of
-the half-done work: finish it and `amend` into the close commit, or revert it.
-Re-run the gates from `STATE.md` §3: if the tree is not in the state §1, §7, and
-§11 claim, reconcile first and say so.
+Check ownership, actual repository changes, checkpoint, unit base, commit
+references, and current branch. Reconcile any OPEN/pending-commit unit first.
+A delegated worker follows its assignment rather than taking over this root loop.
 
-Resolve the WIP-commit setting here: an explicit `--wip-commit` /
-`--no-wip-commit` on this invocation wins and is written into §3; otherwise use
-what §3 already says; otherwise off.
+A plan must be READY at its recorded revision before dispatch. For legacy plans,
+have the supervisor fill missing sub-phase rows, dependencies, local contracts,
+steps, review/evidence fields, and runtime metadata from repository evidence.
+If a required design decision is missing, refine the plan before implementation.
 
-## E2 — Pick the unit of work
+Run applicable baseline/resume checks. A future gate whose owning unit has not
+created its target is not applicable yet, not a failure to repair by improvisation.
+A required active gate that cannot run remains blocked.
 
-Default: the sub-phase in `STATE.md` §1 `Next action:`, then continue in order. A
-phase or sub-phase selector narrows execution to it; refuse (and say why) when
-its preconditions are not `DONE` in the §11 board.
+## E2 — Select an eligible unit
 
-## E3 — Execute, sub-phase by sub-phase
+Use the next eligible unit in scope, respecting order and explicit dependencies.
+Require prerequisite sub-phases and artifacts, not just a phase's claimed DONE.
+A SKIPPED dependency requires an explicit supervisor waiver/replacement.
+Refuse inconsistent selectors with an actionable reason.
 
-- **Open the unit in `STATE.md` §1 before editing any code** (`Type: sub-phase`,
-  its `ID`, `Status: OPEN`, `Intent`, `Next action:`, §6 `claimed — nothing
-  written yet`). This is what makes an interruption recoverable.
-- Do exactly what the sub-phase's **Change** field says. Follow its assignment:
-  delegate to the tagged agent, honor the `agent-1` review gates.
-- Write the named unit and e2e tests with the stated assertions. A sub-phase
-  whose tests do not exist is not done.
-- Run the phase gates. Never mark work done on a red gate.
-- **Do not improvise scope.** Something the plan did not foresee is either a
-  deviation recorded in `STATE.md` §8 with its reason, or a question to the user —
-  never a silent extra change.
-- Stop and ask when the plan is ambiguous, contradicts the code, or needs a
-  decision outside the plan's `D*` set. Cheaper than an unwinding.
-- **A defective sub-phase is a plan bug, not an excuse to improvise.** If one of
-  the seven fields is missing, or the named files, anchors, or symbols no longer
-  exist: say exactly what is wrong, repair that phase file first (recording the
-  edit in `STATE.md` §8), and only then execute it.
-- **Close the unit in `STATE.md`** once the gates are green — §4 ledger row, §6
-  back to `none`, §5 §7 §8 §9 §10 and the §11 board updated, §1 pointing at the
-  next unit with `Status: none`. With WIP commits on, commit the closed unit
-  (`sub-phase(<N.Y>): <intent>`) staging only its files plus the plan files, put
-  the sha in the §4 row, and name the branch you committed to. Then apply the rest
-  of the **coherence contract** before starting the next sub-phase. At the end of each phase, the
-  README sub-phase runs like any other.
+Record whether this invocation covers the whole plan, one phase, one sub-phase,
+or a report. Full autonomy does not expand that selection.
 
-## E4 — Executing a correction plan (`execute verify [V<NNN>]`)
+## E3 — Execute the detailed contract
 
-A verify report's correction plan is executable work like any other, and it lives
-on disk precisely so it can be run later or in a fresh session.
+1. Open the unit and mark its phase/sub-phase IN_PROGRESS. Record ID/attempt,
+   plan revision, base, ownership, intended files, and first step.
+2. Read the local design context and named source slices. Confirm interfaces and
+   relevant callers before editing. Follow numbered steps and their postconditions.
+3. Checkpoint after meaningful edit/test batches and before yielding. Workers
+   return evidence to the coordinator; only the state owner updates shared files.
+4. Implement named tests with the stated fixtures and assertions. Verify that the
+   intended tests actually execute; test absence or zero discovery is not success.
+5. For locator drift, find and inspect the symbol. For missing/contradictory
+   design, escalate to the strong supervisor. The supervisor may repair technical
+   steps within unchanged requirements/scope, version the plan, and update
+   dependents. The weak implementer must not quietly redesign it.
+6. Run unit gates and required review against the actual diff. After two failed
+   fixes of the same issue, escalate instead of retrying blindly or weakening tests.
+7. Apply the coherence contract in full, then close and commit according to
+   execution-contract.md. Resolve the completion commit identity before advancing.
+   A failure to commit leaves closure pending and recoverable, not fully complete.
+8. Continue the next eligible unit. Routine sub-phase completion is not a reason
+   to ask the user to authorize work already in scope.
 
-- Templates for the files you re-status: `references/templates-audit.md`.
-- Default target: the newest report in `<plan-folder>/verify/`; a `V<NNN>`
-  selector picks an older one. Read `verify/index.md` first, then that report.
-- Work through the correction plan in order, blockers first, treating each item
-  as its own **unit**: opened in `STATE.md` §1 as `Type: correction` with
-  `ID: V<NNN>-C<n>` before editing, closed after its gates are green — and
-  committed as `correction(V<NNN>-C<n>): <intent>` when WIP commits are on. An
-  interrupted correction run resumes from §1 (or from the `wip:` commit) without
-  re-reading the whole report.
-- **Re-verify each item before closing it.** A finding is `FIXED` only when the
-  condition it described no longer holds and the evidence is recorded.
-- Update `verify/index.md` for every item: `FIXED` (with date and how it was
-  closed), `OPEN` still (with the reason it could not be closed), or `ACCEPTED`
-  when the user decides to live with it. Mirror the status in the report file so
-  the two never disagree.
-- Corrections that reopen a phase already marked `DONE` set that phase back to
-  `IN_PROGRESS` in the `STATE.md` §11 board until its done-criterion holds again.
-- Apply the full **coherence contract** after each correction, exactly as for a
-  sub-phase: a correction changing user-visible behavior updates `README.md`, one
-  that proves a plan file wrong reconciles that plan file.
-- Close by saying which findings are now `FIXED`, which remain `OPEN`, and
-  recommend a fresh `/plan-execute-verify verify` when blockers were touched.
+## E4 — Close each phase
 
-## E5 — Close
+After its implementation and README sub-phases, open P<N> as a phase-close unit.
+Run phase gates, obtain the strong supervisor's review of integration/invariants/
+tests/docs, and record evidence. Only then mark the phase DONE. With
+full-autonomous:true, commit this nonempty state/review update on the current
+branch, distinctly identifying phase completion.
 
-Terse chat summary: sub-phases completed, gate results, deviations recorded, files
-touched, next action — plus, when WIP commits are on, the commits created and the
-branch they landed on. State plainly what failed or was skipped and why — never
-report a phase done when part of it is not.
+The final phase additionally proves the reference scenario and final gates.
+When a scoped sub-phase finishes, do not execute later sub-phases outside that
+scope. Keep the next eligible plan unit recorded for the next invocation.
 
-Before reporting done, run the **Coherence checklist** in
-`references/quality-checklist.md`.
+## E5 — Corrections from an audit
+
+`execute verify [<plan>] [V<NNN>]` uses the selected/active plan's newest report by
+default. Read STATE.md, verify/index.md, and the selected report. Use
+templates-audit.md for record updates.
+Check correction-plan readiness as well as the main plan. BLOCKED or legacy
+underspecified corrections require supervisor refinement and evidence before
+dispatch; an audit's completed status is not proof its corrections are executable.
+
+Each correction is a unit V<NNN>-C<n>, with the same detailed contract as a
+sub-phase. Recheck its finding against the current tree before editing. If it is
+already resolved, record current evidence and avoid duplicate code or commits.
+
+Work in dependency/severity order. A correction affecting a completed phase
+reopens it; invalidate dependent evidence as needed. Re-run the affected phase
+gates and supervisor review, then close it through P<N> with a new attempt.
+No empty closure commits for phases that were not actually reopened.
+
+Mark a finding FIXED only with evidence that its condition no longer holds.
+Keep unresolved findings OPEN; ACCEPTED requires the user's decision; OBSOLETE
+requires a concrete reason. Update both index and source report without rewriting
+the historical audit verdict. Update pending plan contracts invalidated by fixes.
+
+## E6 — Finish or hand off
+
+Run the Coherence checklist before reporting completion. Summarize scope results,
+gates/reviews, deviations, local completion commits/branch, and the next action.
+State failed, blocked, skipped, or unverified work plainly.
+
+When full autonomy is true, continue until the selected scope is verified complete
+or an actual blocker/user stop/host interruption prevents further work. Save a
+checkpoint and exact handoff when the session ends; never imply an unavailable
+supervisor or host automatically performed the next step.

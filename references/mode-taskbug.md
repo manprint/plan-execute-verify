@@ -1,76 +1,57 @@
-# Task and Bug modes — small changes and single defects
+# Task and Bug — small changes with durable recovery
 
-Both write production code and both follow SKILL.md's **coherence contract**.
-Both keep their mini-plan **in memory, not on disk** — no plan folder, no phase
-files.
+Read execution-contract.md and templates-ledger.md. Resolve options, roster, and
+plan attachment per SKILL.md. Both modes implement only the requested change;
+full-autonomous:true does not authorize unrelated plan phases.
 
-Both are **units of work**: opened in `STATE.md` §1 (`Type: task` / `Type: bug`,
-`ID` = the ledger ID you are about to use) before any code is touched, closed
-after the gates are green — and, when `STATE.md` §3 has WIP commits on, committed
-at close as `task(T-A<NNN>): <intent>` / `bug(B-A<NNN>): <intent>`, with the sha
-in the §4 row and the branch named in the closing line. A task or bug interrupted halfway is then resumable
-from §1 and §6 like any sub-phase. In `000_adhoc` there is no `STATE.md`, so the
-ledger entry is the only record — write it as soon as the fix is in place.
+Use a short but persistent mini-plan: exact files/symbols, prerequisites,
+input/output/error contract, numbered steps with postconditions, named tests,
+review requirements, and done criterion. Save it before editing so a model/session
+handoff can resume without chat history.
 
-Ledger templates: `references/templates-ledger.md`.
+With a real plan, open the unit in STATE.md and link its ledger entry. Without
+one, create an OPEN entry in docs/plans/000_adhoc/tasks.md or bugs.md before code
+edits; that entry holds settings, owner, baseline, mini-plan, checkpoint, and
+commit identity. Never invent STATE.md or phases for ad-hoc work.
 
-Before reporting done, run the **Coherence checklist** in
-`references/quality-checklist.md`.
+If the request is materially larger than a small unit, the supervisor scopes a
+proper plan before implementation; do not silently turn one task into a project.
+Existing user authorization to complete a larger task may already cover planning.
 
----
+## Task
 
-## Task mode
+1. Define the observable outcome and mini-plan. Explain material assumptions;
+   settled technical choices do not require repeated user approval.
+2. Open the unit/ledger entry and implement the numbered steps. Checkpoint after
+   meaningful batches. Follow existing repository structure.
+3. Add named tests with concrete assertions, or document why a test is not
+   applicable for this change. Run applicable gates and required review.
+4. Reconcile README, plan decisions/dependents, tests, and any affected audit
+   findings. Close the task with evidence.
+5. When full autonomy or WIP completion policy requires it, commit locally on
+   the current branch with the stable task identity; otherwise leave uncommitted.
+   A mandatory unresolved gate/review prevents a completion commit.
 
-`/plan-execute-verify task <description>` — one small, well-understood change
-that does not deserve a plan folder: a flag, a message, a small refactor, a doc
-fix.
+## Bug
 
-1. **Mini-plan in memory.** Restate the goal in one line, list the files to touch
-   with anchors, the change, the tests, the done-criterion. In chat, terse.
-2. **Show it before executing** when the change touches public behavior, data, or
-   more than a couple of files; otherwise proceed and show the result. If the task
-   turns out bigger than a handful of sub-steps, stop and say it needs a plan
-   (`/plan-execute-verify <feature>`) instead of growing silently.
-3. **Open the unit** in `STATE.md` §1, then **implement**, with at least one
-   named test asserting the new behavior (or an explicit one-line reason why a
-   test is impossible).
-4. **Run the gates** from `STATE.md` §3, or the repo's own if there is no plan.
-5. **Apply the coherence contract**: append a `T-A<NNN>` entry to `tasks.md`,
-   close the unit in `STATE.md` (§4 ledger row `Type: task`, §11 board where the
-   task changed a test or a doc), update `README.md` if the change is
-   user-visible, reconcile the plan files if the task invalidated anything. In
-   `000_adhoc` there is no plan or state file: the ledger entry and the
-   `README.md` update are the whole contract.
-6. Close with: what changed, `T-A<NNN>`, files, tests, gate results, and the
-   commit sha when one was made.
+1. Reproduce the defect with an input/command and expected vs actual result.
+   If reproduction fails, record attempts and blocker rather than guessing a fix.
+2. Establish the root cause and affected paths. If a plan decision is wrong,
+   involve the strong supervisor and update dependent contracts.
+3. Persist the mini-plan, open the unit, and write the regression test first.
+   Observe its relevant failure, then implement the fix and check it passes.
+   If such a test is impossible, require an explicit supervisor-approved
+   alternative verification; do not call missing verification green.
+4. Run the focused regression and relevant full regression suite; record actual
+   discovery/results, environment limits, and required reviews.
+5. Apply the same coherence and commit transaction as Task, using B-A<NNN>.
 
----
+For either mode, a weak worker escalates missing design or two unsuccessful fixes
+of the same issue; the supervisor may correct the approach within the approved
+requirements. New scope/product choices remain user decisions.
 
-## Bug mode
+At handoff retain OPEN with the next unverified step. WIP commits are controlled
+by the separate WIP option. Completion reporting includes stable ID, outcome,
+verification, deviations, and commit SHA/branch when committed.
 
-`/plan-execute-verify bug <description>` — diagnose and fix one defect. Same
-lightweight shape as `task`, with a mandatory diagnosis step.
-
-1. **Reproduce first.** Establish the failing behavior concretely (a command, an
-   input, an assertion). If it cannot be reproduced, say so and stop with what you
-   tried — do not "fix" a bug you cannot see.
-2. **Find the root cause**, not the symptom. State it in one line with
-   `path:line` evidence. If the cause is a plan decision (`D*`) or a missing
-   invariant (`I-*`), say so explicitly — it changes the fix and the plan.
-3. **Mini-plan in memory**: root cause, fix, blast radius (what else touches this
-   code), the regression test, the done-criterion.
-4. **Open the unit** in `STATE.md` §1, then **write the failing regression test
-   first** (named, `B-A<NNN>`-tagged), watch it fail, then fix until it passes. A
-   bug fix without a regression test is incomplete unless the test is genuinely
-   impossible — then say why.
-5. **Run the gates**, full suite, not just the touched area — bug fixes are where
-   regressions hide.
-6. **Apply the coherence contract**: append a `B-A<NNN>` entry to `bugs.md`
-   (symptom, root cause, fix, regression test, affected phase), close the unit in
-   `STATE.md` (§4 ledger row `Type: bug`, §11 board for the new regression test),
-   update `README.md` if user-visible behavior or a documented limit changed, and
-   reconcile the plan when the bug proves a planned assumption wrong — **including phases not yet executed that share the faulty assumption**.
-   In `000_adhoc` there is no plan or state file: the ledger entry and the
-   `README.md` update are the whole contract.
-7. Close with: symptom → root cause → fix → regression test → gate results,
-   `B-A<NNN>`, and the commit sha when one was made.
+Run the Coherence checklist in quality-checklist.md before the final report.

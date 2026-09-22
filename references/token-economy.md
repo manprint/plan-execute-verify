@@ -1,82 +1,40 @@
-# Token economy — spend the fewest tokens, lose no quality
+# Token economy — reduce repetition, preserve correctness
 
-Two budgets to protect: the tokens spent **producing** the plan, and the tokens
-the **implementers** spend executing it. A good plan slashes both. The headline
-insight:
+Optimize successful completion cost, including failed attempts and recovery.
+Correctness, adequate detail for the weakest worker, and verifiable reviews have
+priority over minimizing the initial plan or supervisor context.
 
-> **A self-contained sub-phase is a token-minimization device.** If the
-> implementer can act from the plan alone — exact files, line anchors, the
-> precise change, the tests, the done-criteria — they never re-explore the
-> codebase. Re-exploration is where downstream tokens go to die.
+## Useful savings
 
----
+- Batch related recon questions; ask for paths, symbols, contracts, and evidence.
+- Inspect focused source slices, relevant callers, and tests rather than entire
+  unrelated files. The strong planner directly checks correctness-sensitive code.
+- Reuse recorded facts while their revision remains valid. Re-check changed
+  contracts; a previous summary is not permanently authoritative.
+- Keep overview.md compact. Put detailed algorithms, edge cases, steps, and test
+  oracles in phase files, where the implementer needs them.
+- Include the meaning of relevant decisions/invariants in each phase's local
+  context. A small amount of deliberate repetition avoids dangerous assumptions.
+- Use stable IDs, unit checkpoints, and actual evidence to avoid repeated work.
+- Run gates appropriate to the stage; do not repeatedly run unrelated expensive
+  suites without a reason, or demand tests that have not been introduced yet.
+- Use fewer well-scoped workers when sufficient, but do not retain a confused
+  context solely to save a new agent's setup cost.
+- Read references when needed, and again after context loss or a relevant change
+  if their instructions are no longer available. Cache behavior is not a reason
+  to act without the operating contract.
 
-## Producing the plan cheaply (your own execution)
+## Detail that is worth its cost
 
-1. **Recon on one configured exploration agent, structured-output only.** Push
-   all fact-finding to it in a **single multi-part task**. Demand `path:line —
-   what` bullets, not file dumps. One agent over many: every extra agent
-   re-pays context-load and re-reads overlapping files. Split into parallel
-   agents only if one cannot hold the search.
-2. **Never pull a large file into the supervisor context to "look around".**
-   Ask the exploration agent for the 5–10 anchors you actually need. Keep the
-   supervisor context small.
-3. **Trust the anchors; don't re-read.** Once an agent reports a signature and
-   line, cite it. Re-reading to "double-check" doubles the cost for ~no gain;
-   reserve re-reads for things a correctness gate genuinely depends on.
-4. **Write the plan once, in the file.** No long in-chat drafts you then rewrite.
-   Compose directly in the artifact; iterate with targeted edits.
-5. **Author phase files on `agent-1` directly.** The supervisor already holds
-   the design context. Delegate prose only when phases are many and purely
-   mechanical, and then spot-check rather than full-reread.
-6. **Keep conversational replies terse.** The only thing allowed to be long is
-   the plan file, because its length buys downstream savings.
-7. **Favor the available context cache.** Read each reference at most once,
-   early, in a stable order; never re-read mid-run. Prefer fewer, larger agents
-   because each spawn is a fresh context. Never read `worked-example.md` during
-   a run.
+Complex work for a weak model needs an explicit algorithm, state representation,
+input/output/error contracts, boundary cases, synchronization/lifecycle decisions,
+ordered steps with postconditions, and a test oracle the worker did not invent.
+Use pseudocode or exact signatures where those remove real ambiguity.
 
-## Designing the plan so implementation is cheap
+A short instruction such as “implement a lock-free token bucket” is not a
+self-contained plan. Nor are “handle errors”, “add tests”, or an invariant ID
+without its meaning. Split work or specify the missing decisions before dispatch.
 
-8. **Anchors over prose.** `src/foo.rs:120-145 — splice loop, reuse for X` lets
-   the implementer open exactly that range. A paragraph forces them to go
-   re-find it.
-9. **The reuse map is a token cache.** Every "reuse `Y` at `path:line`" row is a
-   search the implementer doesn't run. Make it exhaustive.
-10. **Right-size the configured agent per sub-phase.** Tag mechanical
-   sub-phases `agent-3+` when available, implementation `agent-2`, and
-   architecture/review `agent-1`. With one configured agent, keep all work on
-   that agent and mark the final review as self-review.
-11. **Phase for small diffs and small test runs.** Independently shippable
-    phases mean each implementation turn touches few files and runs a focused
-    test subset — less context loaded, fewer tokens per turn.
-12. **Name tests with IDs.** `T-HUB1`, `vpn_pool_alloc_*`. Referenceable test
-    names mean later phases say "T-HUB1 still passes" instead of re-describing
-    the whole test.
-13. **State invariants once, reference them by tag.** `I-MC1` instead of
-    re-explaining the legacy-path guarantee in every phase.
-
-## Anti-patterns (these silently burn tokens)
-
-- Asking a subagent to "explain the codebase" → pages of prose you don't need.
-- Reading whole files in the architect context for orientation.
-- Re-deriving facts already in the conversation or already in a subagent report.
-- Vague sub-phases ("update the server logic") → the implementer must re-explore
-  to discover what you already knew but didn't write down.
-- Pasting large code blocks into the plan when a `path:line` anchor + a 2-line
-  description of the change would do.
-
-## The tradeoff, stated honestly
-
-Phase files are intentionally **long and detailed**. That is not a token waste —
-it is front-loaded work (once, on the supervisor) that prevents repeated re-exploration
-spend (many times, across every implementation turn and every implementer).
-Optimize total tokens across the whole feature, not the size of any one file.
-Keep overview.md small — its value is fast cold-start, not detail.
-
-`STATE.md` follows the same logic one level down: it is medium-sized and
-bounded (one line per ledger entry, no code dumps, verbatim text only for
-failing gate output), and it is the single file a cleared session reads to
-resume — there is no second status file to keep in sync. Opening a unit in it
-before the work and closing it after costs a few lines; skipping either costs a
-full re-exploration plus the risk of redoing or clobbering in-flight work.
+Checkpoint after meaningful work, not just at session end. Keep the live state
+easy to scan with concise evidence references. Historical ledgers can grow; do
+not delete recovery/audit evidence to satisfy an arbitrary size target.
