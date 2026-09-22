@@ -2,8 +2,9 @@
 name: plan-execute-verify
 description: >
   Plan and execute phased development with explicit sub-phase contracts,
-  resumable state, configured agents, and verification. Use to plan a feature,
-  refactor, or migration; execute an existing plan; implement a small task;
+  resumable state, configured agents, and verification. Use to onboard an existing
+  repository or recover its context; plan a feature, refactor, or migration;
+  execute an existing plan; implement a small task;
   fix a bug; or audit implementation against a plan. Supports successive
   model sessions and coordinated subagents. full-autonomous:true continues
   within the requested scope and commits verified operational units locally.
@@ -46,6 +47,8 @@ Each setting resolves independently: explicit invocation > selected plan's
 STATE.md §3 > default. Store explicit overrides in §3. Without a plan,
 `task`/`bug` use per-invocation settings recorded in their ledger. Plan mode
 accepts these options as presets for execution; it neither implements nor commits.
+Onboard is the exception to persistence: options apply only to that inspection,
+never alter saved settings, and never authorize commits or subsequent execution.
 
 `full-autonomous:true` does not authorize pushes, deployments, or broader scope.
 `verify` still only audits; `task` still does only the requested task. Exact
@@ -81,6 +84,7 @@ an invocation of its Plan/Execute workflow.
 
 | Token | Mode | Manual | Result |
 |-------|------|--------|--------|
+| `onboard` | Onboard | [mode-onboard](references/mode-onboard.md) | Repository context and next-step guidance; onboarding document only |
 | `plan` or no mode | Plan | [mode-plan](references/mode-plan.md) | Plan files; no production code |
 | `execute` | Execute | [mode-execute](references/mode-execute.md) | Implementation of the selected plan/scope |
 | `execute verify` | Corrections | [mode-execute](references/mode-execute.md) | Corrections from the selected audit |
@@ -89,8 +93,9 @@ an invocation of its Plan/Execute workflow.
 | `verify` | Verify | [mode-verify](references/mode-verify.md) | Audit artifacts and truthful state; no code fixes |
 
 Routing is syntactic, not a guess from the description: the first token after
-leading options/prefix selects a mode if it is exactly `plan`, `execute`, `task`,
-`bug`, or `verify`. Otherwise the whole remainder is an implicit Plan description.
+leading options/prefix selects a mode if it is exactly `onboard`, `plan`, `execute`,
+`task`, `bug`, or `verify`. Otherwise the whole remainder is an implicit Plan
+description.
 Use `plan task queue for background jobs` or `plan bug reporting dashboard` for
 features whose names begin with a reserved mode word. In natural-language
 requests without command syntax, resolve material ambiguity before writing.
@@ -100,6 +105,8 @@ fall back to another mode. Options alone do not authorize choosing a feature.
 ### Selection and execution scope
 
 ```text
+/plan-execute-verify onboard
+/plan-execute-verify onboard 003
 /plan-execute-verify <feature>
 /plan-execute-verify plan task queue for background jobs
 /plan-execute-verify execute 003
@@ -118,7 +125,12 @@ accepts `phase_02`, `1.2`, `§ 1.2`, or `phase_02 § 1.2`.
 Numeric sub-phase IDs refer to their heading, not the file's numeric suffix:
 logical phase 0 is stored in `phase_01.md`. Reject mismatched file/ID selectors.
 
-Without a selector use the highest numbered real plan, ignoring `000_adhoc`;
+Onboard accepts an optional plan selector, not a phase/report selector. Without
+one it inventories the repository's plans and ad-hoc ledgers; it does not select
+the highest number as the next work item. See its manual for ambiguity handling.
+
+For execution/audit selection, without a selector use the highest numbered real
+plan, ignoring `000_adhoc`;
 if multiple plans are active and context does not identify one, ask which.
 An explicit path always wins. `execute verify` means audit corrections; select
 a plan literally named `verify` by number/path. It targets the selected/active
@@ -135,7 +147,8 @@ merely because a single selected sub-phase finished.
 
 ## Plan folder and identities
 
-Use `docs/plans/<NNN>_plan-<FeatureName>/` under the target repository root.
+When creating a plan, use `docs/plans/<NNN>_plan-<FeatureName>/` under the target
+repository root.
 Create parent directories if absent. The number is the highest existing numeric
 prefix plus one, starting at 001; never reuse gaps or renumber old plans.
 FeatureName is a short PascalCase or kebab-case name without spaces.
@@ -152,6 +165,8 @@ contracts. Completion evidence always identifies which revision was implemented.
 Operational modes must read [execution-contract.md](references/execution-contract.md).
 Planning embeds its cold-start, scope, ownership, review, and completion rules
 into STATE.md and a concise reminder into every phase file.
+Onboard is informational: it observes this state but never claims ownership,
+opens/closes units, repairs records, or performs completion transactions.
 
 - Read STATE.md first. Reconcile OPEN work, its step checkpoint, the actual diff,
   prerequisite sub-phase statuses, and unresolved commit references.
@@ -215,6 +230,13 @@ planner checks critical source contracts even when recon came from a weaker
 agent. Implementers inspect the exact symbols, callers, and tests they modify.
 Line numbers are hints; paths, symbols, and expected contracts are the anchors.
 
+If docs/onboarding.md exists, use it as a source map after reading the active
+state in operational modes. Recheck relevant paths against the current tree;
+it is a dated context snapshot, not authority for requirements, progress, test
+results, or permission. Its absence never blocks another mode and does not
+require running Onboard first. Never stage an unrelated onboarding document
+merely because a later operational unit creates a commit.
+
 Plan includes repository recon followed by targeted internet research before
 design decisions. Use [research.md](references/research.md) for material external
 questions: primary sources, version applicability, privacy, evidence records,
@@ -238,11 +260,13 @@ and evidence. See [token economy](references/token-economy.md).
 
 ## References
 
-- [Plan](references/mode-plan.md), [Execute](references/mode-execute.md),
+- [Onboard](references/mode-onboard.md), [Plan](references/mode-plan.md),
+  [Execute](references/mode-execute.md),
   [Task/Bug](references/mode-taskbug.md), [Verify](references/mode-verify.md)
 - [Execution contract](references/execution-contract.md): operational policy and
   recovery; read for runtime work and when writing resumable plans
 - [Plan templates](references/output-template.md),
+  [onboarding template](references/template-onboarding.md),
   [ledger templates](references/templates-ledger.md),
   [audit templates](references/templates-audit.md): read the template being written
 - [Agent roster](references/agent-roster.md): assignments, handoffs, and reviews

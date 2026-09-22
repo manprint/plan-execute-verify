@@ -25,6 +25,11 @@ the strong supervisor is authorized to make.
 
 ## B1 — Repository recon
 
+When docs/onboarding.md exists, use its source map and command inventory as
+locators. Recheck the relevant sources, versions and dirty changes; onboarding
+is neither a required prerequisite nor proof that a planned change is safe.
+Do not import its suggested next action as a user-approved requirement.
+
 Gather exact paths, symbols/signatures, relevant callers, repository conventions,
 test fixtures, command syntax, setup requirements, existing failures, and reuse
 candidates. Prefer a batched exploration worker when available; local recon is

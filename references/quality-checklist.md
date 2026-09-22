@@ -4,6 +4,29 @@ Run the relevant checks before reporting completion. A checklist is not evidence
 by itself: record actual source inspection, command results, and review identity.
 An unresolved required item prevents READY or implementation DONE.
 
+## Onboard — context, not execution approval
+
+- [ ] Repository/worktree, instructions, branch/HEAD or unavailable Git metadata,
+      inspected scope, and relevant dirty changes are identified without claiming ownership.
+- [ ] Map covers purpose, components/entrypoints, actual version evidence,
+      conventions, command sources/setup, and important limits; facts and inferences differ.
+- [ ] Existing onboarding content was revalidated, not treated as current because
+      its timestamp or HEAD matches. Uncommitted changes and moved symbols count.
+- [ ] Real plans, ad-hoc history, partial/legacy artifacts, and supplied custom
+      paths are distinguished; absence of skill files is not absence of software.
+- [ ] Returning-project summary links authoritative state/ledgers/reports and
+      distinguishes recorded completion, inspected evidence, and current checks.
+- [ ] OPEN/pending-commit/suspended work and active owners are surfaced before
+      recommending new work. Missing evidence never becomes DONE or READY.
+- [ ] Next action respects prerequisites, saved scope, settings, report ID, and
+      actual host capabilities. Multiple candidates require a choice, not a guess.
+- [ ] Suggested commands use supported syntax; natural-language handoffs retain
+      exact paths/IDs when no selector exists. Unknown goals remain questions.
+- [ ] Only the onboarding artifact was written, preserving unrelated content;
+      no code/state/roster/index changes, unit claims, commits, or automatic next command.
+- [ ] Snapshot has date/baseline, source locators, coverage limits, and a concise
+      next action; it is not a second live progress board or a substitute for Verify.
+
 ## Plan readiness — strong supervisor
 
 - [ ] Goal, exclusions, requirements, and reference scenario are concrete.

@@ -19,6 +19,11 @@ Legacy defaults are Opus/Sonnet/Haiku in those positions. Explicit configuration
 overrides the plan's roster; otherwise preserve the stored roster across sessions.
 Record an intentional override and its effect on remaining assignments. Do not
 treat opening a plan in a different model as an automatic roster override.
+Onboard is informational: an explicit roster applies to that inspection only;
+never rewrite saved assignments. Prefer the strong supervisor for the initial
+architectural reconstruction. Routine context refreshes can follow the recorded
+source map; unresolved architectural interpretation needs a strong handoff,
+not a fabricated review. Record the actual inspecting agent and limitations.
 
 Select work by the worker's required reasoning, available context, and contract
 completeness. The weakest worker can implement complex logic when the supervisor

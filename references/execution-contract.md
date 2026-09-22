@@ -4,6 +4,8 @@ Read for `execute`, `execute verify`, `task`, and `bug`; `verify` reads it for
 recovery, ownership, and audit closure. Plan mode uses it to initialize the
 runtime contract. Copy the cold-start rules and resolved settings into generated
 `STATE.md`: a later executor may not have this skill installed.
+Onboard may consult this contract to interpret records, but does not run its
+state-changing recovery or completion steps; mode-onboard.md governs that mode.
 
 ## 1. Resolve the invocation once
 
@@ -13,9 +15,12 @@ Reject other values and duplicate occurrences before making changes. The value
 persists in §3; in `000_adhoc` it is per invocation and recorded in the ledger.
 Parsing ends at the first non-option/non-agent token; occurrences in a task's
 description are literal text. An explicit value overrides the persisted value.
+Exception: Onboard only observes saved configuration. Its options and agent
+prefix are invocation-local and never persist to a plan or an ad-hoc ledger.
 
 | Mode | Scope when true | Completion commits |
 |------|-----------------|--------------------|
+| Onboard | Inspect context and suggest a next action; never execute that action or alter saved settings | None, including with WIP enabled |
 | Plan | Produce the requested plan; record the setting for execution | None; planning does not start implementation |
 | Execute | Continue through eligible sub-phases and phase closures within the selected scope | Every completed sub-phase and phase closure |
 | Execute verify | Apply the selected report's corrections; revalidate affected phases | Every completed correction and reopened phase closure |
@@ -35,11 +40,12 @@ existing WIP option still applies independently:
 | true | on | Yes | Yes |
 
 `--no-wip-commit` disables interruption commits, not autonomous completion
-commits. WIP alone never commits audits or planning. Neither setting authorizes
-pushes, deployments, destructive cleanup, or changes outside the requested scope.
+commits. Onboard never commits; WIP alone never commits audits or planning.
+Neither setting authorizes pushes, deployments, destructive cleanup, or changes
+outside the requested scope.
 
-Persist the requested scope (plan, phase, sub-phase, task, bug, or report), the
-configured roster, and the selected execution style: `handoff` (successive
+In operational modes, persist the requested scope (plan, phase, sub-phase, task,
+bug, or report), the configured roster, and the selected execution style: `handoff` (successive
 sessions/models) or `delegated` (coordinator and workers). A new explicit selector
 replaces the scope; a context reset or resume does not expand it. Preserve the
 plan's next eligible unit separately from the current invocation's scope.

@@ -1,6 +1,6 @@
 # plan-execute-verify
 
-A skill for planning, implementing, and checking development work across phases
+A skill for onboarding repositories, planning, implementing, and checking work across phases
 and sub-phases. A strong agent specifies the design and reviews the result;
 less capable agents can implement even complex changes from explicit contracts,
 numbered steps, and test expectations.
@@ -10,8 +10,17 @@ different model. Reliability and recoverability take priority over saving tokens
 
 ## Quick start
 
-First, ask the strong agent to create a plan. Replace agent names with identifiers
-supported by your host:
+On an unfamiliar repository, or when returning after a break, start with:
+
+```text
+/plan-execute-verify onboard
+```
+
+It maps the project, summarizes any existing work, and suggests the next command
+without running it. This step is optional when you already have enough context.
+
+To start a new development, ask the strong agent to create a plan. Replace agent
+names with identifiers supported by your host:
 
 ```text
 /plan-execute-verify full-autonomous:true agent-1:opus,agent-2:sonnet,agent-3:haiku add per-user rate limits; preserve existing behavior when disabled
@@ -50,6 +59,7 @@ different interface, select this skill and pass the same options and arguments.
 
 | Command after the skill name | Use it for | What it changes |
 |------------------------------|------------|-----------------|
+| `onboard [plan]` | Understand an existing repository or recover context and the next step | Only docs/onboarding.md; no code, plan-state changes or commits |
 | `plan <feature>` or `<feature>` | Design a feature, refactor, or migration | Plan files only |
 | `execute [plan] [phase or sub-phase]` | Implement an existing plan | Code, tests, docs, and plan state |
 | `task <description>` | One small change | Requested change and its ledger |
@@ -57,11 +67,66 @@ different interface, select this skill and pass the same options and arguments.
 | `verify [plan]` | Audit implementation against the plan | Audit reports and state; no code fixes |
 | `execute verify [plan] [report ID]` | Apply audit corrections | Selected corrections and affected plan state |
 
-The first word after options selects the mode when it is `plan`, `execute`,
-`task`, `bug`, or `verify`. Otherwise it starts a planning description.
+The first word after options selects the mode when it is `onboard`, `plan`,
+`execute`, `task`, `bug`, or `verify`. Otherwise it starts a planning description.
 For a feature whose name begins with a mode word, use the explicit Plan form:
 `/plan-execute-verify plan task queue for background jobs`.
 Missing arguments or invalid selectors never silently switch modes.
+
+## Onboarding: first visit or returning project
+
+Run from the target repository:
+
+```text
+/plan-execute-verify onboard
+/plan-execute-verify onboard 003
+/plan-execute-verify onboard docs/plans/003_plan-RateLimit
+```
+
+The optional selector focuses an existing plan by number, unique name or path;
+it does not accept phase/report selectors. Without it, Onboard inventories the
+repository and discovered plans/ledgers. Multiple plausible work streams require
+a choice; the highest plan number is not automatically the work to resume.
+
+**First visit, no skill history:** the agent maps the project's purpose,
+components, entrypoints, stack/resolved versions, conventions, principal flows,
+test locations, command definitions and relevant existing changes. It identifies
+uncertainty and provides an ordered reading path for the next agent. Existing
+software is not recreated, and TODOs are not converted into an approved roadmap.
+Without a stated next goal, the agent asks what you want to achieve.
+
+**Returning project:** the agent reads authoritative state, phase contracts,
+task/bug ledgers and relevant audits, then compares the checkpoint with the actual
+repository. The recap distinguishes recorded completion, evidence inspected and
+tests actually rerun. It identifies open work, pending commits, blockers, saved
+scope/settings and the next eligible step. Partial or legacy plans are reported
+as such, not treated as a fresh project or silently repaired.
+
+The output is a short recap, a source-backed context map in docs/onboarding.md,
+and one next command or precise handoff. For example, a saved scope of sub-phase
+1.2 can produce `/plan-execute-verify execute 003 § 1.2`, not a whole-plan command.
+If that plan has saved `full-autonomous:true`, the recap explains that execution
+would inherit automatic completion commits. Onboard does not run that command.
+For an existing draft or interrupted ledger entry without a supported ID selector,
+it gives a natural-language handoff with the exact path/ID rather than inventing
+syntax such as `plan 003` or `bug B-A002`.
+
+The map records observation date, branch/commit, coverage, source locators and
+limitations. It is a dated orientation aid, not a second STATE.md or an audit.
+Later modes recheck relevant sources and still perform their own recon/recovery;
+Onboard is not mandatory before every command. Existing user content outside its
+managed section is preserved; an unmarked file at the destination needs an agreed
+merge/location rather than being overwritten.
+
+Onboard never edits code, plans, runtime settings or rosters; rebuilds search indexes;
+claims units; repairs state; switches branches; or commits. It inventories project
+commands without executing scripts, installing dependencies or starting services
+by default. Tests not run are explicitly labelled. Full-autonomous and WIP options
+are accepted but do not change these boundaries and are not saved for later work.
+An agent prefix selects the inspector only; it does not reassign an existing plan.
+Prefer a strong agent for the first architecture map; ordinary refreshes can reuse
+it, escalating uncertain interpretation. Internet research remains targeted,
+usually during Plan, not a compulsory onboarding survey.
 
 ## Configure autonomy and commits
 
@@ -94,6 +159,9 @@ Settings resolve independently:
 Both settings persist across sessions. To turn off all automatic commits, specify
 both `full-autonomous:false --no-wip-commit`. Without a plan, task/bug options
 apply only to that invocation and are recorded in the ad-hoc ledger.
+Exception: Onboard never persists options or changes a plan's saved configuration.
+Both boolean values mean inspection only; neither full autonomy nor WIP commits
+its context document or starts the recommended next action.
 
 ### Which commits are created?
 
@@ -106,7 +174,7 @@ apply only to that invocation and are recorded in the ad-hoc ledger.
 
 A code unit is a sub-phase, task, bug fix, or audit correction. A phase gets its
 own completion commit after all sub-phases, integration checks, documentation,
-and strong-agent review. Planning itself never commits.
+and strong-agent review. Planning and Onboard never commit.
 
 Examples of commit subjects:
 
@@ -149,8 +217,8 @@ does not authorize the executor to continue into 1.3. Dependencies still apply.
 Phase files are numbered from 01; logical phases start at 0. Thus
 `phase_02.md` contains logical phase 1 and sub-phases such as 1.1 and 1.2.
 
-Without a plan selector, the skill uses the highest numbered real plan unless
-multiple active plans make the target ambiguous. The reserved `000_adhoc`
+For execution/audit selection without a plan selector, the skill uses the highest
+numbered real plan unless multiple active plans make the target ambiguous. The reserved `000_adhoc`
 folder is never an execute/verify target. Audit corrections use the selected or
 unambiguous active plan and the newest report unless a report ID is provided.
 To disambiguate, use `execute verify 003 V002` or replace `003` with a plan path.
@@ -178,6 +246,7 @@ A single numbered entry (`agent-1:<name>`) is equivalent to `agent:<name>`.
 
 Opening the plan in another model does not silently change its assignments.
 An explicit prefix overrides the roster and updates remaining assignments.
+In Onboard only, a prefix applies to the inspection and never changes assignments.
 
 The weakest worker may implement complex logic, but the strong planner must
 already specify the algorithm, interfaces, synchronization, boundary cases,
@@ -192,7 +261,13 @@ Both execution styles use the same plan files:
 | Successive sessions/models | Each session resumes from STATE.md and the named step; ownership transfers after the previous session stops |
 | Coordinator with subagents | The coordinator owns state, plan edits, reviews, and commits; workers receive bounded implementation assignments |
 
-For a fresh session:
+For orientation in a fresh session without starting work:
+
+```text
+/plan-execute-verify onboard 003
+```
+
+To request actual resumption instead:
 
 ```text
 Use plan-execute-verify to resume docs/plans/003_plan-RateLimit.
@@ -265,6 +340,10 @@ these boundaries nor the requirement for sufficient evidence.
 
 ## Files you will see
 
+Onboard writes the repository-level docs/onboarding.md, separate from numbered
+plans. It creates neither a plan folder nor an ad-hoc ledger just to store context.
+Implementation progress continues to live only in the relevant STATE.md/ledger.
+
 ```text
 docs/plans/003_plan-RateLimit/
   overview.md       Goal, decisions, research evidence, interfaces, phase map
@@ -315,6 +394,8 @@ availability and the mechanism for starting subagents come from the host.
 
 [Skill entrypoint](SKILL.md) · [Execution contract](references/execution-contract.md) ·
 [Plan templates](references/output-template.md) ·
+[Onboarding manual](references/mode-onboard.md) ·
+[Onboarding template](references/template-onboarding.md) ·
 [Research protocol](references/research.md) ·
 [Worked example](references/worked-example.md) ·
 [Quality checklist](references/quality-checklist.md)
@@ -322,8 +403,9 @@ availability and the mechanism for starting subagents come from the host.
 ### Validation scope (2026-09-22)
 
 Skill structure validation, static local-link checks, and `git diff --check` pass.
-These checks include the research protocol and its templates; the research
+These checks include onboarding and the research protocol/templates; the research
 workflow has not yet been exercised end-to-end with live sources.
+Onboard has not yet undergone an independent end-to-end agent evaluation.
 
 The execution protocol was checked separately before the research addition:
 An independent scenario review checked scope limits, interrupted completion,
