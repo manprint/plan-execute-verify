@@ -111,27 +111,29 @@ DONE, or explicitly waived by the supervisor with preserved requirements.
 SKIPPED does not implicitly satisfy a dependency. Open the unit before editing,
 mark its phase IN_PROGRESS, record its base and owned paths, and name step S1.
 
-Execute the numbered steps and check each expected result. Update §6 after each
-meaningful edit/test batch, before delegation, before a long-running operation,
-and before yielding. Record completed steps, next step, actual changed files,
-pending edits, last verification, and any process/resource that must be resumed
-or cleaned up. A crash can precede the next checkpoint: always inspect the diff
-on resume, even when §6 still says `claimed — nothing written yet`.
+Execute the numbered steps and check each expected result. A step or successful
+targeted test does not itself require a state write. Keep §6 compact: last durable
+step, next action, owned diff, pending edits, and resources that need recovery.
+Update it at a real recovery boundary: before handoff/delegation, a risky or long
+external operation, an unresolved blocker, or a pause likely to outlive the current
+session. Opening and closing the unit are required writes; several ordinary
+edit/test batches between them may share one checkpoint or need none. On resume,
+inspect the actual diff because a crash may precede any checkpoint.
 
-After implementation, run the unit gates and required review, reconcile affected
-plan files and docs, and close the unit using §6 below. Continue without asking
+After implementation, run the targeted unit checks and required review, reconcile
+affected plan files and docs, and close the unit using §6 below. Continue without asking
 for permission to start the next already-authorized unit. With full autonomy,
 do not stop merely because a sub-phase or phase ended.
 
-For planned phase work, a specifically named dependent README sub-phase may
-fulfil its documentation obligation later in that phase. Keep the obligation
-visible and pending until then; unit completion is not phase/feature completion.
+For planned phase work, a specifically named later unit or phase closure may
+fulfil its README obligation. Keep the affected sections and owner visible and
+pending until then; unit completion is not phase/feature completion.
 Tasks, bugs, and corrections include their affected documentation in their own
 completion transaction rather than inventing a future documentation task.
 
 A phase has a separate closure unit `P<N>`: all its sub-phases are DONE or
-explicitly SKIPPED with a justification; its README obligation, phase gates, and
-strong-supervisor review are complete. Record the review and phase result in
+explicitly SKIPPED with a justification; its README obligation, full phase gates,
+and strong-supervisor review are complete. Record the review and phase result in
 STATE.md, then commit the closure when full autonomy is true. This is a real
 state change, not an empty ceremonial commit. Completing a selected sub-phase
 does not authorize executing remaining sub-phases; its containing phase may be
@@ -161,9 +163,11 @@ supervisor with: unit/step, expected vs actual, minimal evidence, attempts,
 affected dependents, and proposed options.
 
 The supervisor may amend technical decisions and remaining steps autonomously
-within the user's approved requirements, observable behavior, and scope. Record
-the new plan revision, superseded decision, reason, affected units, and required
-revalidation; update their local contract excerpts. It cannot weaken acceptance
+within the user's approved requirements, observable behavior, and scope. Revise
+the plan only when a decision, contract, dependency, gate, or scope actually
+changes: record the superseded decision, reason, affected units, and required
+revalidation; update their local contract excerpts. Locator drift and routine
+progress belong in STATE.md, not a plan revision. It cannot weaken acceptance
 criteria or retroactively rewrite an executed specification to excuse a failure.
 User decisions are needed only for a changed product requirement, scope, or
 external authority. Existing authorization remains valid across sessions.
@@ -182,9 +186,15 @@ and any follow-up. Edits affecting reviewed behavior invalidate that review.
 
 Define baseline, unit, phase, and final gates separately. Each gate records its
 exact command, cwd, setup, activation unit, assertions/test IDs, and applicability.
-Run baseline checks before the first edit; at resume rerun checks affected by the
-actual diff or uncertain previous evidence. Do not require a future test target
-before the sub-phase that creates it. `not-applicable-yet` is not `pass`.
+Run the focused baseline checks needed to identify pre-existing failures before
+the first edit; rerun only checks whose prior evidence the actual diff or changed
+environment invalidates. At each sub-phase run only
+focused tests/checks for its changed behavior and immediate contract, including a
+narrow regression when relevant. Run the complete integration/regression gate once
+at phase closure P<N>, after all sub-phases and documentation, and final gates at
+the last phase closure. Repeat a full gate only when a later change invalidates
+its evidence or a concrete failure needs diagnosis. Do not require a future test
+target before the sub-phase that creates it. `not-applicable-yet` is not `pass`.
 
 For test gates, confirm the intended tests were discovered and executed; an exit
 code of zero with zero selected tests does not prove the unit. Record command,
@@ -222,7 +232,8 @@ Suggested subjects (adapt to the repository's convention without losing meaning)
 `correction(V001-C1): complete Retry-After assertion`,
 `verify(V001): complete audit; FAIL, 1 blocker`.
 
-1. Check gates/review and finish all coherence updates before staging. Record the
+1. Check the gates applicable to this unit and its required review; finish all
+   coherence updates before staging. Record the
    closed unit, evidence, next eligible unit, and ledger commit reference
    `unit:<id>:<attempt>` in the same proposed snapshot. When commits are disabled,
    record `uncommitted`. Do not try to embed a commit's own SHA inside itself.

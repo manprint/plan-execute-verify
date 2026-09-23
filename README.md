@@ -291,8 +291,10 @@ does not automatically launch a new host session after the current one ends.
 ## What makes a plan ready?
 
 Every sub-phase contains exact prerequisites, files/symbols, local design
-contracts, numbered steps and expected results, checkpoints, named tests with
-assertions, required reviews, and a completion condition.
+contracts, numbered steps and expected results, named focused tests with
+assertions, required reviews, and a completion condition. A typical phase groups
+2–4 coherent sub-phases around one integration result. Shared design appears once
+per phase, and documentation may be part of an implementation unit.
 
 The strong planner checks the critical source contracts and performs a cold-read
 validation before marking the plan READY. Unresolved design, contradictory
@@ -301,6 +303,9 @@ labelled as such and is not presented as an executable plan.
 
 During execution, failed or unavailable mandatory checks prevent completion.
 A zero-test run is not verification. Workers cannot weaken tests to get green.
+Sub-phases run focused validation; full gates run at phase closure. State is
+opened and closed for each unit, with interim checkpoints only at recovery
+boundaries such as handoff, risky operations, or blockers.
 The supervisor resolves technical plan defects and records revisions and affected
 dependencies. These checks reduce ambiguity; they do not replace actual testing
 and review of the resulting software.
@@ -393,6 +398,7 @@ availability and the mechanism for starting subagents come from the host.
 ## Maintainer references
 
 [Skill entrypoint](SKILL.md) · [Execution contract](references/execution-contract.md) ·
+[Invocation rules](references/invocation.md) ·
 [Plan templates](references/output-template.md) ·
 [Onboarding manual](references/mode-onboard.md) ·
 [Onboarding template](references/template-onboarding.md) ·

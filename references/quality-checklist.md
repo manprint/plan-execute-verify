@@ -33,6 +33,9 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Product ambiguities are resolved using user decisions; authorized technical
       choices are decided by the supervisor, with no unresolved alternatives.
 - [ ] Every phase/sub-phase has stable IDs, exact dependencies, and artifacts.
+- [ ] Phases have observable integration outcomes; adjacent work sharing a
+      contract/checks is grouped. Each split has a dependency, review, or
+      recovery reason; the weakest worker can still resume each unit.
 - [ ] Each sub-phase has all seven fields with complete structured contents:
       contracts, numbered steps/postconditions, checkpoint, scope, failure handling.
 - [ ] Complex units specify algorithm, representation, synchronization/lifecycle,
@@ -55,10 +58,12 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Named tests have locations, fixtures, exact assertions, valid commands,
       setup, activation stages, and intended discovery evidence.
 - [ ] Unit, phase, baseline, and final gates are distinguished; future gates do not
-      block earlier units. The final gates prove the reference scenario.
+      block earlier units. Unit checks are focused; full gates run at phase/final
+      closure and prove the reference scenario.
 - [ ] Required strong reviews name reviewer, timing, and focus; complex work may
       go to weak workers only with those contracts/reviews.
-- [ ] Each phase has a README obligation and a separate reviewed closure P<N>.
+- [ ] Each phase has a README obligation and a separate reviewed closure P<N>;
+      documentation has its own sub-phase only when substantial.
 - [ ] STATE.md is initialized with immutable baseline, revision, roster, scope,
       settings, ownership, step checkpoints, evidence tables, and every sub-phase.
 - [ ] Every dependency resolves; ordering has no cycle; next action names an
@@ -67,6 +72,8 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Both handoff and delegated workers can determine who owns state/commits.
 - [ ] Cold-reading validation of the most complex unit found no missing decision.
       If evaluated by another agent, retain its actual result, not assumed success.
+- [ ] Phase-local meanings, gate commands, and runtime rules are not repeated in
+      every unit; no omitted detail forces the worker to design an acceptance oracle.
 - [ ] Plan files contain no unfilled placeholders or contradictory instructions.
       Readiness is READY only after these checks; otherwise report the blockers.
 
@@ -75,9 +82,11 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Requested scope preserved; no unauthorized work or changed product requirement.
 - [ ] Actual unit revision/contracts/prerequisites checked before editing.
 - [ ] Unit opened before edits; owner and pre-existing changes identified.
-- [ ] Steps/checkpoints reflect actual work, including pending edits and next action.
+- [ ] OPEN/close writes and recovery-boundary checkpoints reflect actual work,
+      including pending edits and next action; no per-step state churn.
 - [ ] Specified behavior, wiring, tests, and documentation implemented.
-- [ ] Intended tests really ran with required assertions; required gates pass on
+- [ ] Intended focused tests ran for the unit; full gates ran at applicable phase
+      closure. Required gates pass on
       the recorded change; no hidden skips, loosened tolerances, or zero-test pass.
 - [ ] Required reviewer actually inspected the relevant design/diff/evidence.
 - [ ] Supervisor-authorized technical revisions preserve requirements and update
@@ -85,8 +94,8 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Version/environment changes or contradicted external assumptions triggered
       targeted research where needed; evidence, contracts and affected tests were
       updated under supervisor authority before dependent work continued.
-- [ ] README covers affected behavior or, for a planned implementation sub-phase,
-      an exact pending README sub-phase owns the obligation. Phase closure never
+- [ ] README covers affected behavior or a named remaining unit owns the
+      obligation. Phase closure never
       defers it; tasks/bugs/corrections finish their own affected docs. Language
       and structure are preserved.
 - [ ] State/ledgers/findings/reviews and sub-phase/phase progress match reality.

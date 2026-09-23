@@ -4,8 +4,12 @@ The strong supervisor authors the plan. Planning writes no production code and
 makes no commits. Runtime options, including full-autonomous, are presets for
 later execution; they do not convert a planning request into implementation.
 
-Read output-template.md, agent-roster.md, execution-contract.md, and the Plan
-checklist in quality-checklist.md. Use token-economy.md for cost tradeoffs.
+Start with this manual and the Plan section of quality-checklist.md. Read
+agent-roster.md when assigning workers, research.md at B2 only for material
+external questions, the overview/phase sections of output-template.md while
+authoring those files, then its STATE.md section plus execution-contract.md when
+creating the runtime handoff. Read token-economy.md when deciding what to omit.
+Reuse these instructions while unchanged; do not preload or reread every reference.
 
 ## A — Scope and baseline
 
@@ -42,10 +46,12 @@ contracts. Read enough surrounding code and tests to validate the proposed chang
 
 ## B2 — Targeted internet research
 
-After B1, read [research.md](research.md). Identify material external questions
-from the actual repository versions and constraints, then investigate the
-applicable primary sources before fixing the design. Compare approaches only
-where the choice affects correctness or the approved requirements.
+After B1, identify material external questions from the actual repository
+versions and constraints. If any exist, read [research.md](research.md) and
+investigate applicable primary sources before fixing the design. Compare
+approaches only where the choice affects correctness or approved requirements.
+For fully internal established work, record a justified N/A without a research
+pass.
 
 Record R<n> evidence in overview.md: question, source/version/dates, supported
 fact, separately labelled inference/local result, and decision impact. The strong
@@ -53,9 +59,10 @@ planner checks critical passages directly. Preserve unresolved required question
 as UNVERIFIED with scoped blockers; no executable READY plan depends on them.
 For entirely internal work with no external unknown, record justified N/A.
 
-Use the research stopping and privacy rules. Initialize the minimal DRAFT state
-described there before research starts; persist evidence as it is gathered and
-save the next question/lookup at checkpoints or interruption.
+When researching, use its stopping and privacy rules. Initialize the minimal DRAFT state
+described there before research starts. Batch settled evidence into one update;
+save the next question/lookup before interruption or when a required unresolved
+claim blocks design. Do not rewrite state after every source lookup.
 This is a planning step, not an implementation sub-phase or a new commit unit;
 planning still writes no production code and makes no commits.
 
@@ -83,9 +90,15 @@ unit's design and acceptance questions resolved and its contract validated.
 
 ## D — Decompose into executable units
 
-Use phases that preserve existing behavior and can pass their own gates. Start
-with additive scaffolding when useful. Assign stable logical phase/sub-phase IDs
-and map them explicitly to phase files; logical phase 0 is phase_01.md.
+Group work into phases with an observable integration result and one full gate
+run at closure. Usually use 2–4 outcome-oriented sub-phases per phase, including
+documentation only when it is a substantial independent deliverable. This is a
+calibration target, not a quota: use fewer for a narrow change or more when real
+dependencies require them. Before adding a phase, ask whether its outcome and
+gate can be combined with an adjacent phase without making a weak worker choose
+architecture, handle unrelated changes, or retain too much context. Start with
+additive scaffolding when useful. Assign stable logical phase/sub-phase IDs and
+map them explicitly to phase files; logical phase 0 is phase_01.md.
 
 Each sub-phase retains seven top-level fields:
 Model · Assignment · Files · Change · Unit tests · e2e tests · Done.
@@ -98,9 +111,10 @@ complex logic. Each unit needs:
 - Exact prerequisite unit IDs and artifacts, including newly created symbols.
 - Local meanings of applicable decisions/invariants and the expected input/output
   types, defaults, errors, and compatibility behavior.
-- Numbered implementation steps S1, S2, … with an expected postcondition and
-  checkpoint after each meaningful batch. Include imports/exports, callers,
-  configuration, wiring, and teardown where needed.
+- Numbered implementation steps S1, S2, … with checkable postconditions. Group
+  mechanical edits that share one outcome into a step. Include imports/exports,
+  callers, configuration, wiring, and teardown where needed. A step is not a
+  requirement to update STATE.md.
 - The chosen algorithm/data structure and handling of relevant edge cases.
   For concurrency: ownership, synchronization, lock lifetime, ordering, and
   deterministic verification. For data changes: migration/retry/rollback behavior.
@@ -108,28 +122,37 @@ complex logic. Each unit needs:
   what must trigger supervisor escalation.
 - Named tests with fixtures, assertions, location, command, and proof they are
   selected. Do not assign the worker the design of the acceptance oracle.
-- Required reviewer and review timing, unit gates, and a checkable completion
+- Required reviewer and review timing, targeted unit checks, and a checkable completion
   condition including state and the configured commit policy.
 
-Split a sub-phase when it has several independently verifiable outcomes, requires
-unrelated design decisions, or cannot be resumed from a short step checkpoint.
-Do not impose an arbitrary file/line/token cap: a coherent complex change may
-need substantial detail. Prefer small verifiable units over vague large units.
+Keep an outcome in one sub-phase when its edits share a contract and one targeted
+validation set. Split only when there is an independent dependency/review boundary,
+unrelated design, a separately releasable result, or too much work to resume from
+a short checkpoint. Combine adjacent mechanical units that would repeat the same
+context and checks. No arbitrary file/line/token cap overrides these criteria.
+
+Compress by storing each decision and invariant meaning once in the phase's local
+design context, then reference its ID in sub-phases. Keep exact algorithms,
+interfaces, failure behavior, and test oracles; remove repeated prose, generic
+instructions, and duplicate command/setup text already in the gate registry.
+The worker must still be able to act from STATE.md, its phase file, and named
+repository slices without reopening overview.md or inventing a design.
 
 Tests may explicitly be N/A with a reason appropriate to the change. Acceptance
 criteria must preserve the user's requirements; a low-capability assignment is
 not a reason to reduce the test standard.
 
-Every phase ends with a README sub-phase and then a phase closure P<N>.
-README work names only affected sections and shipped behavior; when none changed,
-verify accuracy and record that result without inventing content. Preserve
-existing language and structure. Documentation explains installation, usage,
-flags/config/defaults, examples, limits, and troubleshooting as applicable.
+Every phase has a README obligation and a phase closure P<N>. Put small related
+documentation edits in the implementation sub-phase; use a separate README
+sub-phase only for substantial documentation work. At closure, verify that
+affected sections match shipped behavior; when none changed, record that result
+without inventing content. Preserve existing language and structure.
 
-The supervisor reviews every phase at closure. Mark additional sub-phase gates
-for concurrency, lifecycle, schema/protocol design, sensitive refactors, and
-acceptance assertions. A weaker agent may implement these only from a complete
-contract; lack of detail requires refinement before dispatch.
+The supervisor reviews every phase at closure. Mark focused sub-phase reviews for
+high-risk contracts such as concurrency, lifecycle, schema/protocol changes, and
+sensitive refactors. Run full integration gates only in P<N>; each sub-phase runs
+the narrow tests that validate its own change. A weaker agent may implement these
+only from a complete contract; lack of detail requires refinement before dispatch.
 
 ## E — Write the handoff
 
@@ -146,9 +169,9 @@ The research/evidence register in overview.md retains source provenance and
 question-to-decision traceability; phase excerpts carry its operative conclusions.
 
 Each phase file is independently understandable together with STATE.md and the
-relevant repository slices. Include local decision/invariant excerpts, dependency
-and contract details, ordered sub-phase steps, review obligations, phase gates,
-and completion criteria. Future source paths are marked NEW with explicit
+relevant repository slices. Include one local design context, dependency and
+contract details, ordered sub-phase steps, review obligations, phase gates, and
+completion criteria. Future source paths are marked NEW with explicit
 creation/registration instructions, not treated as missing anchors.
 
 Initialize STATE.md at planning time:
@@ -157,7 +180,7 @@ Initialize STATE.md at planning time:
 - Current unit none; next action points to a real first eligible sub-phase.
 - Baseline/unit/phase/final gate applicability and setup.
 - Empty but usable ledger, checkpoints, evidence/review/deviation tables.
-- Every sub-phase, phase, named test, and README obligation in the progress board.
+- Every sub-phase, phase, named test, and phase README obligation in the progress board.
 - Deferred requirements and unavailable capabilities as scoped blockers.
 
 Do not duplicate implementation statuses in phase files or overview.md. Audit

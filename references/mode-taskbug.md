@@ -1,7 +1,7 @@
 # Task and Bug — small changes with durable recovery
 
 Read execution-contract.md and templates-ledger.md. Resolve options, roster, and
-plan attachment per SKILL.md. Both modes implement only the requested change;
+plan attachment per invocation.md. Both modes implement only the requested change;
 full-autonomous:true does not authorize unrelated plan phases.
 
 Use a short but persistent mini-plan: exact files/symbols, prerequisites,
@@ -28,8 +28,9 @@ Existing user authorization to complete a larger task may already cover planning
 
 1. Define the observable outcome and mini-plan. Explain material assumptions;
    settled technical choices do not require repeated user approval.
-2. Open the unit/ledger entry and implement the numbered steps. Checkpoint after
-   meaningful batches. Follow existing repository structure.
+2. Open the unit/ledger entry and implement the numbered steps. Checkpoint at a
+   recovery boundary such as handoff, risky operation, or blocker. Follow existing
+   repository structure.
 3. Add named tests with concrete assertions, or document why a test is not
    applicable for this change. Run applicable gates and required review.
 4. Reconcile README, plan decisions/dependents, tests, and any affected audit

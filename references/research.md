@@ -77,7 +77,8 @@ it does not duplicate the evidence register or replace implementation progress.
 If Plan has not initialized STATE.md yet, first create a small DRAFT checkpoint
 with plan identity/baseline, owner, scope/roster/settings, no active implementation
 unit, and the next research action. Complete the normal template before handoff;
-this checkpoint is not an executable plan. Persist R records as they are gathered.
+this checkpoint is not an executable plan. Batch settled R records into coherent
+updates; individual source lookups do not require separate state writes.
 On interruption, save sources already inspected, unanswered questions, and the
 next lookup so the next session does not restart the whole search.
 

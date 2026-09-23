@@ -1,13 +1,15 @@
 # Execute mode — implement and resume a selected scope
 
-Read execution-contract.md and agent-roster.md. Use the Coherence checklist in
-quality-checklist.md. These rules apply to both ordinary execution and
+Read execution-contract.md for recovery and the work/commit loop. Consult
+agent-roster.md when dispatch or review is needed, and the Coherence section of
+quality-checklist.md at closure. Do not load plan templates during ordinary
+execution. These rules apply to both ordinary execution and
 `execute verify`.
 
 ## E1 — Resolve and recover
 
 Resolve the plan, scope, roster, execution style, full-autonomous setting, and WIP
-setting per SKILL.md. Read STATE.md first. Preserve the previous scope on a
+setting per invocation.md. Read STATE.md first. Preserve the previous scope on a
 handoff; an explicit new selector supersedes it without abandoning OPEN work.
 
 Check ownership, actual repository changes, checkpoint, unit base, commit
@@ -46,7 +48,9 @@ or a report. Full autonomy does not expand that selection.
    plan revision, base, ownership, intended files, and first step.
 2. Read the local design context and named source slices. Confirm interfaces and
    relevant callers before editing. Follow numbered steps and their postconditions.
-3. Checkpoint after meaningful edit/test batches and before yielding. Workers
+3. Checkpoint at recovery boundaries: before risky/long work, delegation,
+   blockers, or yielding. Routine steps and passing focused checks need no
+   separate state write. Workers
    return evidence to the coordinator; only the state owner updates shared files.
 4. Implement named tests with the stated fixtures and assertions. Verify that the
    intended tests actually execute; test absence or zero discovery is not success.
@@ -54,7 +58,7 @@ or a report. Full autonomy does not expand that selection.
    design, escalate to the strong supervisor. The supervisor may repair technical
    steps within unchanged requirements/scope, version the plan, and update
    dependents. The weak implementer must not quietly redesign it.
-6. Run unit gates and required review against the actual diff. After two failed
+6. Run focused unit checks and required review against the actual diff. After two failed
    fixes of the same issue, escalate instead of retrying blindly or weakening tests.
 7. Apply the coherence contract in full, then close and commit according to
    execution-contract.md. Resolve the completion commit identity before advancing.
@@ -64,8 +68,8 @@ or a report. Full autonomy does not expand that selection.
 
 ## E4 — Close each phase
 
-After its implementation and README sub-phases, open P<N> as a phase-close unit.
-Run phase gates, obtain the strong supervisor's review of integration/invariants/
+After its sub-phases and README obligation, open P<N> as a phase-close unit.
+Run full phase gates, obtain the strong supervisor's review of integration/invariants/
 tests/docs, and record evidence. Only then mark the phase DONE. With
 full-autonomous:true, commit this nonempty state/review update on the current
 branch, distinctly identifying phase completion.
@@ -84,12 +88,13 @@ underspecified corrections require supervisor refinement and evidence before
 dispatch; an audit's completed status is not proof its corrections are executable.
 
 Each correction is a unit V<NNN>-C<n>, with the same detailed contract as a
-sub-phase. Recheck its finding against the current tree before editing. If it is
+sub-phase and focused validation. Recheck its finding against the current tree before editing. If it is
 already resolved, record current evidence and avoid duplicate code or commits.
 
 Work in dependency/severity order. A correction affecting a completed phase
-reopens it; invalidate dependent evidence as needed. Re-run the affected phase
-gates and supervisor review, then close it through P<N> with a new attempt.
+reopens it; invalidate dependent evidence as needed. Group corrections affecting
+that phase, then re-run its full gates and supervisor review once at P<N> closure
+with a new attempt, unless a later change invalidates that evidence again.
 No empty closure commits for phases that were not actually reopened.
 
 Mark a finding FIXED only with evidence that its condition no longer holds.
