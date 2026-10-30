@@ -48,8 +48,8 @@ Its reviewed closure is P0. Phase 1 may use the primitive only after P0 is DONE.
 
 ### 0.1 Implement the synchronized fixed-window primitive
 
-- **Model:** agent-3:haiku
-- **Assignment:** implement the specified algorithm and tests. agent-1:opus
+- **Agent:** agent-3
+- **Assignment:** implement the specified algorithm and tests. agent-1
   reviews the concurrency contract before work and the actual diff/test assertions
   before completion. In delegated mode the coordinator owns STATE.md and commits;
   in handoff mode the current session records progress and requests that review.
@@ -179,23 +179,26 @@ Initial sub-phase rows:
 |----|------------|------------|--------|---------|----------|
 | 0.1 | phase_01.md | none | TODO | 1 | — |
 
-P0 additionally requires G-P0 and agent-1's phase review. When full autonomy is
-true, its phase completion is a separate commit after the 0.1 commit.
+P0 additionally requires G-P0 and agent-1's phase review. When full autonomy or
+WIP is enabled, its phase completion is a separate commit after the 0.1 commit.
 
 ## Example interruption and commit recovery
 
 Suppose S1 and S2 were written but the process ended before S3:
 - 0.1 remains OPEN; completed steps are S1/S2 only if their postconditions were
   checked. The next action is writing/running the named S3 tests.
-- A resumed session compares a fresh working-tree snapshot with the unit's base
-  tree even if STATE.md still names S1 as the next step; it does not duplicate
-  the class or reset the whole file.
+- A resumed session (`/plan-execute-verify resume 003`) compares a fresh
+  working-tree snapshot with the unit's base tree even if STATE.md still names
+  S1 as the next step; it does not duplicate the class or reset the whole file.
 - If the crashed session still holds `ownership: active`, the user's explicit
   invocation on this plan permits takeover once STATE.md and the snapshot stay
   unchanged during inspection; the takeover is recorded before recovery.
 - No completion commit exists until tests, review, and coherence pass.
 - If full autonomy is true and WIP is off, interruption requires a checkpoint,
   not a broken-code commit.
+- With WIP on, the last recovery-boundary checkpoint, if any, is in one rolling
+  `wip(0.1)` commit; the completion commit amends it while it is still owned,
+  local-only, at HEAD, and the unit's only WIP commit on its base HEAD.
 
 At verified completion, the ledger uses unit:0.1:1 and the commit carries:
 PEV-Plan: 003_plan-RateLimit; PEV-Unit: 0.1; PEV-Attempt: 1;

@@ -17,7 +17,7 @@ With multiple agents, assign only positions actually present in the roster.
 
 Legacy defaults are Opus/Sonnet/Haiku in those positions. In Plan, Execute, and
 Execute verify an explicit prefix overrides the plan's roster; otherwise preserve
-the stored roster across sessions. In Task, Bug, and Verify an explicit prefix
+the stored roster across sessions. In Task, Bug, Verify, and Resume an explicit prefix
 applies to that invocation only and is recorded in its ledger entry or report.
 Record an intentional override and its effect on remaining assignments. Do not
 treat opening a plan in a different model as an automatic roster override.
@@ -36,7 +36,12 @@ plan or escalate that decision before implementation.
 ## Assigned and actual agents
 
 Each unit names its assigned agent. At open, record the actual implementer;
-record intended and actual reviewers the same way.
+record intended and actual reviewers the same way. Plan, phase, and correction
+files name roster positions only (`agent-2`), never model names; STATE.md's
+roster resolves each position, so a roster change needs no plan revision.
+Records of actual work (STATE.md §1, ledger rows, reviews) store position and
+actual name. A legacy plan's model name maps to its roster position; if it
+matches none, the supervisor resolves it before dispatch.
 
 - Dispatch the assigned agent when the host supports it.
 - Otherwise a configured agent with an equal or lower position number
@@ -56,6 +61,13 @@ record intended and actual reviewers the same way.
   required reviewer.
 
 ## Two supported execution styles
+
+The style is not an option. At each operational invocation the state writer
+applies one rule and records the result with the invocation in STATE.md §1:
+`delegated` when the host can dispatch subagents running the roster agents the
+scope needs, otherwise `handoff`. A unit whose assigned agent cannot be
+dispatched follows the substitution rule above or gets a BLOCKED handoff; the
+style never changes who may implement or review.
 
 ### Handoff — successive sessions or models
 

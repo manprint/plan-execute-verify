@@ -33,7 +33,8 @@ Use execution-contract.md for ownership, settings, recovery, reviews, and commit
 - Preconditions: <concrete prerequisites>
 - Research: <applicable plan R IDs, or in 000_adhoc the question, source/version/
   dates, supported fact, labelled inference/local result and decision impact;
-  justified N/A when not needed. Required UNVERIFIED claims block implementation.>
+  justified N/A when not needed. Required UNVERIFIED claims block implementation
+  unless the user ACCEPTED them with risk and guard.>
 - Steps:
   1. S1 — <action>; expected <postcondition>.
   2. S2 — <action>; expected <postcondition>.

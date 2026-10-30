@@ -18,11 +18,11 @@ scenario. Resolve the repository root and plan folder per SKILL.md. Record the
 immutable starting commit and any existing dirty changes relevant to this plan;
 do not treat those as future agent output.
 
-Resolve the roster and runtime presets. Record whether execution will use
-successive sessions (handoff), a coordinator with workers (delegated), or support
-both with the active style chosen at execution. A fresh weak-model session must
-know how to request the configured strong supervisor. If the host cannot supply
-it, preserve that limitation rather than promising automatic review.
+Resolve the roster and runtime presets. Execution style is not a plan choice:
+each execution picks handoff or delegated by the fixed rule in agent-roster.md;
+record the host capabilities known now. A fresh weak-model session must know how
+to request the configured strong supervisor. If the host cannot supply it,
+preserve that limitation rather than promising automatic review.
 
 Separate questions requiring the user's product decision from technical choices
 the strong supervisor is authorized to make.
@@ -54,10 +54,13 @@ For fully internal established work, record a justified N/A without a research
 pass.
 
 Record R<n> evidence in overview.md: question, source/version/dates, supported
-fact, separately labelled inference/local result, and decision impact. The strong
-planner checks critical passages directly. Preserve unresolved required questions
-as UNVERIFIED with scoped blockers; no executable READY plan depends on them.
-For entirely internal work with no external unknown, record justified N/A.
+fact, separately labelled inference/local result, and decision impact. The
+strong planner checks critical passages directly. Ask before using the network
+unless the environment already authorizes it (research.md). Preserve unresolved
+required questions as UNVERIFIED with scoped blockers; no executable READY plan
+depends on them unless the user accepts the assumption as a recorded risk
+(ACCEPTED). For entirely internal work with no external unknown, record
+justified N/A.
 
 When researching, use its stopping and privacy rules. Initialize the minimal DRAFT state
 described there before research starts. Batch settled evidence into one update;
@@ -101,7 +104,8 @@ additive scaffolding when useful. Assign stable logical phase/sub-phase IDs and
 map them explicitly to phase files; logical phase 0 is phase_01.md.
 
 Each sub-phase retains seven top-level fields:
-Model · Assignment · Files · Change · Unit tests · e2e tests · Done.
+Agent · Assignment · Files · Change · Unit tests · e2e tests · Done.
+Agent and reviewers are roster positions (`agent-2`), never model names.
 The content requirements are in output-template.md; merely filling the headings
 does not satisfy the contract.
 
@@ -205,4 +209,8 @@ Validate existing gate commands where practical. Gates that depend on future
 artifacts specify activation units; they cannot be reported as already passing.
 Explain remaining unverified prerequisites.
 
-Return the folder path and a concise phase/assignment/configuration summary.
+Return the folder path and a concise phase/assignment/configuration summary. If
+the plan folder is untracked or uncommitted, say so (`git clean` or a branch
+switch can lose it) and suggest the exact commit command, such as
+`git add docs/plans/<id> && git commit -m "plan(<id>): <feature>"`; never run
+it.

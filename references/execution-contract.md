@@ -1,20 +1,23 @@
 # Execution contract — autonomy, handoffs, reviews, and commits
 
-Read for `execute`, `execute verify`, `task`, and `bug`; `verify` reads it for
-recovery, ownership, and audit closure. Plan mode uses it to initialize the
-runtime contract. Copy the cold-start rules and resolved settings into generated
-`STATE.md`: a later executor may not have this skill installed.
+Read for `execute`, `execute verify`, `task`, `bug`, and `resume`; `verify`
+reads it for recovery, ownership, and audit closure. Plan mode uses it to
+initialize the runtime contract. Copy the cold-start rules and resolved settings
+into generated `STATE.md`: a later executor may not have this skill installed.
 Onboard may consult this contract to interpret records, but does not run its
 state-changing recovery or completion steps; mode-onboard.md governs that mode.
 
 ## 1. Resolve the invocation once
 
 `full-autonomous:true|false` is a leading option, accepted by every mode.
-Precedence: explicit invocation > selected plan's STATE.md §3 > `false`. Reject
-other values and duplicate occurrences before making changes. Plan, Execute, and
-Execute verify persist an explicit value in §3. Task, Bug, and Verify use it for
-that invocation only and record it in their ledger entry or audit report,
-including when attached to a real plan. Parsing ends at the first
+Precedence: explicit invocation > saved execution scope override (only while
+continuing that scope) > selected plan's STATE.md §3 > `false`. Reject other
+values and duplicate occurrences before making changes. Plan persists an
+explicit value in §3 as the plan default. Execute and Execute verify record it
+with the saved execution scope they set, as a scope override that lasts while
+that scope continues and never changes §3. Task, Bug, Verify, and Resume use it
+for that invocation only and record it in their ledger entry, audit report, or
+resumed unit, including when attached to a real plan. Parsing ends at the first
 non-option/non-agent token; occurrences in a task's description are literal
 text. An explicit value overrides the persisted value. Exception: Onboard only
 observes saved configuration. Its options and agent prefix are invocation-local
@@ -28,13 +31,18 @@ and never persist to a plan or an ad-hoc ledger.
 | Execute verify | Apply the selected report's corrections; revalidate affected phases | Every completed correction and reopened phase closure |
 | Task / bug | Finish the requested change, tests, documentation, and reconciliation | Every completed task / bug |
 | Verify | Complete the audit, including an honest FAIL or unverified result | Audit artifacts and state only; never automatic code corrections |
+| Resume | Recover recorded work, then continue the saved execution scope | As for the mode of the resumed unit or scope |
 
-With `false`, normal mode behavior continues and may yield at a verified unit
-boundary with a precise handoff; this option adds no commit authorization.
-With `true`, a routine unit boundary does not end the selected scope. The
+With `false`, execution continues through the eligible units of the current
+phase inside the selected scope and stops after that phase's closure P<N>, with
+a precise handoff that `resume` continues; Execute verify stops likewise after
+each reopened phase's closure. A sub-phase boundary inside a phase is not a
+stopping point, and this option adds no commit authorization. With `true`,
+neither a unit nor a phase boundary ends the selected scope. Either way, work
+stops early only at a real blocker, a user stop, or a host interruption. The
 existing WIP option still applies independently:
 
-| Full autonomous | WIP commits | Commit completed code units | Commit interrupted work |
+| Full autonomous | WIP commits | Commit completed code units and phase closures | Rolling WIP commit at checkpoints |
 |-----------------|-------------|-----------------------------|-------------------------|
 | false | off | No | No |
 | false | on | Yes | Yes |
@@ -47,17 +55,23 @@ Neither setting authorizes pushes, deployments, destructive cleanup, or changes
 outside the requested scope.
 
 STATE.md §1 keeps two scopes. The saved execution scope (plan, phase, sub-phase,
-or report selector, with its result) is set only by Execute or Execute verify. A
-new explicit Execute selector replaces it; a context reset, a resume, or an
-intervening Task, Bug, or Verify unit never changes or expands it. The invocation
-record (mode, exact unit or scope, and result) describes the current or last run
-of any operational mode. Persist the roster and the selected execution style:
-`handoff` (successive sessions/models) or `delegated` (coordinator and workers);
-a Task, Bug, or Verify roster prefix is recorded only with that invocation.
-Preserve the plan's next eligible unit separately; it may lie outside the saved
-execution scope. A resume without a new selector first recovers any OPEN or
-pending-closure unit in its own mode, then continues the saved execution scope
-while its result is NOT_STARTED, RUNNING, or BLOCKED.
+or report selector, with its result and option overrides) is set only by Execute
+or Execute verify. A different explicit Execute selector replaces it and its
+overrides, and the same selector on a RUNNING or BLOCKED scope continues it,
+with any new explicit options replacing its overrides; a context reset, a
+resume, or an intervening Task, Bug, or Verify unit never changes or expands it.
+The invocation record (mode, exact unit or scope, and result) describes the
+current or last run of any operational mode. Persist the roster. Record with
+each invocation its execution style, chosen by the fixed rule in
+agent-roster.md: `delegated` (coordinator and workers) or `handoff` (successive
+sessions/models); a Task, Bug, Verify, or Resume roster prefix is recorded only
+with that invocation. Preserve the plan's next eligible unit separately; it may
+lie outside the saved execution scope. Resume (mode-resume.md) first recovers
+any OPEN or pending-closure unit in its own mode with its recorded settings,
+then continues a set (not `none`) saved execution scope while its result is
+NOT_STARTED, RUNNING, or BLOCKED. An explicit Execute or Execute verify selector
+that would replace a RUNNING or BLOCKED saved execution scope with a different
+one asks the user first.
 
 ## 2. Ownership and cold starts
 
@@ -185,12 +199,13 @@ Tasks, bugs, and corrections include their affected documentation in their own
 completion transaction rather than inventing a future documentation task.
 
 A phase has a separate closure unit `P<N>`: all its sub-phases are DONE or
-explicitly SKIPPED with a justification; its README obligation, full phase gates,
-and strong-supervisor review are complete. Record the review and phase result in
-STATE.md, then commit the closure when full autonomy is true. This is a real
-state change, not an empty ceremonial commit. Completing a selected sub-phase
-does not authorize executing remaining sub-phases or its phase closure P<N>;
-P<N> then becomes the next eligible unit for a phase or plan scope.
+explicitly SKIPPED with a justification; its README obligation, full phase
+gates, and strong-supervisor review are complete. Record the review and phase
+result in STATE.md, then commit the closure when full autonomy or WIP is
+enabled. This is a real state change, not an empty ceremonial commit. Completing
+a selected sub-phase does not authorize executing remaining sub-phases or its
+phase closure P<N>; P<N> then becomes the next eligible unit for a phase or plan
+scope.
 
 P<N> edits only plan records and documentation it owns; it never repairs
 production code or tests. A required gate that is `blocked` (unavailable service
@@ -210,12 +225,13 @@ Stop at the selected scope's verified completion, an explicit user stop, or a
 documented blocker requiring unavailable capability/authority. The last phase
 also requires the reference scenario and final integration gates. Only then
 record COMPLETE: for Execute and Execute verify in both the saved execution
-scope and the invocation, for Task, Bug, and Verify in the invocation alone.
+scope and the invocation, for Task, Bug, and Verify in the invocation alone;
+Resume records results as the mode of the work it resumed.
 Never label unverified work complete.
 If the host ends a session, save a handoff; this skill cannot start a new host
 session by itself.
-With full autonomy false, a verified unit boundary may instead yield a handoff;
-record that the saved execution scope is still RUNNING, not COMPLETE.
+With full autonomy false, the stop after a phase closure leaves the saved
+execution scope RUNNING, not COMPLETE, while scope work remains.
 
 ## 4. Decisions, supervisor escalation, and retry limits
 
@@ -288,7 +304,10 @@ verdict is FAIL. This closes the audit, not the audited phases. Use
 
 Use a stable identity: plan folder ID (or `000_adhoc`), unit ID, and attempt
 number. Reopened work increments the attempt; a retry after interruption does
-not. Record these identity trailers on completion and WIP commits:
+not. Record these identity trailers on completion and WIP commits, in the
+message's final paragraph (Git's trailer block) together with any required
+`Co-Authored-By:` or `Signed-off-by:` lines; nothing may follow that block.
+`git commit --trailer` places them correctly:
 
 ```text
 PEV-Plan: <plan-id>
@@ -311,28 +330,67 @@ Suggested subjects (adapt to the repository's convention without losing meaning)
    proposed snapshot. When commits are disabled, record `uncommitted`. Do not try
    to embed a commit's own SHA inside itself.
    If completion commits are disabled, closure ends here; do not run steps 2–4.
-   A failed P<N> attempt records commit `none` and also ends here under every
-   commit policy; it is never a pending closure.
+   The final report then warns that the work and plan records are uncommitted
+   and suggests a commit command, never run. A failed P<N> attempt records
+   commit `none` and also ends here under every commit policy; it is never a
+   pending closure.
 2. Stage only owned changes and their plan records. Include required plan files
    created for this request during an earlier planning session once their
-   provenance is established; otherwise a fresh checkout could lack its contract.
-   Being inside the plan folder alone does not establish ownership.
-   Preserve pre-existing hunks
-   even in a file this unit also edits. Inspect the staged diff; unrelated staged
-   changes must not enter the commit. If they cannot be isolated safely, keep the
-   work recoverable and report a blocker rather than sweeping them in.
+   provenance is established; otherwise a fresh checkout could lack its
+   contract. Being inside the plan folder alone does not establish ownership.
+   STATE.md, ledgers, and audit reports belong to the state writer and are
+   staged whole. Never use interactive staging. If the index already holds
+   staged changes this unit does not own, report a blocker; never unstage them.
+   Stage paths only this unit changed with `git add -A -- <paths>`. For a shared
+   path that also holds pre-existing or other units' hunks, stage only this
+   unit's hunks, diffing the unit base tree against a fresh closure snapshot
+   tree (§3):
+
+   ```bash
+   p="$(git rev-parse --git-dir)/pev-owned.patch"
+   git diff --binary <base-tree> <closure-tree> -- <shared-paths> > "$p" &&
+   git reset -q <unit-base-HEAD> -- <shared-paths> &&
+   git apply --cached --check "$p" && git apply --cached "$p"
+   rm -f "$p"
+   ```
+
+   Skip the reset on an unborn branch. If the patch does not apply (overlapping
+   hunks, or an edited pre-existing untracked file), restore those index entries
+   with `git reset -q HEAD -- <shared-paths>`, commit nothing mixed, keep the work
+   recoverable, and report a blocker. Inspect `git diff --cached` against the
+   owned intent; unrelated changes must not enter the commit.
 3. Commit on the current branch; do not create/switch branches, push, or make an
    empty duplicate commit. Confirm the branch still matches the unit's recorded
    branch before committing; unexpected changes require reconciliation. For
-   detached HEAD, persist a blocker instead of inventing a branch.
+   detached HEAD, persist a blocker instead of inventing a branch. Let hooks
+   run; never pass `--no-verify` or disable them. A failing hook is a failed
+   gate: fix it inside the unit and restage only owned changes (inspect files a
+   hook rewrote), or report a blocker. A rejected WIP commit leaves that
+   checkpoint uncommitted and recorded.
 4. Resolve the ledger reference using the unique reachable completion commit
    matching all four trailer values exactly in its trailer block, within current
-   HEAD's ancestry. Do not use subject text or substring matches (1.2 is not 1.20).
-   Zero matches means pending closure; multiple matches mean an identity conflict
-   to reconcile, not permission to choose one arbitrarily or add another commit.
-   Confirm the commit contains the intended owned diff
-   and state. Report its actual SHA; no extra bookkeeping commit is necessary.
-   An existing resolved identity means this unit was already committed.
+   HEAD's ancestry. Do not use subject text or substring matches (1.2 is not 1.20):
+
+   ```bash
+   f='%H%x09%(trailers:key=PEV-Plan,valueonly,separator=%x2C)'
+   f="$f"'%x09%(trailers:key=PEV-Unit,valueonly,separator=%x2C)'
+   f="$f"'%x09%(trailers:key=PEV-Attempt,valueonly,separator=%x2C)'
+   f="$f"'%x09%(trailers:key=PEV-Result,valueonly,separator=%x2C)'
+   k="$(printf '%s\t%s\t%s\t%s' '<plan-id>' '<unit-id>' '<n>' complete)"
+   git log --format="$f" HEAD | awk -F'\t' -v k="$k" \
+     '$2 "\t" $3 "\t" $4 "\t" $5 == k {print $1}'
+   ```
+
+   The awk test compares strings, never numbers. If the output contains a
+   literal `%(trailers`, this Git lacks the format: parse each candidate with
+   `git log -1 --format=%B <sha> | git interpret-trailers --parse` instead, or
+   report a blocker; never read zero matches from an unsupported format as a
+   pending closure. Use `wip` instead of `complete` to find the unit's WIP
+   commit. Zero matches means pending closure; multiple matches mean an identity
+   conflict to reconcile, not permission to choose one arbitrarily or add
+   another commit. Confirm the commit contains the intended owned diff and
+   state. Report its actual SHA; no extra bookkeeping commit is necessary. An
+   existing resolved identity means this unit was already committed.
 
 The reference in the committed snapshot resolves to that commit; the SHA may be
 recorded by a later genuine update but is not required. If interrupted after
@@ -343,10 +401,23 @@ If interrupted after commit, resolve it and continue without committing twice.
 An explicitly requested audit can suspend that implementation transaction as
 specified in §2; unresolved audit closure is recovered before restoring execution.
 
-With WIP enabled, interruption commits carry `PEV-Result: wip` and §1 remains
-OPEN. Finish into a completion commit; amend only an owned, local-only WIP at
-HEAD, otherwise append. Inspect current changes as well as the WIP diff. Full
-autonomy alone never requires committing broken or unreviewed work.
+With WIP enabled, every recovery-boundary checkpoint of an OPEN code unit
+(before risky or long work, delegation, a blocker, a handoff, or a stop) also
+saves the unit's owned changes and STATE.md in one rolling `wip(<id>)` commit
+with `PEV-Result: wip`; §1 remains OPEN. Stage it by steps 2–3 with a fresh
+checkpoint snapshot as the closure tree, and record that tree in §1 as the last
+WIP snapshot. Amend only when the WIP commit is owned, local-only, at HEAD, and
+the unit's only WIP commit directly on the unit base HEAD; staging then uses the
+unit base tree and HEAD as in step 2. Otherwise append: use the last WIP
+snapshot as `<base-tree>` and current HEAD as the reset target, so already
+committed hunks are not applied twice. On recovery, commits that the step 4
+lookup with `wip` matches to this plan, unit, and attempt are this unit's own
+work, not foreign changes, and a HEAD recorded in STATE.md that an amend
+replaced is expected. A crash loses at most the work since the last checkpoint,
+which the working-tree snapshot comparison still recovers. Finish into a
+completion commit under the same amend rule. Inspect current changes as well as
+the WIP diff. Full autonomy alone never requires committing broken or unreviewed
+work.
 
 ## 7. Coherence contract
 

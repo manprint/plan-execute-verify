@@ -10,10 +10,11 @@ phase sub-phase in output-template.md.
 ````markdown
 # <Feature> — Audit V<NNN>
 
-Date: <date>. Auditor: <actual configured reviewer>.
+Date: <date>. Auditor: <actual agent as position:name>.
 Settings for this audit: full-autonomous:<true|false>; WIP:<on|off>; roster:
 <saved, or invocation-only prefix>. Not written to STATE.md §3.
-Plan: <path/ID/revision>. Reviewed scope: <units/phases>.
+Plan: <path/ID/revision, or 000_adhoc>. Audit scope: <whole plan | phase |
+sub-phase | ledger entry> — <selected units>; the verdict covers only this scope.
 Baseline/range: <commits>; owned/uncommitted/pre-existing changes: <details>.
 Verdict: PASS | PASS WITH FINDINGS | FAIL | INCOMPLETE.
 Scope limitations: <none or concrete missing evidence>.
@@ -64,7 +65,7 @@ Readiness: READY | BLOCKED — <supervisor validation, or unresolved questions,
 affected correction IDs, resolution owner and exact next action>.
 <No unresolved contract or acceptance choice may be labelled READY.>
 ### C<n> — <outcome; closes finding IDs>
-- **Model:** <configured implementer>
+- **Agent:** <roster position only, e.g. agent-2>
 - **Assignment:** <responsibility; strong reviewer and timing>
 - **Files:** <exact read/write paths, symbols, existing/NEW>
 - **Change:**

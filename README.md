@@ -64,13 +64,14 @@ different interface, select this skill and pass the same options and arguments.
 | `execute [plan] [phase or sub-phase]` | Implement an existing plan | Code, tests, docs, and plan state |
 | `task <description>` | One small change | Requested change and its ledger |
 | `bug <description>` | One defect | Reproduction, regression test, fix, and ledger |
-| `verify [plan]` | Audit implementation against the plan | Audit reports and state; no code fixes |
+| `verify [plan] [phase, sub-phase, or entry]` | Audit the whole plan or a narrower scope, including `000_adhoc` entries | Audit reports and state; no code fixes |
 | `execute verify [plan] [report ID]` | Apply audit corrections | Selected corrections and affected plan state |
+| `resume [plan] [unit ID]` | Continue interrupted or saved work exactly where it stopped | Whatever the resumed unit/scope changes; never its scope or settings |
 
 The first word after options selects the mode when it is `onboard`, `plan`,
-`execute`, `task`, `bug`, or `verify`. Otherwise it starts a planning description.
-For a feature whose name begins with a mode word, use the explicit Plan form:
-`/plan-execute-verify plan task queue for background jobs`.
+`execute`, `task`, `bug`, `verify`, or `resume`. Otherwise it starts a planning
+description. For a feature whose name begins with a mode word, use the explicit
+Plan form: `/plan-execute-verify plan task queue for background jobs`.
 Missing arguments or invalid selectors never silently switch modes.
 
 Task and bug take no selector. They attach to a plan only when the request names
@@ -110,13 +111,13 @@ as such, not treated as a fresh project or silently repaired.
 
 The output is a short recap, a source-backed context map in docs/onboarding.md,
 and one next command or precise handoff. For example, a saved execution scope of
-sub-phase 1.2 can produce `/plan-execute-verify execute 003 § 1.2`, not a
-whole-plan command.
-If that plan has saved `full-autonomous:true`, the recap explains that execution
-would inherit automatic completion commits. Onboard does not run that command.
-For an existing draft or interrupted ledger entry without a supported ID selector,
-it gives a natural-language handoff with the exact path/ID rather than inventing
-syntax such as `plan 003` or `bug B-A002`.
+sub-phase 1.2 produces `/plan-execute-verify resume 003`, which continues that
+scope, not a whole-plan `execute 003`.
+If that scope or plan has saved `full-autonomous:true`, the recap explains that
+resuming would inherit automatic completion commits. Onboard does not run that
+command. For an interrupted ledger entry, audit, or draft it suggests `resume`
+with the exact ID, such as `/plan-execute-verify resume 000_adhoc B-A002`, never
+invented syntax such as `plan 003` or `bug B-A002`.
 
 The map records observation date, branch/commit, coverage, source locators and
 limitations. It is a dated orientation aid, not a second STATE.md or an audit.
@@ -150,8 +151,8 @@ agent prefix:
 | Option | Effect |
 |--------|--------|
 | `full-autonomous:true` | Continue until the selected scope is complete or genuinely blocked; commit verified operational completions |
-| `full-autonomous:false` | Normal execution; may hand off at a clean unit boundary; adds no completion commits |
-| `--wip-commit` | Commit completed code units and save interrupted units as WIP commits |
+| `full-autonomous:false` | Continue through the current phase and stop after its closure (`resume` continues); adds no completion commits |
+| `--wip-commit` | Commit progress: completed code units, phase closures, and a rolling WIP commit at each recovery checkpoint |
 | `--no-wip-commit` | Disable WIP behavior; does not disable completion commits enabled by full autonomy |
 
 Default: `full-autonomous:false`, WIP off. Booleans are literal `true` or
@@ -160,30 +161,37 @@ Default: `full-autonomous:false`, WIP off. Booleans are literal `true` or
 Settings resolve independently:
 
 1. An explicit option in the current invocation.
-2. The selected plan's saved setting in STATE.md.
-3. The default.
+2. The option given with the saved execution scope, while that scope continues.
+3. The plan default in STATE.md, set by Plan.
+4. The default.
 
-Settings given to Plan, Execute, or Execute verify persist in the plan across
-sessions. To turn off all automatic commits, specify both
-`full-autonomous:false --no-wip-commit`. Task, Bug, and Verify use explicit
-options for that invocation only and record them in their ledger entry or audit
-report, even when attached to a plan; they never change its saved settings.
-Onboard never persists options or changes a plan's saved configuration.
-Both boolean values mean inspection only; neither full autonomy nor WIP commits
-its context document or starts the recommended next action.
+Options given to Plan become plan defaults. Options given to Execute or Execute
+verify belong to the scope they start: they survive resume and new sessions of
+that scope and lapse when a different selector replaces it, so a one-off
+autonomous run never changes later executions. To turn off all automatic
+commits, specify both `full-autonomous:false --no-wip-commit`. Task, Bug,
+Verify, and Resume use explicit options for that invocation only and record them
+in their ledger entry, audit report, or resumed unit, even when attached to a
+plan; they never change its saved settings. Onboard never persists options or
+changes a plan's saved configuration. Both boolean values mean inspection only;
+neither full autonomy nor WIP commits its context document or starts the
+recommended next action.
 
 ### Which commits are created?
 
-| Full autonomous | WIP | Completed code units | Completed phases | Interrupted work | Completed audit |
+| Full autonomous | WIP | Completed code units | Completed phases | WIP at checkpoints | Completed audit |
 |-----------------|-----|----------------------|------------------|------------------|-----------------|
 | false | off | No | No | No | No |
-| false | on | Yes | No separate phase commit | Yes | No |
+| false | on | Yes | Yes | Yes | No |
 | true | off | Yes | Yes | No | Yes, artifacts only |
 | true | on | Yes | Yes | Yes | Yes, artifacts only |
 
 A code unit is a sub-phase, task, bug fix, or audit correction. A phase gets its
 own completion commit after all sub-phases, integration checks, documentation,
-and strong-agent review. Planning and Onboard never commit.
+and strong-agent review. Planning and Onboard never commit. When work or plan
+files stay uncommitted, the final report says so and suggests the exact commit
+command without running it: untracked plan files can be lost to `git clean` or a
+branch switch.
 
 Examples of commit subjects:
 
@@ -205,8 +213,14 @@ An autonomous audit can commit a report with verdict FAIL: that records a
 completed inspection, not completed or verified implementation. It never applies
 its proposed code fixes automatically.
 
-WIP commits are separately labelled incomplete. Full autonomy without WIP does
-not commit broken or unreviewed work at interruption.
+WIP commits are separately labelled incomplete: with WIP on, each recovery
+checkpoint of an open unit updates one rolling `wip(<id>)` commit, so a crash
+loses at most the work since that checkpoint. Full autonomy without WIP does not
+commit broken or unreviewed work at interruption. Commits stage only the unit's
+own hunks without interactive Git, keep repository hooks active (never
+`--no-verify`; a failing hook blocks the unit like a failed gate), and put the
+PEV identity trailers in the final trailer block beside any `Co-Authored-By`
+lines.
 
 ## Select exactly what should run
 
@@ -223,8 +237,9 @@ not commit broken or unreviewed work at interruption.
 A phase/sub-phase selector is a limit, even with full autonomy. Selecting 1.2
 does not authorize the executor to continue into 1.3 or to run the phase closure
 P1; run P1 with a phase or plan selector. Dependencies still apply. The selected
-scope is saved: a later resume continues it, and task, bug, or audit runs in
-between do not replace it.
+scope is saved: `resume` continues it, and task, bug, or audit runs in between do
+not replace it. An explicit `execute` or `execute verify` that would replace a
+running or blocked saved scope with a different one asks you first.
 
 Phase files are numbered from 01; logical phases start at 0. Thus
 `phase_02.md` contains logical phase 1 and sub-phases such as 1.1 and 1.2.
@@ -274,7 +289,9 @@ tests, and acceptance criteria. Missing design returns to the strong supervisor.
 
 ## Continue in another session or model
 
-Both execution styles use the same plan files:
+Both execution styles use the same plan files. The style is not an option:
+each run uses the coordinator style when the host can start subagents running
+the roster's models, and successive sessions otherwise, and records which.
 
 | Style | How it works |
 |-------|--------------|
@@ -290,9 +307,17 @@ For orientation in a fresh session without starting work:
 To request actual resumption instead:
 
 ```text
-Use plan-execute-verify to resume docs/plans/003_plan-RateLimit.
-Read STATE.md first and preserve its scope, settings, roster, and checkpoint.
+/plan-execute-verify resume 003
+/plan-execute-verify resume 003 1.2
+/plan-execute-verify resume 000_adhoc B-A002
 ```
+
+Resume first recovers interrupted work (an open unit, a pending completion
+commit, an interrupted audit, a planning draft), then continues the saved
+execution scope. It never widens that scope or changes saved settings; a resumed
+unit keeps the settings it was opened with, unless you override them for that
+run. A unit ID must name open, pending, blocked, or suspended work; a TODO unit
+is new work for `execute`.
 
 The executor checks the real diff and tests before trusting a recorded checkpoint.
 Each unit's base is HEAD plus a working-tree snapshot, so a resume can separate
@@ -362,10 +387,14 @@ The phase files contain the resulting concrete rules and tests: workers do not
 receive only links they must interpret or design questions they must settle.
 
 Research stops when the necessary questions are answered and the resulting
-decisions are explicit. Unresolved required facts prevent READY; unavailable
-browsing is disclosed, not treated as successful verification. Applicable local
-primary documentation/source can supply evidence, but cannot establish freshness
-it does not have. Private code, secrets, and identifying data stay out of queries.
+decisions are explicit. Unless the environment already authorizes network
+access, Plan asks once before browsing, listing the sanitized questions, and
+records your answer. Unresolved required facts prevent READY unless you
+explicitly accept one as a known risk (ACCEPTED, with its guarding test);
+unavailable browsing is disclosed, not treated as successful verification.
+Applicable local primary documentation/source can supply evidence, but cannot
+establish freshness it does not have. Private code, secrets, and identifying
+data stay out of queries.
 
 During Execute, Task or Bug, research is reopened only for relevant new evidence,
 changed versions, or missing/contradictory assumptions; design revisions stay with

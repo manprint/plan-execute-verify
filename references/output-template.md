@@ -44,7 +44,7 @@ them; STATE.md must mark readiness BLOCKED. Do not apply unapproved defaults.>
 ## Phase map
 | Logical phase | File | Sub-phase IDs | Depends on | Assignment |
 |---------------|------|---------------|------------|------------|
-| 0 | [phase_01.md](phase_01.md) | 0.1, 0.2 | none | <agent> |
+| 0 | [phase_01.md](phase_01.md) | 0.1, 0.2 | none | <roster position> |
 
 No live status in this table.
 
@@ -60,7 +60,7 @@ entirely internal, established work. Follow the skill's research.md protocol.>
 
 | ID | Question / required or optional | Evidence state | Affected decisions / units / tests |
 |----|---------------------------------|----------------|------------------------------------|
-| R1 | <concrete question and relevance> | <CONFIRMED/UNVERIFIED/SUPERSEDED> | <D/I/unit/test IDs> |
+| R1 | <concrete question and relevance> | <CONFIRMED/UNVERIFIED/ACCEPTED/SUPERSEDED> | <D/I/unit/test IDs> |
 
 ### R1 — <question>
 - Sources: <primary URL and section, or local path/symbol and provenance>.
@@ -75,7 +75,9 @@ entirely internal, established work. Follow the skill's research.md protocol.>
 - Unresolved/replacement: <missing evidence, owner and next action; replacement
   R ID when superseded; or none>.
 
-<Required UNVERIFIED claims prevent READY and dependent dispatch. Optional open
+<Network authorization: <environment or user answer, date, scope; or none>.
+Required UNVERIFIED claims prevent READY and dependent dispatch unless the user
+accepted them (ACCEPTED: who, when, risk, guarding test). Optional open
 questions may be excluded only when no requirement/chosen design depends on them.
 Retain superseded evidence; update local phase conclusions when decisions change.>
 
@@ -94,10 +96,10 @@ Retain superseded evidence; update local phase conclusions when decisions change
 STATE.md §3 is the command registry; phase files reference gate IDs and state
 their assertions/applicability. Do not require all stages' commands to be identical.>
 
-## Model-assignment summary
+## Agent-assignment summary
 | Unit(s) | Implementer | Required supervisor review |
 |---------|-------------|----------------------------|
-| <IDs> | <exact configured assignment> | <timing and focus> |
+| <IDs> | <roster position, e.g. agent-2> | <agent-1: timing and focus> |
 ````
 
 ## 2. phase_NN.md
@@ -112,13 +114,13 @@ Do not copy the full runtime protocol or repeat gate commands in this file.
 
 Intent: <observable outcome>.
 Prerequisites: <unit IDs and artifacts, or none>.
-Phase closure: P<N>; review by <configured strong supervisor>.
+Phase closure: P<N>; review by agent-1.
 
 ## State and ownership contract
 Read STATE.md §0–1 first for scope, ownership, recovery, checks, and commit rules.
 Open before edits; checkpoint at a recovery boundary; close with evidence. A
-delegated worker follows its assigned OPEN unit. Missing design goes to the
-configured supervisor.
+delegated worker follows its assigned OPEN unit. Missing design goes to
+agent-1, the supervisor.
 
 ## Local design context
 Plan revision: <revision these excerpts implement>.
@@ -134,7 +136,7 @@ oracles below; do not leave "read these links and decide" to the implementer.>
 ## Sub-phases
 
 ### <N.1> <one independently verifiable outcome>
-- **Model:** <exact configured assignment>
+- **Agent:** <roster position only, e.g. agent-2; STATE.md resolves the name>
 - **Assignment:** <responsibility; review before design/after diff; reviewer;
   `self-review` when the implementer is also the required reviewer>
 - **Files:** READ <paths + symbols/contracts>; WRITE <paths + symbols>;
@@ -166,10 +168,10 @@ Otherwise name the implementation unit that updates affected README sections.>
 - Required gates: <IDs from STATE.md §3>; assertions: <phase-level expectations>.
 - README obligation: <unit/sections changed, or evidence sections remain accurate>.
 - Every sub-phase DONE or explicitly justified SKIPPED. Run full phase gates now.
-- Supervisor <agent> reviews integration, invariants, tests, and documentation.
+- agent-1 reviews integration, invariants, tests, and documentation.
 - Open closure unit P<N>, record actual review and verified phase result, mark
-  the phase DONE, and close. With full-autonomous:true commit this state change
-  as a phase completion. Never fabricate an empty commit.
+  the phase DONE, and close. With full-autonomous:true or WIP enabled, commit
+  this state change as a phase completion. Never fabricate an empty commit.
 - P<N> edits no production code or tests. A blocked gate keeps P<N> OPEN and
   BLOCKED until it can run (same attempt). A failing gate or rejected review closes
   that attempt as failed (commit none); reopen the responsible sub-phase with a new
@@ -189,7 +191,8 @@ is append-only; a reopened unit gets a new attempt rather than erasing evidence.
 Read first at every session. Updated <date/time> by <actual agent>.
 Plan ID: <folder ID>. Revision: <n>. Repo root: <absolute path>.
 Plan baseline: <immutable starting commit>; pre-existing changes: <paths/diff reference>.
-Roster: <exact configured names>. Active execution style: <handoff|delegated>.
+Roster: <exact configured names>. Execution style: per invocation in §1 —
+delegated only when the host can dispatch the needed roster agents, else handoff.
 State writer: <session/coordinator identity>; ownership: <active|released>.
 Last takeover: <previous writer → new writer, time, reason; or none>.
 
@@ -204,7 +207,12 @@ Last takeover: <previous writer → new writer, time, reason; or none>.
    record previous/new writer, time, and reason; otherwise ask. A delegated
    worker stays inside its assigned OPEN unit and never owns shared state or
    commits. Task, Bug, and Verify run as their own unit; they never replace the
-   saved execution scope or the §3 settings and roster.
+   saved execution scope or the §3 settings and roster. Resume (`resume <plan>`)
+   recovers OPEN/pending work first, with its recorded settings, then continues
+   the saved execution scope without changing or widening it, and never starts a
+   TODO unit named by ID or work outside that scope; an explicit execute
+   selector that would replace a RUNNING or BLOCKED saved scope asks the user
+   first.
 2. Inspect HEAD, staged/working changes, and checkpoint postconditions; compare a
    fresh working-tree snapshot (step 4) with the unit's base tree. Preserve
    unrelated changes, including hunks in shared files. Reconcile unresolved
@@ -219,7 +227,7 @@ Last takeover: <previous writer → new writer, time, reason; or none>.
    its checkpoint to start new work.
 3. Read the pointed phase/correction and local contracts. Check prerequisite
    sub-phase rows and artifacts; locate symbols rather than trusting line numbers.
-   A changed contract or missing design goes to the configured strong supervisor.
+   A changed contract or missing design goes to the strong supervisor, agent-1.
    Reuse the recorded research; if versions/environment or required external
    assumptions changed, checkpoint the step and request targeted verification.
    The supervisor validates primary evidence, updates decisions/affected phase
@@ -252,34 +260,43 @@ Last takeover: <previous writer → new writer, time, reason; or none>.
    review `self-review` when the reviewer is the unit's actual implementer.
 6. Finish docs and plan/audit reconciliation, append the ledger row, update
    progress, and point to the next eligible unit. If commit is required, store
-   unit:<id>:<attempt> as the reference in this snapshot, stage only owned changes,
-   and commit on the current branch with PEV-Plan, PEV-Unit, PEV-Attempt, and
-   PEV-Result: complete trailers. Resolve the unique reachable matching commit
-   before advancing. Do not store that commit's own SHA inside itself.
-   If commits are disabled, record uncommitted and do not stage/commit. A failed
-   P<N> attempt records commit none and is never committed or pending.
-   Include required plan artifacts authored for this request in earlier planning
-   only after establishing provenance; preserve unrelated plan-file edits too.
-   Planned implementation may leave README changes to a named later unit or P<N>;
-   record that outstanding obligation and never close
-   the phase/feature before it passes. Task/bug/correction documentation is part
-   of that same unit, not an implicit future task.
-7. If interrupted before commit, an unresolved reference means closure is pending:
-   reconcile/finalize it before starting new work. If already committed, resolve
-   the reference and continue without a duplicate commit. With WIP enabled only,
-   interruption may create an owned wip(<id>) commit with PEV-Result: wip and OPEN
-   state; amend only when owned, at HEAD, and local-only.
+   unit:<id>:<attempt> as the reference in this snapshot, stage only owned
+   changes without interactive Git (`git add -A -- <paths>`; for a path with
+   other hunks, `git diff --binary <base-tree> <closure-tree> -- <path>` applied
+   with `git apply --cached`, else a blocker, never a mixed commit), and commit
+   on the current branch with PEV-Plan, PEV-Unit, PEV-Attempt, and PEV-Result:
+   complete trailers in the final trailer block, beside any Co-Authored-By or
+   Signed-off-by lines. Hooks always run; never use --no-verify; a failing hook
+   is a failed gate. Resolve the unique reachable commit whose four trailer
+   values (`git log --format=%(trailers:key=PEV-Unit,valueonly)` and likewise)
+   equal the identity as exact strings before advancing. Do not store that
+   commit's own SHA inside itself. If commits are disabled, record uncommitted
+   and do not stage/commit. A failed P<N> attempt records commit none and is
+   never committed or pending. Include required plan artifacts authored for this
+   request in earlier planning only after establishing provenance; preserve
+   unrelated plan-file edits too. Planned implementation may leave README
+   changes to a named later unit or P<N>; record that outstanding obligation and
+   never close the phase/feature before it passes. Task/bug/correction
+   documentation is part of that same unit, not an implicit future task.
+7. If interrupted before commit, an unresolved reference means closure is
+   pending: reconcile/finalize it before starting new work. If already
+   committed, resolve the reference and continue without a duplicate commit.
+   With WIP enabled, each recovery-boundary checkpoint of an OPEN code unit also
+   creates or amends one rolling wip(<id>) commit with PEV-Result: wip and OPEN
+   state; amend only the unit's single owned, local-only WIP at HEAD on the unit
+   base HEAD; otherwise append, staging from the last WIP snapshot against HEAD.
+   On recovery, a HEAD that is this unit's own wip commit (exact trailers) is
+   expected, not foreign.
 8. After sub-phases, open P<N> for full phase gates and strong review (phase
-   IN_REVIEW). Record phase DONE and commit its closure when full autonomy is true.
-   A sub-phase scope never includes P<N>. P<N> never repairs production code or
-   tests. A blocked gate keeps P<N> OPEN/BLOCKED and resumes the same attempt. A
-   failing gate or rejected review closes that P<N> attempt with result failed and
-   commit none, returns the phase to IN_PROGRESS, and the supervisor reopens the
-   responsible sub-phase (attempt + 1) or revises the plan; P<N> then reruns as a
-   new attempt.
-   Continue eligible units without routine approval inside the saved execution
-   scope; final completion requires the reference scenario and all required
-   gates/reviews.
+   IN_REVIEW). Record phase DONE and commit its closure when full autonomy or
+   WIP is enabled. A sub-phase scope never includes P<N>. P<N> never repairs
+   production code or tests. A blocked gate keeps P<N> OPEN/BLOCKED and resumes
+   the same attempt. A failing gate or rejected review closes that P<N> attempt
+   with result failed and commit none, returns the phase to IN_PROGRESS, and the
+   supervisor reopens the responsible sub-phase (attempt + 1) or revises the
+   plan; P<N> then reruns as a new attempt. Continue eligible units without
+   routine approval inside the saved execution scope; final completion requires
+   the reference scenario and all required gates/reviews.
 9. A worker escalates missing decisions or two failed fixes of the same issue.
    The strong supervisor may revise technical steps within unchanged requirements/
    scope; record a revision, superseded decision, dependent updates/revalidation.
@@ -291,8 +308,9 @@ Last takeover: <previous writer → new writer, time, reason; or none>.
    model outside the roster coordinates and dispatches but implements nothing.
 10. On handoff save exact next action, pending changes/resources, evidence, and
     ownership release. Do not assume the host can automatically start a session.
-    With full autonomy false, a verified unit boundary may yield without marking
-    the saved execution scope COMPLETE.
+    With full autonomy false, stop after each phase closure P<N>, never at a
+    sub-phase boundary; the saved execution scope stays RUNNING while scope work
+    remains.
 
 Audit closure may have verdict FAIL or INCOMPLETE; this closes the inspection,
 never the failed implementation. Full autonomy commits its report/state only.
@@ -306,21 +324,23 @@ checkpoint. Capture/open and restore/close are each one STATE.md update.
 ## 1. Current unit and scope
 
 - Saved execution scope: <plan|phase|sub-phase|report selector set by Execute or
-  Execute verify, or none>; result: <NOT_STARTED|RUNNING|BLOCKED|COMPLETE>
+  Execute verify, or none>; result: <NOT_STARTED|RUNNING|BLOCKED|COMPLETE>;
+  overrides: <full-autonomous/WIP given with that selector, or none>
 - Invocation: <mode and exact unit/scope of the current or last run>; result:
-  <RUNNING|BLOCKED|COMPLETE>
+  <RUNNING|BLOCKED|COMPLETE>; style: <handoff|delegated>; effective settings:
+  <full-autonomous/WIP, each with source: explicit|scope override|plan default>
 - Type: <sub-phase|phase-close|task|bug|verify|correction|none>
 - ID / attempt: <stable ID / n>
 - Status: <OPEN|none>
 - Intent: <one concrete outcome>
-- Assigned: <assigned agent>; actual: <actual agent>;
-  supervisor: <configured reviewer>
+- Assigned: <agent-N>; actual: <agent-N:name>;
+  supervisor: agent-1:<name>
 - File / unit heading: <phase/report path and heading>
 - Current step: <S<n> or review/commit/none>
 - Next action: <exact next action for this invocation>
 - Next eligible plan unit: <ID/file; may be outside the saved execution scope>
-- Unit base: <HEAD before unit> + snapshot tree <tree ID>; branch: <current branch>;
-  owned changes: <paths/hunks>
+- Unit base: <HEAD before unit> + snapshot tree <tree ID>; branch: <current
+  branch>; owned changes: <paths/hunks>; last WIP snapshot: <tree ID, or none>
 - Repo state: <HEAD; clean/dirty; unrelated changes>
 
 ## 2. Feature context and readiness
@@ -335,15 +355,22 @@ Required supervisor reviews cannot be silently replaced by weaker self-review.
 
 ## 3. Environment, settings, and gate registry
 
-- Full autonomous: false <or true; source/date of override>
-- WIP commits: off <or on; source/date>
+- Full autonomous (plan default): false <or true; Plan or user edit, date>
+- WIP commits (plan default): off <or on; Plan or user edit, date>
 - Completion policy: full autonomy commits operational units and phase closures;
-  WIP alone commits completed code units; plan never commits. false adds no
-  commits. --no-wip-commit does not disable autonomous completion commits.
-- Saved execution scope, settings, and roster survive handoff. An explicit Plan,
-  Execute, or Execute verify option or roster prefix replaces the stored value;
-  Task, Bug, and Verify use explicit values for that invocation only and record
-  them in their ledger entry or report.
+  WIP alone commits completed code units, phase closures, and a rolling WIP
+  commit at each checkpoint; plan never commits. false adds no commits.
+  --no-wip-commit does not disable autonomous completion commits.
+- Saved execution scope, its overrides, plan defaults, and roster survive
+  handoff. Precedence: explicit option > §1 scope override while continuing that
+  scope > plan default. An explicit Plan option sets the plan default; an
+  explicit Execute or Execute verify option becomes a scope override and lapses
+  when a different selector replaces that scope. An explicit Plan, Execute, or
+  Execute verify roster prefix replaces the roster. Task, Bug, Verify, and
+  Resume use explicit values for that invocation only and record them with their
+  unit or report. After Plan, only a user edit of §3 made while ownership is
+  released changes plan defaults. A legacy §3 value whose source is Execute
+  counts as a plan default; Onboard shows its source.
 - Setup: <versions, services, credentials required, cwd, ports, cleanup>.
 - Supervisor access: <host dispatch method or explicit session-handoff procedure>.
 

@@ -11,6 +11,22 @@ roster apply to this audit only and are recorded in the report; they never chang
 
 ## V1 — Recover and identify the claim
 
+`verify [<plan>] [<scope>]` audits the whole plan without a scope. A scope
+narrows it to one phase (`phase_02`, with its sub-phases and P<N>), one
+sub-phase (`1.2`), or one ledger entry (`T-A004`, `B-A002`). A scoped audit
+inspects the selected units plus the interfaces, dependents, and previous
+findings they touch; every dimension applies within that scope. Its verdict
+covers only that scope and never stands for the whole plan.
+
+`000_adhoc` is auditable as a whole ledger or by entry ID. It has no STATE.md:
+its verify/index.md records the open audit and its checkpoint, and corrections
+become ready Task/Bug requests citing their finding IDs instead of correction
+units. The resulting ledger entry marks the finding FIXED with evidence;
+`execute verify` does not apply to `000_adhoc`. Read its ledgers and
+verify/index.md where a real plan reads STATE.md, and close the audit there.
+Auditing an OPEN ad-hoc entry suspends nothing: its own ledger checkpoint stays
+authoritative, and the audit only inspects it.
+
 Resolve the plan and runtime settings. Read STATE.md first, respecting ownership
 and OPEN-unit recovery. An audit of incomplete implementation does not require
 finishing that implementation first: the state owner explicitly checkpoints it
@@ -19,9 +35,10 @@ the audit. Do not lose its step/checkpoint. Restore the suspended context on aud
 closure using the execution contract, with findings attached.
 
 Read overview.md, relevant phase files, tasks.md/bugs.md, and verify/index.md.
-Audit every DONE, IN_PROGRESS, IN_REVIEW, or BLOCKED unit and any changed area
-mapped to the plan, even if its phase is erroneously still TODO. Check readiness,
-revision history, scope, prerequisites, actual review evidence, and commit policy.
+Within the audit scope, audit every DONE, IN_PROGRESS, IN_REVIEW, or BLOCKED
+unit and any changed area mapped to the plan, even if its phase is erroneously
+still TODO. Check readiness, revision history, scope, prerequisites, actual
+review evidence, and commit policy.
 
 Open the audit unit V<NNN> as the invocation; the saved execution scope stays
 unchanged. Record the audited baseline/range and dirty changes;
@@ -111,9 +128,9 @@ Apply the same readiness rule to correction plans: READY only after their
 contracts and prerequisites are validated. If a correction depends on an
 unresolved product decision or unavailable evidence, label it BLOCKED with the
 question, owner, and next action. The audit may still close truthfully; it must
-not present that correction as executable or invent an answer to finish the report.
-Add one STATE.md §11 Corrections row per correction: TODO, or BLOCKED with its
-question.
+not present that correction as executable or invent an answer to finish the
+report. Add one STATE.md §11 Corrections row per correction: TODO, or BLOCKED
+with its question (none in `000_adhoc`).
 
 Update verify/index.md with new findings, evidence-based status updates, report
 metadata, and open blockers. FIXED requires proof; ACCEPTED requires the user's
@@ -131,9 +148,9 @@ branch using the completion transaction. The subject states the audit verdict.
 This commits a finished inspection, not unverified implementation. Never stage
 uncommitted production changes merely because the audit inspected them.
 
-No automatic correction follows verify, even in full autonomy. Report the verdict,
-counts, limitations, report path, commit when created, and the command to apply
-corrections. Use the report as the durable detailed output; avoid duplicating it
-in full in chat.
+No automatic correction follows verify, even in full autonomy. Report the
+verdict, counts, limitations, report path, commit when created, and the command
+to apply corrections (in `000_adhoc`, the ready Task/Bug commands). Use the
+report as the durable detailed output; avoid duplicating it in full in chat.
 
 Run the Verify checklist before the final response.

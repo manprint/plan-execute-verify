@@ -8,10 +8,13 @@ execution. These rules apply to both ordinary execution and
 
 ## E1 — Resolve and recover
 
-Resolve the plan, scope, roster, execution style, full-autonomous setting, and WIP
-setting per invocation.md. Read STATE.md first. Preserve the saved execution
-scope on a handoff or resume; an explicit new selector replaces it without
-abandoning OPEN work (execution-contract §1).
+Resolve the plan, scope, roster, execution style (fixed rule in
+agent-roster.md), full-autonomous setting, and WIP setting per invocation.md.
+Read STATE.md first. Preserve the saved execution scope on a handoff or resume;
+a different explicit selector replaces it and its option overrides without
+abandoning OPEN work, after asking the user when the saved scope is RUNNING or
+BLOCKED and different (execution-contract §1). Resume follows mode-resume.md and
+then this manual for the saved scope.
 
 Check ownership (stale ownership changes hands only under execution-contract
 §2), actual repository changes against the unit's snapshot base, checkpoint,
@@ -43,8 +46,9 @@ A SKIPPED dependency requires an explicit supervisor waiver/replacement.
 Refuse inconsistent selectors with an actionable reason.
 
 Record the saved execution scope: the whole plan, one phase, one sub-phase, or a
-report. A sub-phase scope excludes its phase closure P<N>. Full autonomy does not
-expand that selection.
+report, with this invocation's explicit options as its overrides
+(execution-contract §1); they never change §3. A sub-phase scope excludes its
+phase closure P<N>. Full autonomy does not expand that selection.
 
 ## E3 — Execute the detailed contract
 
@@ -55,9 +59,10 @@ expand that selection.
 2. Read the local design context and named source slices. Confirm interfaces and
    relevant callers before editing. Follow numbered steps and their postconditions.
 3. Checkpoint at recovery boundaries: before risky/long work, delegation,
-   blockers, or yielding. Routine steps and passing focused checks need no
-   separate state write. Workers
-   return evidence to the coordinator; only the state owner updates shared files.
+   blockers, or yielding. With WIP enabled, each such checkpoint also updates
+   the unit's rolling WIP commit (execution-contract §6). Routine steps and
+   passing focused checks need no separate state write. Workers return evidence
+   to the coordinator; only the state owner updates shared files.
 4. Implement named tests with the stated fixtures and assertions. Verify that the
    intended tests actually execute; test absence or zero discovery is not success.
 5. For locator drift, find and inspect the symbol. For missing/contradictory
@@ -79,13 +84,14 @@ expand that selection.
 
 After its sub-phases and README obligation, open P<N> as a phase-close unit
 under a phase or plan scope; the phase is IN_REVIEW while it is OPEN (BLOCKED
-while a required gate is blocked).
-Run full phase gates, obtain the strong supervisor's review of integration/invariants/
-tests/docs, and record evidence. Only then mark the phase DONE. With
-full-autonomous:true, commit this nonempty state/review update on the current
-branch, distinctly identifying phase completion. If a gate or the review fails,
-follow the P<N> failure procedure in execution-contract §3: never mark the phase
-DONE or patch code inside P<N>.
+while a required gate is blocked). Run full phase gates, obtain the strong
+supervisor's review of integration/invariants/ tests/docs, and record evidence.
+Only then mark the phase DONE. With full-autonomous:true or WIP enabled, commit
+this nonempty state/review update on the current branch, distinctly identifying
+phase completion. With full-autonomous:false, stop after this closure with a
+handoff while scope work remains; `resume` continues. If a gate or the review
+fails, follow the P<N> failure procedure in execution-contract §3: never mark
+the phase DONE or patch code inside P<N>.
 
 The final phase additionally proves the reference scenario and final gates.
 When a scoped sub-phase finishes, do not execute later sub-phases or its P<N>
@@ -94,14 +100,15 @@ invocation.
 
 ## E5 — Corrections from an audit
 
-`execute verify [<plan>] [V<NNN>]` uses the selected/active plan's newest report by
-default. Read STATE.md, verify/index.md, and the selected report. Use
-templates-audit.md for record updates. Track each correction's status and attempt
-in STATE.md §11 Corrections; for a report without those rows, add them before
-dispatch.
-Check correction-plan readiness as well as the main plan. BLOCKED or legacy
+`execute verify [<plan>] [V<NNN>]` uses the selected/active plan's newest report
+by default; `000_adhoc` audit corrections run as Task/Bug instead. Read
+STATE.md, verify/index.md, and the selected report. Use templates-audit.md for
+record updates. Track each correction's status and attempt in STATE.md §11
+Corrections; for a report without those rows, add them before dispatch. Check
+correction-plan readiness as well as the main plan. BLOCKED or legacy
 underspecified corrections require supervisor refinement and evidence before
-dispatch; an audit's completed status is not proof its corrections are executable.
+dispatch; an audit's completed status is not proof its corrections are
+executable.
 
 Each correction is a unit V<NNN>-C<n>, with the same detailed contract as a
 sub-phase and focused validation. Recheck its finding against the current tree before editing. If it is
@@ -120,11 +127,15 @@ the historical audit verdict. Update pending plan contracts invalidated by fixes
 
 ## E6 — Finish or hand off
 
-Run the Coherence checklist before reporting completion. Summarize scope results,
-gates/reviews, deviations, local completion commits/branch, and the next action.
-State failed, blocked, skipped, or unverified work plainly.
+Run the Coherence checklist before reporting completion. Summarize scope
+results, gates/reviews, deviations, local completion commits/branch, and the
+next action. With commits disabled, warn that the changes and plan records
+remain uncommitted, and untracked plan files can be lost to `git clean`; suggest
+the exact commit command without running it. State failed, blocked, skipped, or
+unverified work plainly.
 
-When full autonomy is true, continue until the selected scope is verified complete
-or an actual blocker/user stop/host interruption prevents further work. Save a
-checkpoint and exact handoff when the session ends; never imply an unavailable
-supervisor or host automatically performed the next step.
+When full autonomy is true, continue until the selected scope is verified
+complete or an actual blocker/user stop/host interruption prevents further work.
+With false, also stop after each phase closure, never at a sub-phase boundary.
+Save a checkpoint and exact handoff when the session ends; never imply an
+unavailable supervisor or host automatically performed the next step.

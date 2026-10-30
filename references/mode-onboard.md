@@ -30,13 +30,14 @@ document); all code, plan specifications, STATE.md, ledgers, and reports are rea
    approved requirements or executable PEV plans.
 
 All leading options use normal syntax validation. full-autonomous:true and WIP
-options do not authorize commits, state changes, or executing the recommendation.
-Do not persist them or carry them into a recommended execution command. Show the
-selected plan's saved settings separately from invocation-local settings.
-An explicit agent prefix applies only to this inspection, never saved assignments.
-Read agent-roster.md if selecting/delegating an inspector: prefer a strong agent
-for initial architecture reconstruction. An unavailable supervisor does not block
-factual gathering; label unreviewed interpretations and the needed handoff.
+options do not authorize commits, state changes, or executing the
+recommendation. Do not persist them or carry them into a recommended execution
+command. Show the selected plan's defaults (§3) and saved scope overrides (§1)
+separately from invocation-local settings. An explicit agent prefix applies only
+to this inspection, never saved assignments. Read agent-roster.md if
+selecting/delegating an inspector: prefer a strong agent for initial
+architecture reconstruction. An unavailable supervisor does not block factual
+gathering; label unreviewed interpretations and the needed handoff.
 
 ## O2 — Build or refresh the source map
 
@@ -126,11 +127,12 @@ substitute actual IDs/paths in a real handoff.
 | Observed condition | Next action / command guidance |
 |--------------------|--------------------------------|
 | Target, ownership, branch/baseline or scope conflict; required source missing | Explain the conflict and ask the exact question or hand off to the current owner. Do not switch branches or recommend blind execution. |
-| Interrupted unit, pending completion transaction or suspended audit | Identify that identity's recovery first, in its original mode and scope. If readiness/design is blocked, hand it to the supervisor rather than proposing execution. An OPEN audit/pending audit commit takes precedence over its suspended implementation; never recommend a new audit or later phase to bypass recovery. |
+| Interrupted unit, pending completion transaction or suspended audit | Identify that identity's recovery first, in its original mode and scope: suggest `resume <plan> <unit-id>`. If readiness/design is blocked, hand it to the supervisor rather than proposing execution. An OPEN audit/pending audit commit takes precedence over its suspended implementation; never recommend a new audit or later phase to bypass recovery. |
 | DRAFT/BLOCKED or underspecified/legacy contract | Give a strong-supervisor handoff naming the existing folder, missing decision/evidence and affected unit. No new plan and no claim of execution readiness. |
 | Audit findings need a correction decision or ready contract | Explain the findings and request the missing approval/design. Do not bypass blocking findings by recommending ordinary implementation. |
 | Authorized, READY audit corrections with eligible remaining units | Suggest `execute verify <plan> V<NNN>` with the actual report, not an ambiguous newest-report default. An OPEN finding alone is not authorization to fix it. |
-| READY planned work remaining inside the saved execution scope | Suggest `execute <plan>` plus its saved phase/sub-phase selector when present. Explain the exact unit/step and prerequisites; retain saved settings and roster. |
+| READY planned work remaining inside the saved execution scope | Suggest `resume <plan>`, which continues the saved scope without changing it. Explain the exact unit/step and prerequisites; retain saved settings and roster. |
+| READY plan with saved execution scope `none` | Suggest `execute <plan>` or a narrower phase/sub-phase selector as a new scope. Note that it starts from the plan defaults in §3, not from earlier scope overrides. |
 | Saved execution scope complete, but later plan work exists, including a pending P<N> after a sub-phase scope | Say the requested scope is complete. Show the later command (for P<N>, the phase selector) only as a proposed new scope requiring the user's choice, not as a resume. |
 | Recorded plan complete, no outstanding work | State the evidence/verification limits. Offer `verify <plan>` only if a fresh audit is useful; do not invent implementation work. |
 | No resumable work and no user goal | Ask the desired outcome. Explain Plan for a feature, Task for one small change, Bug for a defect; do not invent a command argument or infer a roadmap from TODOs. |
@@ -143,19 +145,17 @@ is the result; do not loop indefinitely trying to make the project executable.
 
 Command construction must follow SKILL.md, not invented convenience syntax.
 Place options before the mode. Never broaden a saved execution scope to the
-whole plan or replace saved execution settings with onboarding options.
-Surface the effective autonomous/WIP behavior of the suggested invocation,
-especially when a plain `execute` would inherit automatic commits.
+whole plan or replace saved execution settings with onboarding options. Surface
+the effective autonomous/WIP behavior of the suggested invocation, especially
+inherited automatic commits: `resume` keeps the saved scope overrides, while a
+new `execute` scope starts from the plan defaults.
 
-Some resumes cannot be expressed by an ID selector in the current grammar:
-task/bug ledger entries, an interrupted audit's exact identity, and an existing
-draft refinement. Give an explicit natural-language handoff naming mode, absolute
-or repository-relative path, ID/attempt/step and preserved scope/settings. For example:
-"Use plan-execute-verify to resume existing bug B-A002 in
-docs/plans/000_adhoc/bugs.md from its checkpoint. Preserve its identity and
-settings; do not allocate a new bug." Never invent `bug B-A002`, `plan 003` or
-`verify 003 V002` as a resume selector. Use numeric/path selectors for plan names
-that collide with reserved words such as `verify`.
+Express every resume with `resume [<plan>] [<unit-id>]` (mode-resume.md): for
+example `resume 000_adhoc B-A002` for an open ad-hoc bug, `resume 003 V002` for an
+interrupted audit, or `resume 003` for a DRAFT plan's planning checkpoint or the
+saved execution scope. Never invent `bug B-A002`, `plan 003` or `verify 003 V002`
+as resume syntax. Use numeric/path selectors for plan names that collide with
+reserved words such as `verify` or `resume`.
 
 ## O5 — Save and report
 
@@ -179,8 +179,9 @@ Leave pre-existing dirty changes untouched; never stage/commit the map, even und
 full-autonomous:true or --wip-commit. Do not change runtime settings or rewrite
 STATE.md merely to record that onboarding ran.
 
-Return a short recap: project/focus, recorded progress and evidence limits,
-open unit/blocker, next action with the exact supported command or handoff,
-and saved map path (or why not saved). Stop there. The user chooses whether to
+Return a short recap: project/focus, recorded progress and evidence limits, open
+unit/blocker, next action with the exact supported command or handoff, and saved
+map path (or why not saved). If the map is untracked, say so and suggest an
+exact commit command without running it. Stop there. The user chooses whether to
 run the suggested mode; an explicit future execution still performs its own
 cold-start and source checks.

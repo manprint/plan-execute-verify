@@ -21,8 +21,8 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Next action respects prerequisites, saved execution scope, settings,
       report ID, and actual host capabilities. Multiple candidates require a
       choice, not a guess.
-- [ ] Suggested commands use supported syntax; natural-language handoffs retain
-      exact paths/IDs when no selector exists. Unknown goals remain questions.
+- [ ] Suggested commands use supported syntax; resumes use
+      `resume [<plan>] [<unit-id>]` with exact IDs. Unknown goals remain questions.
 - [ ] Only the onboarding artifact was written, preserving unrelated content;
       no code/state/roster/index changes, unit claims, commits, or automatic next command.
 - [ ] Snapshot has date/baseline, source locators, coverage limits, and a concise
@@ -38,7 +38,8 @@ An unresolved required item prevents READY or implementation DONE.
       contract/checks is grouped. Each split has a dependency, review, or
       recovery reason; the weakest worker can still resume each unit.
 - [ ] Each sub-phase has all seven fields with complete structured contents:
-      contracts, numbered steps/postconditions, checkpoint, scope, failure handling.
+      contracts, numbered steps/postconditions, checkpoint, scope, failure
+      handling. Agents and reviewers are roster positions, not model names.
 - [ ] Complex units specify algorithm, representation, synchronization/lifecycle,
       boundary cases, interfaces, and errors; the worker need not invent design.
 - [ ] Files distinguish existing symbols from NEW paths and explain registration,
@@ -50,9 +51,11 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] After repository recon, material external questions were researched with
       applicable primary sources, or internal work has a justified N/A.
 - [ ] Research records include question, source/provenance, version/environment,
-      dates, decision impact, and separately labelled facts/inferences/local results.
-      Critical sources were checked by the supervisor; required UNVERIFIED claims
-      block readiness. Browsing limitations are not disguised as confirmation.
+      dates, decision impact, and separately labelled facts/inferences/local
+      results. Critical sources were checked by the supervisor; network use was
+      authorized by the environment or a recorded user answer; required
+      UNVERIFIED claims block readiness unless the user ACCEPTED them with risk
+      and guard. Browsing limitations are not disguised as confirmation.
 - [ ] Research conclusions are translated into local contracts, steps and test
       oracles; no worker must infer the design from a reading list. Material
       alternatives/contradictions are resolved; no aimless source accumulation.
@@ -66,9 +69,9 @@ An unresolved required item prevents READY or implementation DONE.
       implementer is also the required reviewer are marked self-review.
 - [ ] Each phase has a README obligation and a separate reviewed closure P<N>;
       documentation has its own sub-phase only when substantial.
-- [ ] STATE.md is initialized with immutable baseline, revision, roster, settings,
-      saved execution scope NOT_STARTED, ownership, step checkpoints, evidence
-      tables, and every sub-phase.
+- [ ] STATE.md is initialized with immutable baseline, revision, roster,
+      settings, saved execution scope none (NOT_STARTED), ownership, step
+      checkpoints, evidence tables, and every sub-phase.
 - [ ] Every dependency resolves; ordering has no cycle; next action names an
       eligible unit. SKIPPED does not silently satisfy a prerequisite.
 - [ ] Full-autonomous and WIP behavior are resolved independently and explained.
@@ -80,11 +83,15 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Plan files contain no unfilled placeholders or contradictory instructions.
       Readiness is READY only after these checks; otherwise report the blockers.
 
-## Coherence — execute, task, bug, corrections
+## Coherence — execute, resume, task, bug, corrections
 
 - [ ] Requested scope preserved; no unauthorized work or changed product requirement.
-      Task/Bug/Verify left the saved execution scope, §3 settings, and roster
-      unchanged; their explicit options were recorded with the invocation only.
+- [ ] Resume followed the recovery order, started no TODO unit named by ID and
+      no work outside the saved scope, kept scope/§3/roster unchanged and each
+      resumed unit's recorded settings, and recorded results under that unit's
+      mode. Task/Bug/Verify left the saved execution scope, §3 settings, and
+      roster unchanged; their explicit options were recorded with the invocation
+      only.
 - [ ] Task/bug attached to a named or clearly affected plan, otherwise 000_adhoc;
       the attachment reason is recorded.
 - [ ] Actual unit revision/contracts/prerequisites checked before editing.
@@ -92,7 +99,9 @@ An unresolved required item prevents READY or implementation DONE.
       owner and pre-existing changes identified. Stale ownership was taken over
       only under the recorded takeover rule.
 - [ ] Assigned versus actual agents recorded; substitutions only by an equal or
-      lower-numbered roster agent; supervisor reviews only by agent-1.
+      lower-numbered roster agent; supervisor reviews only by agent-1. Execution
+      style chosen by the fixed rule in agent-roster.md and recorded with the
+      invocation.
 - [ ] OPEN/close writes and recovery-boundary checkpoints reflect actual work,
       including pending edits and next action; no per-step state churn.
 - [ ] Specified behavior, wiring, tests, and documentation implemented.
@@ -117,27 +126,39 @@ An unresolved required item prevents READY or implementation DONE.
       responsible unit was reopened with a new attempt or the plan revised, and
       P<N> reran as a new attempt. A sub-phase scope did not run P<N>.
 - [ ] Completion transaction finished: all coherence updates precede commit,
-      owned hunks only, stable identity resolves uniquely when commit required.
+      owned hunks only, staged without interactive Git; hooks ran without
+      --no-verify; PEV trailers sit in the final trailer block; stable identity
+      resolves uniquely by exact string match when commit required.
 - [ ] No own-SHA bookkeeping loop, duplicate/empty completion commit, unrelated
       staged changes, branch switch, push, or unowned WIP amendment.
 - [ ] WIP policy is separate from autonomous completion; false alone does not
-      cancel a persisted WIP setting.
-- [ ] With full autonomy, continue eligible work until scoped completion or a real
-      blocker/stop/interruption; no routine approval pause after each unit.
+      cancel a persisted WIP setting. With WIP, each recovery-boundary
+      checkpoint of an OPEN code unit updated one rolling WIP commit.
+- [ ] Execute options were recorded as §1 scope overrides, never in §3; they
+      lapsed when a different selector replaced the scope. Only Plan set §3.
+- [ ] With full autonomy, continue eligible work until scoped completion or a
+      real blocker/stop/interruption; no routine approval pause after each unit.
+      With false, the only additional stop is after each phase closure.
 - [ ] In 000_adhoc, the ledger itself holds the durable mini-plan/checkpoint and
       settings; no fake STATE.md/phases created.
-- [ ] Final report distinguishes completed, skipped, blocked, and unverified work.
+- [ ] Final report distinguishes completed, skipped, blocked, and unverified
+      work, and warns when changes or plan records remain uncommitted, with a
+      suggested commit command.
 
 ## Verify
 
-- [ ] Real plan selected; audit baseline, dirty changes, and scope explicit.
+- [ ] Real plan or 000_adhoc selected; audit scope (whole plan, phase, sub-phase,
+      or ledger entry), baseline, and dirty changes explicit; a scoped verdict
+      is never presented as plan-wide.
 - [ ] Active implementation checkpoint preserved if auditing unfinished work.
 - [ ] Relevant modified units audited even if the board incorrectly says TODO.
 - [ ] All twelve dimensions in mode-verify.md covered with evidence.
 - [ ] Critical source and acceptance contracts inspected by the strong auditor.
 - [ ] Relevant research claims match actual versions and applicable primary
-      evidence; missing required proof prevents PASS. New evidence is recorded
-      in the report, not used to silently rewrite the plan or implement fixes.
+      evidence; missing required proof prevents PASS; ACCEPTED assumptions are
+      reported as accepted risks with their guards checked. New evidence is
+      recorded in the report, not used to silently rewrite the plan or implement
+      fixes.
 - [ ] Applicable gates actually ran; missing required evidence recorded.
 - [ ] Phase/sub-phase statuses, dependency claims, review records, and completion
       commit identities validated against the repository.
@@ -145,7 +166,8 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Every finding has evidence, severity, impact, plan reference, and correction.
       Severity follows the definitions in mode-verify.md V4, impact recorded.
 - [ ] Correction units are complete enough for a cold weak executor; each has a
-      STATE.md §11 Corrections row.
+      STATE.md §11 Corrections row (in 000_adhoc, a ready Task/Bug request
+      instead).
 - [ ] Explicit options/roster recorded in the report only; §3 and the saved
       execution scope unchanged.
 - [ ] Correction readiness is explicit; unresolved design/evidence blocks dispatch
