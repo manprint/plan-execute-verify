@@ -49,8 +49,8 @@ needs an agreed merge/location, not wholesale replacement.
 - Evidence inspected: <specific artifacts/test/review/commit references and limits>.
 - Current verification: <checks actually run or not rerun; not a verdict>.
 - Open work / owner: <unit/attempt/step, pending closure or suspended audit; source reference>.
-- Saved scope, roster and runtime settings: <source references and relevant effective values, or absent>.
-- Next eligible work: <source reference and prerequisites; distinguish it from current invocation scope>.
+- Saved execution scope, roster and runtime settings: <source references and relevant effective values, or absent>.
+- Next eligible work: <source reference and prerequisites; distinguish it from the saved execution scope>.
 
 ## Uncertainty and handoff
 | Question / discrepancy | Evidence / missing evidence | Impact and resolution owner |

@@ -10,13 +10,15 @@ state-changing recovery or completion steps; mode-onboard.md governs that mode.
 ## 1. Resolve the invocation once
 
 `full-autonomous:true|false` is a leading option, accepted by every mode.
-Precedence: explicit invocation > selected plan's STATE.md §3 > `false`.
-Reject other values and duplicate occurrences before making changes. The value
-persists in §3; in `000_adhoc` it is per invocation and recorded in the ledger.
-Parsing ends at the first non-option/non-agent token; occurrences in a task's
-description are literal text. An explicit value overrides the persisted value.
-Exception: Onboard only observes saved configuration. Its options and agent
-prefix are invocation-local and never persist to a plan or an ad-hoc ledger.
+Precedence: explicit invocation > selected plan's STATE.md §3 > `false`. Reject
+other values and duplicate occurrences before making changes. Plan, Execute, and
+Execute verify persist an explicit value in §3. Task, Bug, and Verify use it for
+that invocation only and record it in their ledger entry or audit report,
+including when attached to a real plan. Parsing ends at the first
+non-option/non-agent token; occurrences in a task's description are literal
+text. An explicit value overrides the persisted value. Exception: Onboard only
+observes saved configuration. Its options and agent prefix are invocation-local
+and never persist to a plan or an ad-hoc ledger.
 
 | Mode | Scope when true | Completion commits |
 |------|-----------------|--------------------|
@@ -44,11 +46,18 @@ commits. Onboard never commits; WIP alone never commits audits or planning.
 Neither setting authorizes pushes, deployments, destructive cleanup, or changes
 outside the requested scope.
 
-In operational modes, persist the requested scope (plan, phase, sub-phase, task,
-bug, or report), the configured roster, and the selected execution style: `handoff` (successive
-sessions/models) or `delegated` (coordinator and workers). A new explicit selector
-replaces the scope; a context reset or resume does not expand it. Preserve the
-plan's next eligible unit separately from the current invocation's scope.
+STATE.md §1 keeps two scopes. The saved execution scope (plan, phase, sub-phase,
+or report selector, with its result) is set only by Execute or Execute verify. A
+new explicit Execute selector replaces it; a context reset, a resume, or an
+intervening Task, Bug, or Verify unit never changes or expands it. The invocation
+record (mode, exact unit or scope, and result) describes the current or last run
+of any operational mode. Persist the roster and the selected execution style:
+`handoff` (successive sessions/models) or `delegated` (coordinator and workers);
+a Task, Bug, or Verify roster prefix is recorded only with that invocation.
+Preserve the plan's next eligible unit separately; it may lie outside the saved
+execution scope. A resume without a new selector first recovers any OPEN or
+pending-closure unit in its own mode, then continues the saved execution scope
+while its result is NOT_STARTED, RUNNING, or BLOCKED.
 
 ## 2. Ownership and cold starts
 
@@ -59,10 +68,22 @@ evidence. Its assigned OPEN unit is active work, not an abandoned unit to revert
 In handoff execution, the current session owns the state; transfer ownership only
 after the previous writer has stopped. Independent read-only probes may overlap.
 
+Stale ownership: a crashed or interrupted session can leave `ownership: active`
+without a release. The user's explicit operational invocation on this plan
+counts as a resume request. Take over only when STATE.md and a fresh working-tree
+snapshot (§3) are unchanged between the first read and the takeover write;
+otherwise, or when the user indicates that the other writer may still run,
+report the conflict and ask. Record previous writer, new writer, time, and reason
+in the same state update that claims ownership, then recover the OPEN unit as
+interrupted work, never by reverting it. Onboard never takes over ownership, and
+a delegated worker never claims it.
+
 At startup:
-1. Read STATE.md; identify plan ID/revision, scope, role, roster, current unit,
-   step cursor, checkpoint, repository path, branch, and immutable plan baseline.
-2. Inspect the current diff, staged changes, and unit base. Separate pre-existing
+1. Read STATE.md; identify plan ID/revision, saved execution scope, invocation,
+   role, roster, current unit, step cursor, checkpoint, repository path, branch,
+   immutable plan baseline, and the state writer's ownership.
+2. Inspect the current diff, staged changes, and unit base; compare a fresh
+   working-tree snapshot with the base snapshot tree (§3). Separate pre-existing
    changes from this unit's edits. Never infer ownership merely from a filename.
 3. Reconcile incomplete closure transactions and any OPEN unit before selecting
    new work. An unrelated WIP commit is not this plan's work; match its plan and
@@ -89,15 +110,16 @@ do not rewrite historical work as newly completed.
 
 Only the state owner may suspend an OPEN or pending-commit implementation unit
 for an explicitly requested audit. Before replacing §1/§6, save STATE.md §12:
-the complete prior §1 record, active scope/result, unit/attempt, plan revision,
+the complete prior §1 record, invocation and result, unit/attempt, plan revision,
 owner, branch/base and owned/pre-existing changes, complete §6 checkpoint,
 pending commit reference, and evidence/review references. Keep its board rows;
 do not mark it DONE. Capture the snapshot and open the audit in one state update.
 No nested suspension; delegated workers cannot initiate this transition.
 
 During the audit the snapshot is immutable. After reporting, restore the prior
-unit/scope/checkpoint, attach audit blockers, and revalidate against the current
-diff/revision; do not restore stale phase/test statuses over audit corrections.
+invocation/unit/checkpoint (the audit never changed the saved execution scope),
+attach audit blockers, and revalidate against the current diff/revision; do not
+restore stale phase/test statuses over audit corrections.
 Mark the snapshot restored only after that state update. Record the audit closure
 alongside it. A crash with an OPEN audit resumes the audit; a completed audit with
 an unresolved required audit commit finishes only that audit transaction before
@@ -108,8 +130,31 @@ pending commit merely because the audit completed.
 
 Choose the next ordered, eligible unit inside the scope; dependencies must be
 DONE, or explicitly waived by the supervisor with preserved requirements.
-SKIPPED does not implicitly satisfy a dependency. Open the unit before editing,
-mark its phase IN_PROGRESS, record its base and owned paths, and name step S1.
+SKIPPED does not implicitly satisfy a dependency. Open the unit before editing:
+mark it and its phase IN_PROGRESS; record its base, owned paths, assigned and
+actual agent (agent-roster.md), and step S1.
+
+The unit base is HEAD plus a working-tree snapshot tree taken at open. Without
+completion commits, several finished units share one HEAD; the snapshot separates
+this unit's edits from earlier units and pre-existing changes. Take it without
+touching the real index:
+
+```bash
+idx="$(git rev-parse --git-dir)/pev-snapshot.$$.index"
+{ GIT_INDEX_FILE="$idx" git read-tree HEAD 2>/dev/null ||
+  GIT_INDEX_FILE="$idx" git read-tree --empty; } &&
+GIT_INDEX_FILE="$idx" git add -A &&
+GIT_INDEX_FILE="$idx" git write-tree
+rm -f "$idx"
+```
+
+The printed tree covers tracked and untracked files, not ignored ones; list owned
+ignored artifacts explicitly. On resume and at closure take a fresh snapshot and
+compare it with `git diff --stat <base-tree> <current-tree>`. Changes outside the
+unit's owned paths are reported, never claimed. The tree object is unreferenced,
+so `git gc` may eventually prune it; if it is missing, fall back to §5 and the
+checkpoint and record that limitation. Onboard takes no snapshot; Verify takes
+one only for the stale-ownership check (§2), never as a unit base.
 
 Execute the numbered steps and check each expected result. A step or successful
 targeted test does not itself require a state write. Keep §6 compact: last durable
@@ -120,10 +165,18 @@ session. Opening and closing the unit are required writes; several ordinary
 edit/test batches between them may share one checkpoint or need none. On resume,
 inspect the actual diff because a crash may precede any checkpoint.
 
-After implementation, run the targeted unit checks and required review, reconcile
-affected plan files and docs, and close the unit using §6 below. Continue without asking
-for permission to start the next already-authorized unit. With full autonomy,
-do not stop merely because a sub-phase or phase ended.
+After implementation, run the targeted unit checks and required review, apply
+the coherence contract (§7), and close the unit using §6 below. Continue without
+asking for permission to start the next already-authorized unit. With full
+autonomy, do not stop merely because a sub-phase or phase ended.
+
+Statuses move TODO → IN_PROGRESS → DONE, with IN_REVIEW between the last two
+when focused checks pass and a required review is pending at a recovery boundary
+(review dispatched or handed off); an inline review finished in the same session
+may go directly to DONE. Any edit to reviewed behavior returns the unit to
+IN_PROGRESS. An unavailable reviewer makes the unit BLOCKED with its review
+request. A phase is IN_REVIEW while its P<N> is OPEN, and BLOCKED while that
+P<N> is blocked. A reopened unit returns to IN_PROGRESS with a new attempt.
 
 For planned phase work, a specifically named later unit or phase closure may
 fulfil its README obligation. Keep the affected sections and owner visible and
@@ -136,17 +189,33 @@ explicitly SKIPPED with a justification; its README obligation, full phase gates
 and strong-supervisor review are complete. Record the review and phase result in
 STATE.md, then commit the closure when full autonomy is true. This is a real
 state change, not an empty ceremonial commit. Completing a selected sub-phase
-does not authorize executing remaining sub-phases; its containing phase may be
-closed if all requirements are already satisfied and review is in scope.
+does not authorize executing remaining sub-phases or its phase closure P<N>;
+P<N> then becomes the next eligible unit for a phase or plan scope.
+
+P<N> edits only plan records and documentation it owns; it never repairs
+production code or tests. A required gate that is `blocked` (unavailable service
+or credential) keeps P<N> OPEN and BLOCKED with a checkpoint; it resumes as the
+same attempt once the gate can run. If a full phase gate result is `fail` or the
+phase review rejects the phase, record the failing evidence, close that P<N>
+attempt with ledger result `failed` and commit `none`, and return the phase to
+IN_PROGRESS. The supervisor locates the cause: a defect in a DONE sub-phase
+reopens it (IN_PROGRESS, attempt + 1, prior evidence kept, dependent evidence
+invalidated); a missing or wrong design becomes a plan revision (§4) that amends
+or adds a unit. After that work closes, run P<N> again as a new attempt. When
+commits are enabled, the failed attempt's state records enter the reopened or
+added unit's completion commit as owned plan records. Retry limits in §4 apply
+to repeated failures.
 
 Stop at the selected scope's verified completion, an explicit user stop, or a
 documented blocker requiring unavailable capability/authority. The last phase
-also requires the reference scenario and final integration gates. Record
-`Scope result: COMPLETE` only then. Never label unverified work complete.
+also requires the reference scenario and final integration gates. Only then
+record COMPLETE: for Execute and Execute verify in both the saved execution
+scope and the invocation, for Task, Bug, and Verify in the invocation alone.
+Never label unverified work complete.
 If the host ends a session, save a handoff; this skill cannot start a new host
 session by itself.
 With full autonomy false, a verified unit boundary may instead yield a handoff;
-record that the selected scope is still RUNNING, not COMPLETE.
+record that the saved execution scope is still RUNNING, not COMPLETE.
 
 ## 4. Decisions, supervisor escalation, and retry limits
 
@@ -176,11 +245,14 @@ After two unsuccessful fixes for the same failure, escalate with the evidence;
 do not repeat the same attempt or loosen tests. The supervisor can specify a new
 approach and a fresh bounded retry budget. If the configured supervisor is not
 available, persist a precise handoff and mark the unit BLOCKED; a weaker worker
-must not claim a strong review or silently substitute itself.
+must not claim a strong review or silently substitute itself. Assigned versus
+actual agents and the only permitted substitutions are defined in
+agent-roster.md.
 
 Review evidence includes reviewer identity, unit/plan revision, reviewed change
 identity (commit or base plus owned diff/checkpoint), inspected invariants, result,
-and any follow-up. Edits affecting reviewed behavior invalidate that review.
+and any follow-up. Label it `self-review` when the reviewer is also the unit's
+actual implementer. Edits affecting reviewed behavior invalidate that review.
 
 ## 5. Verification appropriate to the current stage
 
@@ -233,11 +305,14 @@ Suggested subjects (adapt to the repository's convention without losing meaning)
 `verify(V001): complete audit; FAIL, 1 blocker`.
 
 1. Check the gates applicable to this unit and its required review; finish all
-   coherence updates before staging. Record the
-   closed unit, evidence, next eligible unit, and ledger commit reference
-   `unit:<id>:<attempt>` in the same proposed snapshot. When commits are disabled,
-   record `uncommitted`. Do not try to embed a commit's own SHA inside itself.
+   coherence updates (§7) before staging. Record the closed unit, its ledger
+   result (`complete`, or `failed` for a failed P<N> attempt), evidence, next
+   eligible unit, and ledger commit reference `unit:<id>:<attempt>` in the same
+   proposed snapshot. When commits are disabled, record `uncommitted`. Do not try
+   to embed a commit's own SHA inside itself.
    If completion commits are disabled, closure ends here; do not run steps 2–4.
+   A failed P<N> attempt records commit `none` and also ends here under every
+   commit policy; it is never a pending closure.
 2. Stage only owned changes and their plan records. Include required plan files
    created for this request during an earlier planning session once their
    provenance is established; otherwise a fresh checkout could lack its contract.
@@ -272,3 +347,30 @@ With WIP enabled, interruption commits carry `PEV-Result: wip` and §1 remains
 OPEN. Finish into a completion commit; amend only an owned, local-only WIP at
 HEAD, otherwise append. Inspect current changes as well as the WIP diff. Full
 autonomy alone never requires committing broken or unreviewed work.
+
+## 7. Coherence contract
+
+Every closed unit leaves the plan consistent with the repository. Apply these
+updates before the completion commit, not afterwards:
+
+1. STATE.md: invocation and saved execution scope, current and next unit,
+   checkpoint, ledger row, owned changes, verification evidence, reviews,
+   deviations, blockers, and sub-phase/phase/correction progress. Live
+   implementation status appears only here.
+2. Out-of-plan work: `tasks.md` or `bugs.md` entries with stable IDs
+   `T-A<NNN>` / `B-A<NNN>`, allocated as the highest existing number in that
+   ledger plus one and never reused (templates-ledger.md). Ad-hoc history stays
+   in `000_adhoc` when a real plan is created later.
+3. README.md for changed user-visible behavior: usage, defaults, examples,
+   limits, and troubleshooting, preserving language and structure. Planned phase
+   work either updates it in the unit or keeps the obligation visible with the
+   named later unit or P<N> that owns it; tasks, bugs, and corrections update
+   affected documentation themselves.
+4. Audit findings affected by the work: update `verify/index.md` and the source
+   report's resolution; never silently drop or self-accept an unresolved finding.
+5. Plan changes: the supervisor records superseded decisions, invariant/test
+   impact, dependencies, and revalidation, and updates pending units made stale.
+   Skipped units keep their reason. Necessary authorized work is added explicitly,
+   never hidden in a vague deviation or in rewritten requirements.
+
+The Coherence checklist in quality-checklist.md verifies these updates.

@@ -1,6 +1,7 @@
 # Ledger templates — tasks and bugs
 
-Append entries with stable T-A<NNN> / B-A<NNN> IDs before implementation.
+Append entries with stable T-A<NNN> / B-A<NNN> IDs before implementation,
+allocated as the highest existing number in that ledger plus one and never reused.
 Never erase entries; update their checkpoint/outcome, preserving changes in
 intent as revisions. In a real plan STATE.md owns live status; the ledger links
 to it and carries the durable mini-plan/evidence. In 000_adhoc the entry itself
@@ -16,12 +17,17 @@ Use execution-contract.md for ownership, settings, recovery, reviews, and commit
 - Date / actual agent: <value>
 - Request: <observable requested outcome>
 - State owner: <STATE.md unit link, or this entry in 000_adhoc>
+- Attachment: <plan named in the request or whose scope/contracts/files it changes,
+  with reason; or 000_adhoc>
 - Plan impact: <affected decisions/units, or n/a — no plan>
 - Related findings: <IDs or none>
-- Settings: full-autonomous:<true|false>; WIP commits:<on|off>
+- Settings: full-autonomous:<true|false>; WIP commits:<on|off>; roster: <saved or
+  invocation prefix> — this invocation only; never written to a plan's §3
 - Identity: plan <folder ID or 000_adhoc>; unit <ID>; attempt <n>
-- Baseline / branch: <starting HEAD, branch, pre-existing changes to preserve>
-- Assignment/reviewer: <configured worker, required supervisor>
+- Baseline / branch: <starting HEAD, working-tree snapshot tree, branch,
+  pre-existing changes to preserve>
+- Assignment/reviewer: <assigned → actual worker, required supervisor;
+  self-review when they are the same>
 - Files: <read/write paths, symbols, owned changes>
 - Contract: <inputs, outputs, errors, preserved behavior, exclusions>
 - Preconditions: <concrete prerequisites>
@@ -36,7 +42,7 @@ Use execution-contract.md for ownership, settings, recovery, reviews, and commit
 
 ### Checkpoint
 <In a real plan link STATE.md §6; do not duplicate live state here.
-In 000_adhoc: OPEN|DONE|BLOCKED, owner, completed steps, actual changes, next step,
+In 000_adhoc: OPEN|IN_REVIEW|DONE|BLOCKED, owner, completed steps, actual changes, next step,
 last checks, pending resources, and stop reason. If research is active, retain
 inspected sources, unanswered questions, and next lookup. Persist before handoff.>
 

@@ -122,8 +122,9 @@ complex logic. Each unit needs:
   what must trigger supervisor escalation.
 - Named tests with fixtures, assertions, location, command, and proof they are
   selected. Do not assign the worker the design of the acceptance oracle.
-- Required reviewer and review timing, targeted unit checks, and a checkable completion
-  condition including state and the configured commit policy.
+- Required reviewer and review timing (state when the implementer is also the
+  required reviewer: that review is `self-review`), targeted unit checks, and a
+  checkable completion condition including state and the configured commit policy.
 
 Keep an outcome in one sub-phase when its edits share a contract and one targeted
 validation set. Split only when there is an independent dependency/review boundary,
@@ -176,7 +177,8 @@ creation/registration instructions, not treated as missing anchors.
 
 Initialize STATE.md at planning time:
 - Protocol and ownership rules sufficient for a session without this skill.
-- Plan identity/revision, immutable baseline, roster, settings, and scope.
+- Plan identity/revision, immutable baseline, roster, and settings; saved
+  execution scope none (NOT_STARTED) until Execute selects one.
 - Current unit none; next action points to a real first eligible sub-phase.
 - Baseline/unit/phase/final gate applicability and setup.
 - Empty but usable ledger, checkpoints, evidence/review/deviation tables.

@@ -15,7 +15,7 @@ user's scope while removing repeated prose, checks, and state writes.
 
 ## Route the request
 
-Command form: `/plan-execute-verify [<options>] [<agent-prefix>] [<mode>] <args>`.
+Command form: `/plan-execute-verify [<options and agent-prefix, any order>] [<mode>] <args>`.
 For command syntax, settings precedence, selectors, and ambiguity, read
 [invocation](references/invocation.md) before parsing. For natural-language
 requests, resolve material ambiguity before writing. Reviewing this skill itself
@@ -41,15 +41,18 @@ runtime/recovery contract and resolved settings into generated STATE.md.
   specifies algorithm, interfaces, invariants, failure behavior, and test oracle.
 - A selector limits scope even under `full-autonomous:true`. That setting commits
   verified operational units locally and continues within the selected scope;
-  it never authorizes a push, deployment, or broader work. Preserve scope across
-  resumes. Exact commit and handoff rules are in
-  [execution-contract](references/execution-contract.md).
+  it never authorizes a push, deployment, or broader work. Preserve the saved
+  execution scope across resumes and Task/Bug/Verify runs. Exact commit and
+  handoff rules are in [execution-contract](references/execution-contract.md).
 - The plan's immutable baseline, revision, roster, settings, stable IDs, gate
   registry, and progress live in STATE.md. Phase files specify work; STATE.md
   alone tracks live implementation status. One state writer owns shared records
-  and commits. An OPEN unit is reconciled against the actual diff before new work.
+  and commits; stale ownership changes hands only under the recorded takeover
+  rule. An OPEN unit is reconciled against the actual diff and its snapshot base
+  before new work.
 - Open a unit before editing and close it with applicable evidence, review,
-  documentation, state reconciliation, and a completion commit when configured.
+  documentation, state reconciliation (coherence contract), and a completion
+  commit when configured.
   Checkpoint at recovery boundaries rather than after every step or test.
   Preserve unrelated changes and commit identity. A phase closes as a separate
   reviewed `P<N>` unit after its sub-phases, README obligation, and full gates.
@@ -63,8 +66,10 @@ runtime/recovery contract and resolved settings into generated STATE.md.
 
 ## Plan shape and context cost
 
-Create plans under `docs/plans/<NNN>_plan-<FeatureName>/`, using the highest
-existing numeric prefix plus one; honor an explicit user path. `000_adhoc` is
+Create plans under `docs/plans/<NNN>_plan-<FeatureName>/`, creating missing
+parent directories. Use the highest existing numeric prefix plus one, starting at
+001; never reuse gaps or renumber old plans. FeatureName is a short PascalCase or
+kebab-case name without spaces. Honor an explicit user path. `000_adhoc` is
 reserved for task/bug ledgers without fake phases or STATE.md.
 
 Size phases by observable integration results; a typical phase has 2–4 coherent

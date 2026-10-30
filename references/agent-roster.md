@@ -15,8 +15,10 @@ responsibility; it does not guarantee model availability or actual capability.
 A roster with only agent-1 has the same single-agent behavior as agent:<name>.
 With multiple agents, assign only positions actually present in the roster.
 
-Legacy defaults are Opus/Sonnet/Haiku in those positions. Explicit configuration
-overrides the plan's roster; otherwise preserve the stored roster across sessions.
+Legacy defaults are Opus/Sonnet/Haiku in those positions. In Plan, Execute, and
+Execute verify an explicit prefix overrides the plan's roster; otherwise preserve
+the stored roster across sessions. In Task, Bug, and Verify an explicit prefix
+applies to that invocation only and is recorded in its ledger entry or report.
 Record an intentional override and its effect on remaining assignments. Do not
 treat opening a plan in a different model as an automatic roster override.
 Onboard is informational: an explicit roster applies to that inspection only;
@@ -30,6 +32,28 @@ completeness. The weakest worker can implement complex logic when the supervisor
 has already decided the design and supplied exact steps, edge cases, and tests.
 If a worker must invent a concurrency protocol or acceptance oracle, refine the
 plan or escalate that decision before implementation.
+
+## Assigned and actual agents
+
+Each unit names its assigned agent. At open, record the actual implementer;
+record intended and actual reviewers the same way.
+
+- Dispatch the assigned agent when the host supports it.
+- Otherwise a configured agent with an equal or lower position number
+  (agent-1 < agent-2 < agent-3 …) may implement the unit. Record the substitution
+  as assigned → actual in STATE.md §1 and the ledger row. A higher-numbered agent
+  never implements a unit assigned to a lower-numbered one; save a BLOCKED
+  handoff naming the required agent instead.
+- Required supervisor reviews and technical plan revisions are performed only by
+  agent-1. If it is unavailable, save a BLOCKED handoff naming the review or
+  decision.
+- A session whose model is not in the roster may coordinate, own state, and
+  dispatch, but implements and reviews nothing unless the roster is explicitly
+  changed.
+- When the reviewer is also the unit's actual implementer (same agent and
+  context), label the review `self-review`. With `agent:<name>` every review is
+  self-review. A plan states in Assignment when a unit's implementer is also its
+  required reviewer.
 
 ## Two supported execution styles
 
@@ -94,6 +118,6 @@ Batch focused recon: paths, signatures, callers, test harness, command syntax,
 reuse candidates, and unknowns. The supervisor inspects critical contracts
 directly rather than trusting a terse weaker-agent summary blindly.
 
-Announce the actual configured assignment for material work and reviews. Record
-both the intended and actual reviewer/worker when availability affects execution.
-Keep reports focused, but include enough evidence to verify their claims.
+Announce the actual configured assignment for material work and reviews, and
+record assigned versus actual agents as defined above. Keep reports focused, but
+include enough evidence to verify their claims.

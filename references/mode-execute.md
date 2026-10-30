@@ -9,11 +9,14 @@ execution. These rules apply to both ordinary execution and
 ## E1 — Resolve and recover
 
 Resolve the plan, scope, roster, execution style, full-autonomous setting, and WIP
-setting per invocation.md. Read STATE.md first. Preserve the previous scope on a
-handoff; an explicit new selector supersedes it without abandoning OPEN work.
+setting per invocation.md. Read STATE.md first. Preserve the saved execution
+scope on a handoff or resume; an explicit new selector replaces it without
+abandoning OPEN work (execution-contract §1).
 
-Check ownership, actual repository changes, checkpoint, unit base, commit
-references, and current branch. Reconcile any OPEN/pending-commit unit first.
+Check ownership (stale ownership changes hands only under execution-contract
+§2), actual repository changes against the unit's snapshot base, checkpoint,
+commit references, and current branch. Reconcile any OPEN/pending-commit unit
+first.
 A delegated worker follows its assignment rather than taking over this root loop.
 
 A plan must be READY at its recorded revision before dispatch. For legacy plans,
@@ -39,13 +42,16 @@ Require prerequisite sub-phases and artifacts, not just a phase's claimed DONE.
 A SKIPPED dependency requires an explicit supervisor waiver/replacement.
 Refuse inconsistent selectors with an actionable reason.
 
-Record whether this invocation covers the whole plan, one phase, one sub-phase,
-or a report. Full autonomy does not expand that selection.
+Record the saved execution scope: the whole plan, one phase, one sub-phase, or a
+report. A sub-phase scope excludes its phase closure P<N>. Full autonomy does not
+expand that selection.
 
 ## E3 — Execute the detailed contract
 
 1. Open the unit and mark its phase/sub-phase IN_PROGRESS. Record ID/attempt,
-   plan revision, base, ownership, intended files, and first step.
+   plan revision, base (HEAD plus working-tree snapshot tree, execution-contract
+   §3), ownership, assigned and actual agent (agent-roster.md), intended files,
+   and first step.
 2. Read the local design context and named source slices. Confirm interfaces and
    relevant callers before editing. Follow numbered steps and their postconditions.
 3. Checkpoint at recovery boundaries: before risky/long work, delegation,
@@ -58,31 +64,41 @@ or a report. Full autonomy does not expand that selection.
    design, escalate to the strong supervisor. The supervisor may repair technical
    steps within unchanged requirements/scope, version the plan, and update
    dependents. The weak implementer must not quietly redesign it.
-6. Run focused unit checks and required review against the actual diff. After two failed
-   fixes of the same issue, escalate instead of retrying blindly or weakening tests.
-7. Apply the coherence contract in full, then close and commit according to
-   execution-contract.md. Resolve the completion commit identity before advancing.
+6. Run focused unit checks and required review against the actual diff; the unit
+   is IN_REVIEW while a dispatched or handed-off review is pending. After two
+   failed fixes of the same issue, escalate instead of retrying blindly or
+   weakening tests.
+7. Apply the coherence contract (execution-contract §7) in full, then close and
+   commit according to execution-contract.md. Resolve the completion commit
+   identity before advancing.
    A failure to commit leaves closure pending and recoverable, not fully complete.
 8. Continue the next eligible unit. Routine sub-phase completion is not a reason
    to ask the user to authorize work already in scope.
 
 ## E4 — Close each phase
 
-After its sub-phases and README obligation, open P<N> as a phase-close unit.
+After its sub-phases and README obligation, open P<N> as a phase-close unit
+under a phase or plan scope; the phase is IN_REVIEW while it is OPEN (BLOCKED
+while a required gate is blocked).
 Run full phase gates, obtain the strong supervisor's review of integration/invariants/
 tests/docs, and record evidence. Only then mark the phase DONE. With
 full-autonomous:true, commit this nonempty state/review update on the current
-branch, distinctly identifying phase completion.
+branch, distinctly identifying phase completion. If a gate or the review fails,
+follow the P<N> failure procedure in execution-contract §3: never mark the phase
+DONE or patch code inside P<N>.
 
 The final phase additionally proves the reference scenario and final gates.
-When a scoped sub-phase finishes, do not execute later sub-phases outside that
-scope. Keep the next eligible plan unit recorded for the next invocation.
+When a scoped sub-phase finishes, do not execute later sub-phases or its P<N>
+outside that scope. Keep the next eligible plan unit recorded for the next
+invocation.
 
 ## E5 — Corrections from an audit
 
 `execute verify [<plan>] [V<NNN>]` uses the selected/active plan's newest report by
 default. Read STATE.md, verify/index.md, and the selected report. Use
-templates-audit.md for record updates.
+templates-audit.md for record updates. Track each correction's status and attempt
+in STATE.md §11 Corrections; for a report without those rows, add them before
+dispatch.
 Check correction-plan readiness as well as the main plan. BLOCKED or legacy
 underspecified corrections require supervisor refinement and evidence before
 dispatch; an audit's completed status is not proof its corrections are executable.

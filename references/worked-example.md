@@ -27,7 +27,9 @@ must select one explicitly before implementation.
 ## Local design context for phase_01.md
 
 Logical phase 0 introduces an internal primitive; it changes no HTTP behavior.
-Its sub-phases are 0.1 (the primitive) and 0.2 (README accuracy check).
+Its single sub-phase is 0.1 (the primitive): one outcome with one contract and one
+targeted check set. Because no public behavior changes, the README obligation is
+an accuracy check owned by P0, not a separate documentation sub-phase.
 Its reviewed closure is P0. Phase 1 may use the primitive only after P0 is DONE.
 
 - D1: Each instance is one independent quota key and one fixed window counter.
@@ -101,39 +103,45 @@ Its reviewed closure is P0. Phase 1 may use the primitive only after P0 is DONE.
   boundaries, backward time, independence, and concurrent exhaustion.
 
   S4 — Run G-U01, inspect the full owned diff, and request the supervisor's review
-  with revision/diff identity and actual test output.
+  with revision/diff identity and actual test output. The unit is IN_REVIEW while
+  a dispatched or handed-off review is pending.
   Expected: required review records I-1 through I-4 and passes before closure.
 
-  Checkpoints: after S1, S2, S3, and the S4 test run, record actual files,
-  completed steps/postconditions, failed checks, and the next unverified step.
-  If interrupted, inspect existing symbols/tests before repeating an edit.
+  Recovery boundary: before dispatching or handing off the S4 review, record in
+  STATE.md §6 the actual files, completed steps/postconditions, the G-U01 result,
+  and the next action. S1–S3 edits and passing test runs need no separate state
+  write. If interrupted earlier, compare a fresh working-tree snapshot with the
+  unit's base tree and inspect existing symbols/tests before repeating an edit.
 
   Scope/failure handling: do not wire HTTP, add a new dependency, change quota
   semantics, replace the lock with atomics, or loosen a test. A changed baseline
   contract, missing design, or two failed fixes of the same error goes to agent-1.
 
-- **Unit tests:** all live in tests/unit/test_limits.py; G-U01 is
-  python -m pytest tests/unit/test_limits.py -v. Confirm these named tests execute,
-  in addition to the pre-existing suite:
+- **Unit tests:** all live in tests/unit/test_limits.py and run through gate
+  G-U01 (command in STATE.md §3). Confirm these named tests execute, in addition
+  to the pre-existing suite. Unless stated otherwise, each test that needs an
+  instance builds a fresh one with capacity=2, window_ns=100, start_ns=1000:
   - test_admission_immutable: Admission(True, None) exposes those exact fields;
     assigning allowed or retry_after_ns raises dataclasses.FrozenInstanceError.
   - test_constructor_validation: reject capacity=-1, capacity=True,
     window_ns=0, window_ns=1.5, start_ns=-1, and start_ns=False.
   - test_time_validation: try_take(-1), try_take(True), and try_take(1.5)
-    raise InvalidLimit and leave the two slots of a fresh capacity=2 instance.
-  - test_exact_window_boundary: capacity=2, window_ns=100, start_ns=1000.
-    Calls at 1000 and 1000 allow; at 1050 deny with retry_after_ns=50;
-    at 1100 allow; at 1100 allow; at 1100 deny with retry_after_ns=100.
-  - test_large_time_jump: the same exhausted initial instance at 1350 allows
-    exactly twice, then denies with retry_after_ns=50, proving alignment to 1300.
-  - test_backward_time: exhaust two slots at 1100, then call at 1050;
-    deny with retry_after_ns=100 and do not reopen an older window.
-  - test_zero_capacity: capacity=0 at start and many future windows always
-    yields Admission(False, None).
-  - test_instances_are_independent: exhausting one capacity=1 instance does not
-    deny the first request to another instance at the same time.
-  - test_concurrent_window_exhaustion: capacity=10, fixed now_ns=1000 and
-    window_ns=100. Start four workers through a barrier; each calls try_take(1000)
+    raise InvalidLimit; afterwards two calls at 1000 still allow.
+  - test_exact_window_boundary: calls at 1000 and 1000 allow; at 1050 deny with
+    retry_after_ns=50; at 1100 allow; at 1100 allow; at 1100 deny with
+    retry_after_ns=100.
+  - test_large_time_jump: exhaust the instance with two calls at 1000; a call at
+    1350 and another at 1350 allow, then a third at 1350 denies with
+    retry_after_ns=50, proving alignment to 1300.
+  - test_backward_time: two calls at 1100 allow, then a call at 1050 denies with
+    retry_after_ns=100 and does not reopen an older window.
+  - test_zero_capacity: capacity=0; calls at 1000, 1100, and 1_000_000 each
+    return Admission(False, None).
+  - test_instances_are_independent: two instances with capacity=1; after the
+    first is exhausted at 1000, the second's first call at 1000 allows.
+  - test_concurrent_window_exhaustion: capacity=10, window_ns=100,
+    start_ns=1000, fixed now_ns=1000. Start four workers through a barrier; each
+    calls try_take(1000)
     100 times, collecting thread-local results. Run this threaded scenario in a
     child process with a 5-second parent-enforced timeout and captured errors;
     terminate/reap only that owned child if it hangs. Fail on any worker exception
@@ -146,48 +154,45 @@ Its reviewed closure is P0. Phase 1 may use the primitive only after P0 is DONE.
 - **Done:** S1–S4 postconditions hold; G-BASE and G-U01 pass with all listed tests
   executed; strong review of the actual diff passes; I-1–I-4 preserved; state
   closed. With full-autonomous:true or WIP completion enabled, the completion
-  commit resolves before 0.2 starts.
+  commit resolves before P0 starts.
 
-### 0.2 Check README accuracy
+## Phase gates and closure
 
-- **Model:** agent-3:haiku
-- **Assignment:** inspect user-facing documentation; supervisor checks at P0.
-- **Files:** READ README.md and the owned phase-0 diff. WRITE README.md only if
-  phase 0 actually invalidated an existing statement.
-- **Change:** prerequisite 0.1 DONE. S1 — compare current documented usage/defaults
-  with unchanged public behavior; expected: no new public rate-limit feature
-  documented. S2 — correct only an actual inaccuracy, otherwise leave the README
-  unchanged; expected: record sections inspected and result. Checkpoint before
-  handing off to P0. Escalate unexpected public behavior to agent-1.
-- **Unit tests:** N/A — documentation inspection; no examples changed.
-- **e2e tests:** N/A — no request behavior changed.
-- **Done:** README remains accurate, verification recorded, unit closed. In commit
-  modes the state/evidence change supplies the nonempty completion commit even
-  when README itself did not change.
+- Required gate: G-P0 at P0, after 0.1 is DONE.
+- README obligation, owned by P0: confirm README.md documents no public
+  rate-limit feature and that phase 0 invalidated no existing statement; record
+  the sections inspected. Correct only an actual inaccuracy.
+- agent-1 reviews integration, invariants I-1–I-4, tests, and documentation.
+- If G-P0 or the review fails, P0 edits no code: it closes that attempt as failed,
+  agent-1 reopens 0.1 as attempt 2 (or revises the plan), and P0 reruns as
+  attempt 2.
 
-## Gates and progress initialization
+## STATE.md gate registry and progress initialization
 
 G-BASE: existing configuration tests in tests/unit/test_limits.py, active at
-baseline. G-U01: the same test command after S3, now also requiring the named
-new tests. G-P0: python -m pytest tests/unit, at P0 after both sub-phases.
-There is no requirement to run future HTTP tests during phase 0.
+baseline. G-U01: python -m pytest tests/unit/test_limits.py -v, after S3, now
+also requiring the named new tests. G-P0: python -m pytest tests/unit, at P0
+after 0.1. There is no requirement to run future HTTP tests during phase 0.
 
 Initial sub-phase rows:
 | ID | Phase file | Depends on | Status | Attempt | Evidence |
 |----|------------|------------|--------|---------|----------|
 | 0.1 | phase_01.md | none | TODO | 1 | — |
-| 0.2 | phase_01.md | 0.1 | TODO | 1 | — |
 
 P0 additionally requires G-P0 and agent-1's phase review. When full autonomy is
-true, its phase completion is a separate commit after the two sub-phase commits.
+true, its phase completion is a separate commit after the 0.1 commit.
 
 ## Example interruption and commit recovery
 
 Suppose S1 and S2 were written but the process ended before S3:
 - 0.1 remains OPEN; completed steps are S1/S2 only if their postconditions were
   checked. The next action is writing/running the named S3 tests.
-- A resumed session inspects the current diff even if the last checkpoint still
-  says S1; it does not duplicate the class or reset the whole file.
+- A resumed session compares a fresh working-tree snapshot with the unit's base
+  tree even if STATE.md still names S1 as the next step; it does not duplicate
+  the class or reset the whole file.
+- If the crashed session still holds `ownership: active`, the user's explicit
+  invocation on this plan permits takeover once STATE.md and the snapshot stay
+  unchanged during inspection; the takeover is recorded before recovery.
 - No completion commit exists until tests, review, and coherence pass.
 - If full autonomy is true and WIP is off, interruption requires a checkpoint,
   not a broken-code commit.

@@ -1,10 +1,13 @@
 # Verify — evidence-based audit without implementation
 
 Read execution-contract.md, templates-audit.md, and the Verify checklist.
-Verify writes reports, the finding register, and truthful STATE.md corrections.
-It never changes production code, rewrites phase specifications, or applies fixes.
+Verify writes reports, the finding register, correction rows, and truthful
+STATE.md corrections. It never changes production code, rewrites phase
+specifications, or applies fixes.
 With full-autonomous:true it commits completed audit artifacts/state locally;
-otherwise it does not commit, regardless of the WIP setting.
+otherwise it does not commit, regardless of the WIP setting. Explicit options and
+roster apply to this audit only and are recorded in the report; they never change
+§3 or the saved execution scope.
 
 ## V1 — Recover and identify the claim
 
@@ -20,7 +23,8 @@ Audit every DONE, IN_PROGRESS, IN_REVIEW, or BLOCKED unit and any changed area
 mapped to the plan, even if its phase is erroneously still TODO. Check readiness,
 revision history, scope, prerequisites, actual review evidence, and commit policy.
 
-Open the audit unit V<NNN>. Record the audited baseline/range and dirty changes;
+Open the audit unit V<NNN> as the invocation; the saved execution scope stays
+unchanged. Record the audited baseline/range and dirty changes;
 a commit range alone is insufficient when planned work is uncommitted.
 
 ## V2 — Gather evidence and run checks
@@ -73,6 +77,22 @@ Use the next unused report number (highest existing plus one), filename
 verify_<NNN>_<YYYY-MM-DD>.md, report ID V<NNN>. Findings have stable global IDs
 V<NNN>-F<n>, never reused. Do not overwrite old reports.
 
+Severity:
+- BLOCKER: the audited scope cannot be accepted or dependent work cannot proceed
+  safely: a required behavior missing or broken, a mandatory gate failing, a
+  regression of existing behavior, a security or data-integrity defect, or a
+  false DONE/commit claim that later units rely on.
+- MAJOR: a confirmed deviation from an approved requirement, decision, invariant,
+  required test, review, or documentation obligation that does not block
+  dependent work but prevents the affected unit or phase from counting as
+  verified, including state errors that would misdirect a resume.
+- MINOR: a confirmed issue that changes no approved behavior, acceptance
+  evidence, or recovery path, such as a convention deviation or imprecise but
+  not misleading text.
+
+Assign the highest level whose definition the evidence fully meets and record
+the impact that justifies it.
+
 Verdict rules:
 - FAIL: at least one confirmed BLOCKER or MAJOR.
 - INCOMPLETE: no confirmed BLOCKER/MAJOR, but mandatory audit evidence is missing.
@@ -92,6 +112,8 @@ contracts and prerequisites are validated. If a correction depends on an
 unresolved product decision or unavailable evidence, label it BLOCKED with the
 question, owner, and next action. The audit may still close truthfully; it must
 not present that correction as executable or invent an answer to finish the report.
+Add one STATE.md §11 Corrections row per correction: TODO, or BLOCKED with its
+question.
 
 Update verify/index.md with new findings, evidence-based status updates, report
 metadata, and open blockers. FIXED requires proof; ACCEPTED requires the user's

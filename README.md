@@ -73,6 +73,12 @@ For a feature whose name begins with a mode word, use the explicit Plan form:
 `/plan-execute-verify plan task queue for background jobs`.
 Missing arguments or invalid selectors never silently switch modes.
 
+Task and bug take no selector. They attach to a plan only when the request names
+it (number, feature name, or path) or clearly changes an active plan's scope,
+contracts, or files; otherwise they use `docs/plans/000_adhoc/`. Several
+candidate plans require your choice, and a completed plan is used only when
+named. Neither mode changes the plan's saved execution scope.
+
 ## Onboarding: first visit or returning project
 
 Run from the target repository:
@@ -103,8 +109,9 @@ scope/settings and the next eligible step. Partial or legacy plans are reported
 as such, not treated as a fresh project or silently repaired.
 
 The output is a short recap, a source-backed context map in docs/onboarding.md,
-and one next command or precise handoff. For example, a saved scope of sub-phase
-1.2 can produce `/plan-execute-verify execute 003 § 1.2`, not a whole-plan command.
+and one next command or precise handoff. For example, a saved execution scope of
+sub-phase 1.2 can produce `/plan-execute-verify execute 003 § 1.2`, not a
+whole-plan command.
 If that plan has saved `full-autonomous:true`, the recap explains that execution
 would inherit automatic completion commits. Onboard does not run that command.
 For an existing draft or interrupted ledger entry without a supported ID selector,
@@ -156,10 +163,12 @@ Settings resolve independently:
 2. The selected plan's saved setting in STATE.md.
 3. The default.
 
-Both settings persist across sessions. To turn off all automatic commits, specify
-both `full-autonomous:false --no-wip-commit`. Without a plan, task/bug options
-apply only to that invocation and are recorded in the ad-hoc ledger.
-Exception: Onboard never persists options or changes a plan's saved configuration.
+Settings given to Plan, Execute, or Execute verify persist in the plan across
+sessions. To turn off all automatic commits, specify both
+`full-autonomous:false --no-wip-commit`. Task, Bug, and Verify use explicit
+options for that invocation only and record them in their ledger entry or audit
+report, even when attached to a plan; they never change its saved settings.
+Onboard never persists options or changes a plan's saved configuration.
 Both boolean values mean inspection only; neither full autonomy nor WIP commits
 its context document or starts the recommended next action.
 
@@ -212,7 +221,10 @@ not commit broken or unreviewed work at interruption.
 ```
 
 A phase/sub-phase selector is a limit, even with full autonomy. Selecting 1.2
-does not authorize the executor to continue into 1.3. Dependencies still apply.
+does not authorize the executor to continue into 1.3 or to run the phase closure
+P1; run P1 with a phase or plan selector. Dependencies still apply. The selected
+scope is saved: a later resume continues it, and task, bug, or audit runs in
+between do not replace it.
 
 Phase files are numbered from 01; logical phases start at 0. Thus
 `phase_02.md` contains logical phase 1 and sub-phases such as 1.1 and 1.2.
@@ -245,8 +257,16 @@ compatibility. Use an explicit roster on other hosts.
 A single numbered entry (`agent-1:<name>`) is equivalent to `agent:<name>`.
 
 Opening the plan in another model does not silently change its assignments.
-An explicit prefix overrides the roster and updates remaining assignments.
-In Onboard only, a prefix applies to the inspection and never changes assignments.
+In Plan, Execute, and Execute verify an explicit prefix overrides the roster and
+updates remaining assignments. In Task, Bug, and Verify it applies to that run
+only; in Onboard it applies to the inspection and never changes assignments.
+
+If the assigned agent cannot run a unit, only an agent with an equal or lower
+position number may substitute (agent-1 for agent-2, not the reverse), and the
+substitution is recorded. Supervisor reviews and plan revisions belong to agent-1
+alone; otherwise the unit is blocked with a handoff. A model outside the roster
+can coordinate but not implement. A review by the unit's own implementer is
+labelled self-review.
 
 The weakest worker may implement complex logic, but the strong planner must
 already specify the algorithm, interfaces, synchronization, boundary cases,
@@ -275,9 +295,16 @@ Read STATE.md first and preserve its scope, settings, roster, and checkpoint.
 ```
 
 The executor checks the real diff and tests before trusting a recorded checkpoint.
-It records sub-phase status, completed step IDs, exact next action, pending edits,
-and verification evidence. Stable commit identities prevent a resumed session
-from duplicating a completion commit.
+Each unit's base is HEAD plus a working-tree snapshot, so a resume can separate
+its edits from earlier uncommitted units and your own changes. It records
+sub-phase status, completed step IDs, exact next action, pending edits, and
+verification evidence. Stable commit identities prevent a resumed session from
+duplicating a completion commit.
+
+If a crashed session still holds ownership of the plan, your explicit
+invocation on that plan lets a new session take over, but only when the state
+file and working tree stay unchanged during its inspection; the takeover is
+recorded. Otherwise it asks.
 
 The strong supervisor remains available for required reviews and unexpected
 technical decisions. It may revise implementation details automatically while
@@ -303,7 +330,10 @@ labelled as such and is not presented as an executable plan.
 
 During execution, failed or unavailable mandatory checks prevent completion.
 A zero-test run is not verification. Workers cannot weaken tests to get green.
-Sub-phases run focused validation; full gates run at phase closure. State is
+Sub-phases run focused validation; full gates run at phase closure. If a phase
+gate or review fails, the closure never patches code: the responsible sub-phase
+is reopened as a new attempt, or the supervisor revises the plan, and the phase
+closure runs again. State is
 opened and closed for each unit, with interim checkpoints only at recovery
 boundaries such as handoff, risky operations, or blockers.
 The supervisor resolves technical plan defects and records revisions and affected
@@ -367,7 +397,9 @@ information in the ledger entry itself. There are no fake phase or STATE files.
 
 Audit verdicts are PASS, PASS WITH FINDINGS, FAIL, or INCOMPLETE. Missing required
 evidence produces INCOMPLETE unless confirmed major/blocker findings already
-justify FAIL. Reports retain their historical verdict after corrections.
+justify FAIL. Severity levels BLOCKER, MAJOR, and MINOR are defined in
+[mode-verify](references/mode-verify.md). Reports retain their historical
+verdict after corrections, and each correction's progress is tracked in STATE.md.
 An audit may finish while its correction plan is BLOCKED by a missing decision;
 those corrections cannot execute until their contracts are validated as READY.
 
@@ -406,7 +438,13 @@ availability and the mechanism for starting subagents come from the host.
 [Worked example](references/worked-example.md) ·
 [Quality checklist](references/quality-checklist.md)
 
-### Validation scope (2026-09-22)
+### Validation scope (2026-09-22; protocol revised afterwards)
+
+The checks below predate later protocol revisions: recovery-boundary checkpoints,
+gate staging and phase sizing, working-tree snapshot unit bases, stale-ownership
+takeover, the saved execution scope, phase-closure failure handling, agent
+substitution, and audit severity definitions. Those revisions have been checked
+statically only; they have not been re-exercised end to end.
 
 Skill structure validation, static local-link checks, and `git diff --check` pass.
 These checks include onboarding and the research protocol/templates; the research

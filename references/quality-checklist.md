@@ -18,8 +18,9 @@ An unresolved required item prevents READY or implementation DONE.
       distinguishes recorded completion, inspected evidence, and current checks.
 - [ ] OPEN/pending-commit/suspended work and active owners are surfaced before
       recommending new work. Missing evidence never becomes DONE or READY.
-- [ ] Next action respects prerequisites, saved scope, settings, report ID, and
-      actual host capabilities. Multiple candidates require a choice, not a guess.
+- [ ] Next action respects prerequisites, saved execution scope, settings,
+      report ID, and actual host capabilities. Multiple candidates require a
+      choice, not a guess.
 - [ ] Suggested commands use supported syntax; natural-language handoffs retain
       exact paths/IDs when no selector exists. Unknown goals remain questions.
 - [ ] Only the onboarding artifact was written, preserving unrelated content;
@@ -61,11 +62,13 @@ An unresolved required item prevents READY or implementation DONE.
       block earlier units. Unit checks are focused; full gates run at phase/final
       closure and prove the reference scenario.
 - [ ] Required strong reviews name reviewer, timing, and focus; complex work may
-      go to weak workers only with those contracts/reviews.
+      go to weak workers only with those contracts/reviews. Units whose
+      implementer is also the required reviewer are marked self-review.
 - [ ] Each phase has a README obligation and a separate reviewed closure P<N>;
       documentation has its own sub-phase only when substantial.
-- [ ] STATE.md is initialized with immutable baseline, revision, roster, scope,
-      settings, ownership, step checkpoints, evidence tables, and every sub-phase.
+- [ ] STATE.md is initialized with immutable baseline, revision, roster, settings,
+      saved execution scope NOT_STARTED, ownership, step checkpoints, evidence
+      tables, and every sub-phase.
 - [ ] Every dependency resolves; ordering has no cycle; next action names an
       eligible unit. SKIPPED does not silently satisfy a prerequisite.
 - [ ] Full-autonomous and WIP behavior are resolved independently and explained.
@@ -80,15 +83,24 @@ An unresolved required item prevents READY or implementation DONE.
 ## Coherence — execute, task, bug, corrections
 
 - [ ] Requested scope preserved; no unauthorized work or changed product requirement.
+      Task/Bug/Verify left the saved execution scope, §3 settings, and roster
+      unchanged; their explicit options were recorded with the invocation only.
+- [ ] Task/bug attached to a named or clearly affected plan, otherwise 000_adhoc;
+      the attachment reason is recorded.
 - [ ] Actual unit revision/contracts/prerequisites checked before editing.
-- [ ] Unit opened before edits; owner and pre-existing changes identified.
+- [ ] Unit opened before edits with HEAD plus working-tree snapshot tree as base;
+      owner and pre-existing changes identified. Stale ownership was taken over
+      only under the recorded takeover rule.
+- [ ] Assigned versus actual agents recorded; substitutions only by an equal or
+      lower-numbered roster agent; supervisor reviews only by agent-1.
 - [ ] OPEN/close writes and recovery-boundary checkpoints reflect actual work,
       including pending edits and next action; no per-step state churn.
 - [ ] Specified behavior, wiring, tests, and documentation implemented.
 - [ ] Intended focused tests ran for the unit; full gates ran at applicable phase
       closure. Required gates pass on
       the recorded change; no hidden skips, loosened tolerances, or zero-test pass.
-- [ ] Required reviewer actually inspected the relevant design/diff/evidence.
+- [ ] Required reviewer actually inspected the relevant design/diff/evidence;
+      self-review is labelled; IN_REVIEW reflects any pending dispatched review.
 - [ ] Supervisor-authorized technical revisions preserve requirements and update
       dependent contracts; historical specifications were not rewritten to hide defects.
 - [ ] Version/environment changes or contradicted external assumptions triggered
@@ -98,8 +110,12 @@ An unresolved required item prevents READY or implementation DONE.
       obligation. Phase closure never
       defers it; tasks/bugs/corrections finish their own affected docs. Language
       and structure are preserved.
-- [ ] State/ledgers/findings/reviews and sub-phase/phase progress match reality.
+- [ ] Coherence contract (execution-contract §7) applied: state/ledgers/findings/
+      reviews and sub-phase/phase/correction progress match reality.
 - [ ] Phase DONE requires its closure review, integration gates, and all sub-phases.
+      A failed P<N> attempt is recorded as failed without code edits; the
+      responsible unit was reopened with a new attempt or the plan revised, and
+      P<N> reran as a new attempt. A sub-phase scope did not run P<N>.
 - [ ] Completion transaction finished: all coherence updates precede commit,
       owned hunks only, stable identity resolves uniquely when commit required.
 - [ ] No own-SHA bookkeeping loop, duplicate/empty completion commit, unrelated
@@ -127,7 +143,11 @@ An unresolved required item prevents READY or implementation DONE.
       commit identities validated against the repository.
 - [ ] Previous OPEN/FIXED findings rechecked; regressions retain traceability.
 - [ ] Every finding has evidence, severity, impact, plan reference, and correction.
-- [ ] Correction units are complete enough for a cold weak executor.
+      Severity follows the definitions in mode-verify.md V4, impact recorded.
+- [ ] Correction units are complete enough for a cold weak executor; each has a
+      STATE.md §11 Corrections row.
+- [ ] Explicit options/roster recorded in the report only; §3 and the saved
+      execution scope unchanged.
 - [ ] Correction readiness is explicit; unresolved design/evidence blocks dispatch
       without preventing an honest completed audit report.
 - [ ] Verdict follows the explicit FAIL/INCOMPLETE/PASS WITH FINDINGS/PASS rules.

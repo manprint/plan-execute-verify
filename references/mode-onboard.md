@@ -87,11 +87,14 @@ for recovery/commit semantics, but observe only: never claim/release ownership,
 finalize a pending commit, restore a suspension, upgrade a legacy plan or repair
 statuses during onboarding.
 
-Read the identity/revision, repository/branch/baseline, scope/result, roster and
-settings, readiness, owner, OPEN unit/attempt/step, next eligible unit, outstanding
-reviews/blockers and pending closure. Check the actual diff and relevant artifacts
-against these claims. A commit only supports the identity/change it contains;
-it does not prove current correctness. Keep these distinctions explicit:
+Read the identity/revision, repository/branch/baseline, saved execution
+scope/result, last invocation, roster and settings, readiness, owner and its
+ownership state, OPEN unit/attempt/step, next eligible unit, outstanding
+reviews/blockers and pending closure. Report an active owner that may be stale
+together with the takeover rule in execution-contract §2; never take over. Check
+the actual diff and relevant artifacts against these claims. A commit only
+supports the identity/change it contains; it does not prove current correctness.
+Keep these distinctions explicit:
 
 - Recorded status: what STATE.md or a ledger says.
 - Evidence inspected: relevant artifact, test/review record and tested revision,
@@ -127,8 +130,8 @@ substitute actual IDs/paths in a real handoff.
 | DRAFT/BLOCKED or underspecified/legacy contract | Give a strong-supervisor handoff naming the existing folder, missing decision/evidence and affected unit. No new plan and no claim of execution readiness. |
 | Audit findings need a correction decision or ready contract | Explain the findings and request the missing approval/design. Do not bypass blocking findings by recommending ordinary implementation. |
 | Authorized, READY audit corrections with eligible remaining units | Suggest `execute verify <plan> V<NNN>` with the actual report, not an ambiguous newest-report default. An OPEN finding alone is not authorization to fix it. |
-| READY planned work remaining inside the saved scope | Suggest `execute <plan>` plus its saved phase/sub-phase selector when present. Explain the exact unit/step and prerequisites; retain saved settings and roster. |
-| Saved scope complete, but later plan work exists | Say the requested scope is complete. Show the later command only as a proposed new scope requiring the user's choice, not as a resume. |
+| READY planned work remaining inside the saved execution scope | Suggest `execute <plan>` plus its saved phase/sub-phase selector when present. Explain the exact unit/step and prerequisites; retain saved settings and roster. |
+| Saved execution scope complete, but later plan work exists, including a pending P<N> after a sub-phase scope | Say the requested scope is complete. Show the later command (for P<N>, the phase selector) only as a proposed new scope requiring the user's choice, not as a resume. |
 | Recorded plan complete, no outstanding work | State the evidence/verification limits. Offer `verify <plan>` only if a fresh audit is useful; do not invent implementation work. |
 | No resumable work and no user goal | Ask the desired outcome. Explain Plan for a feature, Task for one small change, Bug for a defect; do not invent a command argument or infer a roadmap from TODOs. |
 | Concrete new goal already supplied | Suggest `plan <goal>`, `task <description>` or `bug <description>` at the actual scope, without invoking it. |
@@ -139,8 +142,8 @@ When missing requirements or evidence prevent a safe next step, the exact handof
 is the result; do not loop indefinitely trying to make the project executable.
 
 Command construction must follow SKILL.md, not invented convenience syntax.
-Place options before the mode. Never broaden a saved sub-phase/phase scope to
-the whole plan or replace saved execution settings with onboarding options.
+Place options before the mode. Never broaden a saved execution scope to the
+whole plan or replace saved execution settings with onboarding options.
 Surface the effective autonomous/WIP behavior of the suggested invocation,
 especially when a plain `execute` would inherit automatic commits.
 

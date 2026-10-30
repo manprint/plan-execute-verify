@@ -11,6 +11,8 @@ phase sub-phase in output-template.md.
 # <Feature> — Audit V<NNN>
 
 Date: <date>. Auditor: <actual configured reviewer>.
+Settings for this audit: full-autonomous:<true|false>; WIP:<on|off>; roster:
+<saved, or invocation-only prefix>. Not written to STATE.md §3.
 Plan: <path/ID/revision>. Reviewed scope: <units/phases>.
 Baseline/range: <commits>; owned/uncommitted/pre-existing changes: <details>.
 Verdict: PASS | PASS WITH FINDINGS | FAIL | INCOMPLETE.
@@ -23,7 +25,8 @@ Scope limitations: <none or concrete missing evidence>.
 ## Findings
 ### V<NNN>-F<n> — <title>
 - Status: OPEN | FIXED | ACCEPTED | OBSOLETE — <resolution date/evidence if any>
-- Severity: BLOCKER | MAJOR | MINOR
+- Severity: BLOCKER | MAJOR | MINOR — <impact that justifies the level, per the
+  definitions in mode-verify.md V4>
 - Category: missing | divergent | untested | failing-gate | rule-violation |
   scope-creep | regression | stale-state | unfixed-regression
 - Where: <path:symbol/line and plan unit/decision/invariant>
@@ -80,8 +83,9 @@ affected correction IDs, resolution owner and exact next action>.
   configured completion commit resolved.
 
 ## State reconciliation
-<Exact readiness/progress/evidence/blocker corrections; reference to the complete
-suspended implementation snapshot in STATE.md §12, when applicable.>
+<Exact readiness/progress/evidence/blocker corrections; STATE.md §11 Corrections
+rows added (TODO or BLOCKED); reference to the complete suspended implementation
+snapshot in STATE.md §12, when applicable.>
 
 ## Not verifiable
 <Unperformed mandatory checks and why; unproved doubts; or none.>

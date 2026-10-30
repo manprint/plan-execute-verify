@@ -1,7 +1,9 @@
 # Task and Bug — small changes with durable recovery
 
 Read execution-contract.md and templates-ledger.md. Resolve options, roster, and
-plan attachment per invocation.md. Both modes implement only the requested change;
+plan attachment per invocation.md. Explicit options and roster apply to this
+invocation only and are recorded in the ledger entry; they never change a plan's
+§3 or its saved execution scope. Both modes implement only the requested change;
 full-autonomous:true does not authorize unrelated plan phases.
 
 Use a short but persistent mini-plan: exact files/symbols, prerequisites,
@@ -15,10 +17,12 @@ impact resolved by the supervisor. Record the evidence in the real plan's R
 register or, for 000_adhoc, in this unit's ledger entry. Research stays within
 the requested change; unavailable required evidence blocks the dependent work.
 
-With a real plan, open the unit in STATE.md and link its ledger entry. Without
-one, create an OPEN entry in docs/plans/000_adhoc/tasks.md or bugs.md before code
-edits; that entry holds settings, owner, baseline, mini-plan, checkpoint, and
-commit identity. Never invent STATE.md or phases for ad-hoc work.
+With a real plan, open the unit in STATE.md as the invocation, without replacing
+the saved execution scope, and link its ledger entry. Without one, create an OPEN
+entry in docs/plans/000_adhoc/tasks.md or bugs.md before code edits; that entry
+holds settings, owner, baseline (HEAD plus working-tree snapshot tree,
+execution-contract §3), mini-plan, checkpoint, and commit identity. Never invent
+STATE.md or phases for ad-hoc work.
 
 If the request is materially larger than a small unit, the supervisor scopes a
 proper plan before implementation; do not silently turn one task into a project.
@@ -33,8 +37,9 @@ Existing user authorization to complete a larger task may already cover planning
    repository structure.
 3. Add named tests with concrete assertions, or document why a test is not
    applicable for this change. Run applicable gates and required review.
-4. Reconcile README, plan decisions/dependents, tests, and any affected audit
-   findings. Close the task with evidence.
+4. Apply the coherence contract (execution-contract §7): README, plan
+   decisions/dependents, tests, and any affected audit findings. Close the task
+   with evidence.
 5. When full autonomy or WIP completion policy requires it, commit locally on
    the current branch with the stable task identity; otherwise leave uncommitted.
    A mandatory unresolved gate/review prevents a completion commit.

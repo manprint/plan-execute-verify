@@ -71,16 +71,17 @@ Research and evidence section, using output-template.md. Each record contains:
   when the underlying fact is confirmed; design approval is not factual proof.
 
 Preserve substantive old conclusions when evidence changes: link the replacement
-R ID, record the plan revision, and update affected decisions and phase excerpts.
-STATE.md links outstanding blockers/next questions and research checkpoints;
-it does not duplicate the evidence register or replace implementation progress.
-If Plan has not initialized STATE.md yet, first create a small DRAFT checkpoint
-with plan identity/baseline, owner, scope/roster/settings, no active implementation
-unit, and the next research action. Complete the normal template before handoff;
-this checkpoint is not an executable plan. Batch settled R records into coherent
-updates; individual source lookups do not require separate state writes.
-On interruption, save sources already inspected, unanswered questions, and the
-next lookup so the next session does not restart the whole search.
+R ID, record the plan revision, and update affected decisions and phase
+excerpts. STATE.md links outstanding blockers/next questions and research
+checkpoints; it does not duplicate the evidence register or replace
+implementation progress. If Plan has not initialized STATE.md yet, first create
+a small DRAFT checkpoint with plan identity/baseline, owner, roster/settings, no
+saved execution scope or implementation unit, and the next research action.
+Complete the normal template before handoff; this checkpoint is not an
+executable plan. Batch settled R records into coherent updates; individual
+source lookups do not require separate state writes. On interruption, save
+sources already inspected, unanswered questions, and the next lookup so the next
+session does not restart the whole search.
 
 For task/bug without a real plan, put the same relevant evidence in the existing
 ledger entry. During Verify, store new evidence in the audit report, linking the
