@@ -38,7 +38,8 @@ Read overview.md, relevant phase files, tasks.md/bugs.md, and verify/index.md.
 Within the audit scope, audit every DONE, IN_PROGRESS, IN_REVIEW, or BLOCKED
 unit and any changed area mapped to the plan, even if its phase is erroneously
 still TODO. Check readiness, revision history, scope, prerequisites, actual
-review evidence, and commit policy.
+review evidence, and commit policy. PROPOSED and WITHDRAWN ledger entries claim
+no implementation: report them, never as incomplete closure.
 
 Open the audit unit V<NNN> as the invocation; the saved execution scope stays
 unchanged. Record the audited baseline/range and dirty changes;

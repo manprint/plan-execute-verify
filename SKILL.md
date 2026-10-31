@@ -27,7 +27,7 @@ does not invoke its Plan/Execute workflow.
 | `onboard` | [mode-onboard](references/mode-onboard.md) | Repository context only |
 | `plan` or implicit | [mode-plan](references/mode-plan.md) | Plan files; no production code |
 | `execute` / `execute verify` | [mode-execute](references/mode-execute.md) | Selected implementation/corrections |
-| `task` / `bug` | [mode-taskbug](references/mode-taskbug.md) | One requested change/fix |
+| `task` / `bug` | [mode-taskbug](references/mode-taskbug.md) | One requested change/fix from an agent-1-validated mini-plan; approval stop unless fully autonomous |
 | `verify` | [mode-verify](references/mode-verify.md) | Audit and truthful state; no code fixes |
 | `resume` | [mode-resume](references/mode-resume.md) | Recorded work continued; scope/settings unchanged |
 | `handoff` | [mode-handoff](references/mode-handoff.md) | Graceful stop: resumable state, handoff commit for code work, resume command |

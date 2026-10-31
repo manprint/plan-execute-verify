@@ -102,6 +102,11 @@ An unresolved required item prevents READY or implementation DONE.
       only.
 - [ ] Task/bug attached to a named or clearly affected plan, otherwise 000_adhoc;
       the attachment reason is recorded.
+- [ ] Task/bug mini-plan written or validated by agent-1 (a Bug's with its root
+      cause) before code. With false it stopped PROPOSED, with no edits besides
+      the ledger entry and no ownership, until an approval naming it, which ran
+      only that entry; changed paths or edits were revalidated; a rejected
+      proposal is WITHDRAWN, never erased.
 - [ ] Actual unit revision/contracts/prerequisites checked before editing.
 - [ ] Unit opened before edits with HEAD plus working-tree snapshot tree as base;
       owner and pre-existing changes identified. Stale ownership was taken over
@@ -148,7 +153,8 @@ An unresolved required item prevents READY or implementation DONE.
       lapsed when a different selector replaced the scope. Only Plan set §3.
 - [ ] With full autonomy, continue eligible work until scoped completion or a
       real blocker/stop/interruption; no routine approval pause after each unit.
-      With false, the only additional stop is after each phase closure.
+      With false, the only additional stop is after each phase closure
+      (Task/Bug: once, for approval of the validated mini-plan).
 - [ ] In 000_adhoc, the ledger itself holds the durable mini-plan/checkpoint and
       settings; no fake STATE.md/phases created.
 - [ ] Handoff request or deadline (mode-handoff.md): nothing new started; the

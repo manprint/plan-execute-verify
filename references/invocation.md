@@ -8,7 +8,7 @@ Thus `task add a --json flag` keeps `--json` in the description.
 | Leading option | Meaning | Default |
 |----------------|---------|---------|
 | `full-autonomous:true` | Continue selected scope; commit verified units locally | `false` |
-| `full-autonomous:false` | Continue through the current phase; stop after its closure; no completion commits by this option | — |
+| `full-autonomous:false` | Continue through the current phase; stop after its closure (Task and Bug: once, for approval of the mini-plan); no completion commits by this option | — |
 | `--wip-commit` | Commit progress: completed code units, phase closures, and a rolling WIP commit at each checkpoint | off |
 | `--no-wip-commit` | Disable WIP behavior; autonomous commits still apply | — |
 | `executor-power:<level>` | Plan only: `low`, `medium`, or `high` executor capability; sets plan granularity, detail, and executor latitude | `low` |
@@ -104,11 +104,12 @@ and its reason in the ledger entry.
 `resume [<plan>] [<unit-id>]` continues recorded work (mode-resume.md). Its plan
 selector may also be `000_adhoc`; its unit ID names OPEN, pending-closure,
 BLOCKED, or suspended work (`N.M`, `P<N>`, `V<NNN>`, `V<NNN>-C<n>`, `T-A<NNN>`,
-`B-A<NNN>`), never a TODO unit. A single argument matching the unit-ID grammar
-is a unit ID; select a plan named like one by number or path. Without a plan, a
-unit ID resolves to the unique plan or ledger that records it as resumable;
-several matches require a choice. Its options and prefix apply to that
-invocation only.
+`B-A<NNN>`), or a PROPOSED task or bug, which only its explicit entry ID resumes
+and thereby approves; never a TODO unit. A single argument matching the unit-ID
+grammar is a unit ID; select a plan named like one by number or path. Without a
+plan, a unit ID resolves to the unique plan or ledger that records it as
+resumable; several matches require a choice. Its options and prefix apply to
+that invocation only.
 
 `handoff [--deadline=dd-mm-yyyy_hh_mm]` (mode-handoff.md) uses only a deadline,
 given after it or as a leading option; it ignores other options, an agent

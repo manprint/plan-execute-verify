@@ -17,10 +17,13 @@ owns the resumed work.
   use the unique plan or ledger with OPEN, pending-closure, BLOCKED, or
   suspended work, or a set (not `none`) saved execution scope that is
   NOT_STARTED, RUNNING, or BLOCKED; several candidates require a user choice.
+  A PROPOSED task or bug never counts here.
 - Unit ID (optional): sub-phase `N.M`, phase closure `P<N>`, correction
   `V<NNN>-C<n>`, audit `V<NNN>`, task `T-A<NNN>`, or bug `B-A<NNN>`. It must name
-  OPEN, pending-closure, BLOCKED, or suspended work. A TODO unit is new work: reject
-  the selector and suggest the matching `execute` command instead.
+  OPEN, pending-closure, BLOCKED, or suspended work, or a PROPOSED `T-A<NNN>` or
+  `B-A<NNN>`: naming it approves the proposal (mode-taskbug.md approval gate). A
+  TODO unit is new work: reject the selector and suggest the matching `execute`
+  command instead.
 - One argument: a token matching the unit-ID grammar is a unit ID, not a plan
   selector; select a plan named like one by number or path. Without a plan, a
   unit ID resolves to the unique plan or ledger (including `000_adhoc`) that
@@ -38,6 +41,9 @@ In this order, finish recovery before anything else:
    task or bug (mode-taskbug.md), with its recorded settings.
 4. A suspended implementation restored from §12 after its audit closed.
 5. A DRAFT plan with a research or planning checkpoint (mode-plan.md).
+6. A PROPOSED task or bug named by its entry ID: approve it, revalidate, and
+   continue it (mode-taskbug.md approval gate). This handles only that entry:
+   items 1–5 of its plan are reported with their resume commands, not run.
 
 A BLOCKED unit resumes only when its blocker is resolved; otherwise report the
 blocker, its owner, and the exact question instead of retrying.
@@ -56,5 +62,6 @@ result is NOT_STARTED, RUNNING, or BLOCKED, exactly as Execute would under that
 selector. With a unit ID, stop after that unit's recovery and closure.
 `000_adhoc` has no saved execution scope or §3: stop after the recovered entry,
 using the settings recorded in it. When nothing remains to resume, including a
-saved scope of `none`, report that, the next eligible plan unit, and the command
-that would start it; do not start it.
+saved scope of `none`, report that, any PROPOSED entries with their approval
+commands, the next eligible plan unit, and the command that would start it; do
+not start it.

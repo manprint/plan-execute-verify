@@ -39,7 +39,9 @@ With `false`, execution continues through the eligible units of the current
 phase inside the selected scope and stops after that phase's closure P<N>, with
 a precise handoff that `resume` continues; Execute verify stops likewise after
 each reopened phase's closure. A sub-phase boundary inside a phase is not a
-stopping point, and this option adds no commit authorization. With `true`,
+stopping point, and this option adds no commit authorization. Task and Bug stop
+once instead, for the user's approval of the validated mini-plan
+(mode-taskbug.md approval gate). With `true`,
 neither a unit nor a phase boundary ends the selected scope. Either way, work
 stops early only at a real blocker, a user stop, a handoff request or deadline
 (mode-handoff.md), or a host interruption. The

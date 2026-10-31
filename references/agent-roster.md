@@ -7,7 +7,7 @@ responsibility; it does not guarantee model availability or actual capability.
 
 | Assignment | Responsibility |
 |------------|----------------|
-| agent-1:<name> | Strong architect/supervisor; technical plan revisions; risky sub-phase reviews; every phase's approval |
+| agent-1:<name> | Strong architect/supervisor; technical plan revisions; task/bug mini-plans; risky sub-phase reviews; every phase's approval |
 | agent-2:<name> | Primary implementer, including complex changes with complete contracts |
 | agent-3:<name> and later | Recon and other assigned implementation; complex work is allowed when fully specified and supervised |
 | agent:<name> | All responsibilities; review is explicitly labelled self-review |

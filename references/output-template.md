@@ -332,6 +332,18 @@ Last takeover: <previous writer → new writer, time, reason; or none>.
     listing the closed units, whose references become handoff:<id>:<attempt>;
     hooks run, and it is never amended later. Plan and Verify only checkpoint.
     Report the exact resume command, then stop.
+12. Task/Bug mini-plan: agent-1 writes or validates it (a Bug's with its root
+    cause) before any code edit; agent-1 unavailable means a BLOCKED handoff.
+    With full-autonomous:false then stop once for user approval, warning the
+    entry is uncommitted: ledger entry PROPOSED with the mini-plan and a
+    proposal snapshot tree, no edits besides the ledger entry (ignored
+    build/test byproducts allowed), no unit opened, no ownership. Approval is a
+    user reply to that proposal or a resume naming the entry ID, never a bare
+    resume. Revalidate if named paths or the mini-plan changed, then open the
+    unit with a fresh base. Approving handles only that entry. Rejected by a
+    same-session reply or by the user setting WITHDRAWN in the entry. A BLOCKED
+    entry awaiting validation is not PROPOSED; once validated it still needs
+    approval.
 
 Audit closure may have verdict FAIL or INCOMPLETE; this closes the inspection,
 never the failed implementation. Full autonomy commits its report/state only.
@@ -347,9 +359,9 @@ checkpoint. Capture/open and restore/close are each one STATE.md update.
 - Saved execution scope: <plan|phase|sub-phase|report selector set by Execute or
   Execute verify, or none>; result: <NOT_STARTED|RUNNING|BLOCKED|COMPLETE>;
   overrides: <full-autonomous/WIP given with that selector, or none>
-- Invocation: <mode and exact unit/scope of the current or last run>; result:
-  <RUNNING|BLOCKED|COMPLETE|HANDOFF>; style: <handoff|delegated>; effective
-  settings: <full-autonomous/WIP, each with source: explicit|scope
+- - Invocation: <mode and exact unit/scope of the current or last run>; result:
+  <RUNNING|BLOCKED|COMPLETE|HANDOFF|PROPOSED>; style: <handoff|delegated>;
+  effective settings: <full-autonomous/WIP, each with source: explicit|scope
   override|plan default>; deadline: <dd-mm-yyyy_hh_mm local, this run only, or
   none>; handoff: <trigger user|deadline and time, or none>
 - Type: <sub-phase|phase-close|task|bug|verify|correction|none>

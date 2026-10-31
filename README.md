@@ -88,6 +88,20 @@ contracts, or files; otherwise they use `docs/plans/000_adhoc/`. Several
 candidate plans require your choice, and a completed plan is used only when
 named. Neither mode changes the plan's saved execution scope.
 
+Before any code edit, agent-1 writes or validates a short mini-plan in the
+ledger entry; for a bug it comes after the reproduction and root cause. With
+`full-autonomous:false`, the default, the run then stops with the entry
+`PROPOSED` and shows the mini-plan. Edit it in the file if you want, then
+approve it with a reply in the same session or with `/plan-execute-verify resume
+000_adhoc T-A004`: the entry ID is required, and a bare `resume` never approves.
+Changed files or your edits are revalidated before coding, and the run approves
+only that entry. To reject a proposal, say so in the same session or set its
+status to `WITHDRAWN` with a reason in the ledger file. With
+`full-autonomous:true` there is no stop, but the validation still runs, so a
+weak session that cannot reach agent-1 blocks before writing code. No setting
+gives a task or bug with neither an approval stop nor completion commits:
+`false` stops, `true` commits.
+
 ## Onboarding: first visit or returning project
 
 Run from the target repository:
@@ -159,7 +173,7 @@ agent prefix:
 | Option | Effect |
 |--------|--------|
 | `full-autonomous:true` | Continue until the selected scope is complete or genuinely blocked; commit verified operational completions |
-| `full-autonomous:false` | Continue through the current phase and stop after its closure (`resume` continues); adds no completion commits |
+| `full-autonomous:false` | Continue through the current phase and stop after its closure (`resume` continues); Task and Bug stop once, for approval of the mini-plan; adds no completion commits |
 | `--wip-commit` | Commit progress: completed code units, phase closures, and a rolling WIP commit at each recovery checkpoint |
 | `--no-wip-commit` | Disable WIP behavior; does not disable completion commits enabled by full autonomy |
 | `--deadline=dd-mm-yyyy_hh_mm` | Every mode: hand off gracefully by this local time; this run only ([Stop gracefully](#stop-gracefully-handoff)) |
@@ -378,8 +392,9 @@ Resume first recovers interrupted work (an open unit, a pending completion
 commit, an interrupted audit, a planning draft), then continues the saved
 execution scope. It never widens that scope or changes saved settings; a resumed
 unit keeps the settings it was opened with, unless you override them for that
-run. A unit ID must name open, pending, blocked, or suspended work; a TODO unit
-is new work for `execute`.
+run. A unit ID must name open, pending, blocked, or suspended work, or a
+proposed task or bug, which naming it approves; a TODO unit is new work for
+`execute`.
 
 The executor checks the real diff and tests before trusting a recorded checkpoint.
 Each unit's base is HEAD plus a working-tree snapshot, so a resume can separate
@@ -582,7 +597,8 @@ The checks below predate later protocol revisions: recovery-boundary checkpoints
 gate staging and phase sizing, working-tree snapshot unit bases, stale-ownership
 takeover, the saved execution scope, phase-closure failure handling, agent
 substitution, audit severity definitions, the resume mode, scoped verify,
-rolling WIP commits, executor power, and the handoff mode with `--deadline`.
+rolling WIP commits, executor power, the handoff mode with `--deadline`, and the
+task/bug approval gate.
 Those revisions have been checked statically only; they have not been
 re-exercised end to end. The Git commands for owned-hunk staging, including the
 `--3way` fallback and a multi-unit handoff commit staged one patch per unit

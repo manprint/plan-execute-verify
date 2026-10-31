@@ -85,7 +85,7 @@ valori salvati.
 
 | Opzione omessa | Valore usato | Effetto del default di fabbrica |
 |----------------|--------------|---------------------------------|
-| `full-autonomous` | Override dello scope salvato (solo continuando lo stesso scope) → §3 del piano → **`false`** | Stop dopo ogni chiusura di fase; nessun commit di completamento |
+| `full-autonomous` | Override dello scope salvato (solo continuando lo stesso scope) → §3 del piano → **`false`** | Stop dopo ogni chiusura di fase (Task e Bug: uno stop per approvare il mini-piano); nessun commit di completamento |
 | `--wip-commit` / `--no-wip-commit` | Override dello scope salvato → §3 del piano → **WIP off** | Nessun commit WIP a rotazione |
 | `executor-power` | In Plan **`low`**; un piano senza valore salvato vale `low` | Le altre modalità usano sempre il livello del piano; `low` in `000_adhoc` |
 | Prefisso agenti | Roster salvato nel piano → roster legacy **Opus/Sonnet/Haiku** in agent-1/agent-2/agent-3 | Revisioni obbligatorie e chiusure di fase ad agent-1 |
@@ -134,13 +134,13 @@ sezioni per modalità.
 |---|---------|---------|------|---------|----------------|------|-----|--------|--------|---------|
 | 01 | nessuna (default) | ON-01 solo ispezione | PL-01 default in §3 | EX-01 impostazioni salvate | EV-01 impostazioni salvate | TA-01 §3 o default | BU-01 §3 o default | VE-01 §3 o default | RE-01 impostazioni registrate | HA-01 handoff immediato |
 | 02 | `full-autonomous:true` | ON-02 nessun effetto | PL-02 salvato in §3 | EX-02 tutto lo scope, commit | EV-02 tutte le correzioni, commit | TA-02 commit del task | BU-02 commit del fix | VE-02 commit dell'audit | RE-02 solo questa run | HA-02 ignorata, handoff |
-| 03 | `full-autonomous:false` | ON-03 nessun effetto | PL-03 salvato in §3 | EX-03 stop dopo la fase | EV-03 stop dopo fase riaperta | TA-03 niente commit di completamento | BU-03 niente commit di completamento | VE-03 nessun commit | RE-03 solo questa run | HA-03 ignorata, handoff |
+| 03 | `full-autonomous:false` | ON-03 nessun effetto | PL-03 salvato in §3 | EX-03 stop dopo la fase | EV-03 stop dopo fase riaperta | TA-03 approvazione, niente commit di completamento | BU-03 approvazione, niente commit di completamento | VE-03 nessun commit | RE-03 solo questa run | HA-03 ignorata, handoff |
 | 04 | `--wip-commit` | ON-04 nessun effetto | PL-04 salvato in §3 | EX-04 commit + WIP | EV-04 commit + WIP | TA-04 commit + WIP | BU-04 commit + WIP | VE-04 nessun effetto | RE-04 solo questa run | HA-04 ignorata, handoff |
 | 05 | `--no-wip-commit` | ON-05 nessun effetto | PL-05 salvato in §3 | EX-05 niente WIP | EV-05 niente WIP | TA-05 niente WIP | BU-05 niente WIP | VE-05 nessun effetto | RE-05 solo questa run | HA-05 ignorata, handoff |
 | 06 | `full-autonomous:true --wip-commit` | ON-06 nessun effetto | PL-06 salvati in §3 | EX-06 tutto lo scope, commit + WIP | EV-06 tutte le correzioni, commit + WIP | TA-06 commit + WIP | BU-06 commit + WIP | VE-06 commit dell'audit | RE-06 solo questa run | HA-06 ignorata, handoff |
-| 07 | `full-autonomous:false --wip-commit` | ON-07 nessun effetto | PL-07 salvati in §3 | EX-07 stop dopo la fase, commit + WIP | EV-07 stop dopo fase riaperta, commit + WIP | TA-07 commit + WIP | BU-07 commit + WIP | VE-07 nessun commit | RE-07 solo questa run | HA-07 ignorata, handoff |
+| 07 | `full-autonomous:false --wip-commit` | ON-07 nessun effetto | PL-07 salvati in §3 | EX-07 stop dopo la fase, commit + WIP | EV-07 stop dopo fase riaperta, commit + WIP | TA-07 approvazione, commit + WIP | BU-07 approvazione, commit + WIP | VE-07 nessun commit | RE-07 solo questa run | HA-07 ignorata, handoff |
 | 08 | `full-autonomous:true --no-wip-commit` | ON-08 nessun effetto | PL-08 salvati in §3 | EX-08 tutto lo scope, solo commit di completamento | EV-08 tutte le correzioni, solo commit di completamento | TA-08 solo commit di completamento | BU-08 solo commit di completamento | VE-08 commit dell'audit | RE-08 solo questa run | HA-08 ignorata, handoff |
-| 09 | `full-autonomous:false --no-wip-commit` | ON-09 nessun effetto | PL-09 salvati in §3 | EX-09 stop dopo la fase, nessun commit | EV-09 stop dopo fase riaperta, nessun commit | TA-09 nessun commit | BU-09 nessun commit | VE-09 nessun commit | RE-09 solo questa run | HA-09 ignorata, handoff |
+| 09 | `full-autonomous:false --no-wip-commit` | ON-09 nessun effetto | PL-09 salvati in §3 | EX-09 stop dopo la fase, nessun commit | EV-09 stop dopo fase riaperta, nessun commit | TA-09 approvazione, nessun commit | BU-09 approvazione, nessun commit | VE-09 nessun commit | RE-09 solo questa run | HA-09 ignorata, handoff |
 | 10 | `executor-power:low` | ON-10 errore | PL-10 piano `low` | EX-10 errore | EV-10 errore | TA-10 errore | BU-10 errore | VE-10 errore | RE-10 errore | HA-10 ignorata, handoff |
 | 11 | `executor-power:medium` | ON-11 errore | PL-11 piano `medium` | EX-11 errore | EV-11 errore | TA-11 errore | BU-11 errore | VE-11 errore | RE-11 errore | HA-11 ignorata, handoff |
 | 12 | `executor-power:high` | ON-12 errore | PL-12 piano `high` | EX-12 errore | EV-12 errore | TA-12 errore | BU-12 errore | VE-12 errore | RE-12 errore | HA-12 ignorata, handoff |
@@ -1093,6 +1093,20 @@ mai §3 né lo scope salvato, e `full-autonomous:true` non autorizza altre fasi
 del piano. Una richiesta molto più grande di una piccola unità viene prima
 pianificata dal supervisore.
 
+Prima di toccare il codice, agent-1 scrive o valida il mini-piano nella voce di
+ledger. Con `full-autonomous:false` (il default) la run si ferma una volta con
+la voce `PROPOSED` e ti mostra il mini-piano: puoi modificarlo nel file, poi
+approvi rispondendo nella stessa sessione o con `/plan-execute-verify resume
+000_adhoc T-A004`. Serve l'ID della voce: un `resume` senza ID non approva mai.
+File cambiati nel frattempo o tue modifiche vengono rivalidati da agent-1 prima
+del codice; l'approvazione esegue solo quella voce. Per rifiutare la proposta
+dillo nella stessa sessione, oppure imposta a mano lo stato della voce a
+`WITHDRAWN` con il motivo: la voce non viene mai cancellata né ripresa. La voce
+`PROPOSED` non è committata, e il report lo segnala. Con `full-autonomous:true`
+non c'è stop, ma la validazione resta: una sessione debole che non raggiunge
+agent-1 si blocca prima di scrivere codice. Nessuna combinazione dà un task
+senza stop e senza commit di completamento: `false` si ferma, `true` committa.
+
 ### TA-01 · nessuna opzione
 
 ```text
@@ -1103,7 +1117,9 @@ pianificata dal supervisore.
   evidenze; `--json` resta testo della descrizione.
 - **Implicazioni:** collegato a un piano vale il suo §3 (nessun override di
   scope): con `true` in §3 il task viene committato. In `000_adhoc` valgono i
-  default: nessun commit, e il report lo segnala suggerendo il comando.
+  default: nessun commit, e il report lo segnala suggerendo il comando. Con
+  l'autonomia risolta a `false` (default) si ferma per la tua approvazione dopo
+  il mini-piano.
 - **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
   `false`; WIP dal §3 del piano collegato, altrimenti off; livello del piano
   collegato, `low` in `000_adhoc`; roster del piano collegato, altrimenti legacy
@@ -1119,7 +1135,8 @@ pianificata dal supervisore.
 - **Descrizione:** completa il task e lo committa.
 - **Implicazioni:** commit locale `task(T-A<NNN>): …` dopo gate e revisioni
   obbligatorie; un gate o una revisione non risolti impediscono il commit.
-  L'impostazione è registrata solo nella voce di ledger.
+  L'impostazione è registrata solo nella voce di ledger. Nessuno stop per
+  l'approvazione: agent-1 valida il mini-piano e il lavoro prosegue.
 - **Default applicati:** WIP dal §3 del piano collegato, altrimenti off; livello
   del piano collegato, `low` in `000_adhoc`; roster del piano collegato,
   altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; nessun piano nominato:
@@ -1135,7 +1152,8 @@ pianificata dal supervisore.
   opzione.
 - **Implicazioni:** il task è un'unità singola, quindi lo stop a fine fase non
   si applica. Se il WIP risolto è on (dal §3 del piano collegato), il commit
-  avviene comunque.
+  avviene comunque. Si ferma per la tua approvazione dopo il mini-piano validato
+  da agent-1, poi prosegue.
 - **Default applicati:** WIP dal §3 del piano collegato, altrimenti off; livello
   del piano collegato, `low` in `000_adhoc`; roster del piano collegato,
   altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; nessun piano nominato:
@@ -1149,7 +1167,8 @@ pianificata dal supervisore.
 
 - **Descrizione:** attiva il WIP per questo task.
 - **Implicazioni:** commit del task completato e commit WIP a rotazione a ogni
-  checkpoint (handoff, operazioni rischiose, blocchi).
+  checkpoint (handoff, operazioni rischiose, blocchi). Con l'autonomia risolta a
+  `false` (default) si ferma per la tua approvazione dopo il mini-piano.
 - **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
   `false`; livello del piano collegato, `low` in `000_adhoc`; roster del piano
   collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; nessun piano
@@ -1163,8 +1182,9 @@ pianificata dal supervisore.
 ```
 
 - **Descrizione:** disattiva il WIP per questo task.
-- **Implicazioni:** commit di completamento solo se l'autonomia risolta è
-  `true` (esplicita o dal §3 del piano collegato).
+- **Implicazioni:** commit di completamento solo se l'autonomia risolta è `true`
+  (esplicita o dal §3 del piano collegato). Con l'autonomia risolta a `false`
+  (default) si ferma per la tua approvazione dopo il mini-piano.
 - **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
   `false`; livello del piano collegato, `low` in `000_adhoc`; roster del piano
   collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; nessun piano
@@ -1178,7 +1198,8 @@ pianificata dal supervisore.
 ```
 
 - **Descrizione:** completa e committa il task, con WIP ai checkpoint.
-- **Implicazioni:** commit di completamento più WIP a rotazione.
+- **Implicazioni:** commit di completamento più WIP a rotazione. Nessuno stop
+  per l'approvazione: agent-1 valida il mini-piano e il lavoro prosegue.
 - **Default applicati:** livello del piano collegato, `low` in `000_adhoc`;
   roster del piano collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna
   deadline; nessun piano nominato: `000_adhoc`, salvo che la richiesta cambi
@@ -1191,7 +1212,9 @@ pianificata dal supervisore.
 ```
 
 - **Descrizione:** completa il task con commit dovuti al WIP.
-- **Implicazioni:** commit del task completato e WIP a rotazione, come TA-06.
+- **Implicazioni:** commit del task completato e WIP a rotazione, come TA-06. Si
+  ferma per la tua approvazione dopo il mini-piano validato da agent-1, poi
+  prosegue.
 - **Default applicati:** livello del piano collegato, `low` in `000_adhoc`;
   roster del piano collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna
   deadline; nessun piano nominato: `000_adhoc`, salvo che la richiesta cambi
@@ -1205,7 +1228,8 @@ pianificata dal supervisore.
 
 - **Descrizione:** completa il task e lo committa solo alla fine.
 - **Implicazioni:** nessun commit WIP; il lavoro interrotto resta nel working
-  tree, con l'unità OPEN e il suo checkpoint.
+  tree, con l'unità OPEN e il suo checkpoint. Nessuno stop per l'approvazione:
+  agent-1 valida il mini-piano e il lavoro prosegue.
 - **Default applicati:** livello del piano collegato, `low` in `000_adhoc`;
   roster del piano collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna
   deadline; nessun piano nominato: `000_adhoc`, salvo che la richiesta cambi
@@ -1219,7 +1243,8 @@ pianificata dal supervisore.
 
 - **Descrizione:** completa il task senza alcun commit.
 - **Implicazioni:** ignora anche un §3 con commit attivi; il report suggerisce
-  il comando di commit.
+  il comando di commit. Si ferma per la tua approvazione dopo il mini-piano
+  validato da agent-1, poi prosegue.
 - **Default applicati:** livello del piano collegato, `low` in `000_adhoc`;
   roster del piano collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna
   deadline; nessun piano nominato: `000_adhoc`, salvo che la richiesta cambi
@@ -1267,7 +1292,9 @@ pianificata dal supervisore.
 
 - **Descrizione:** assegna gli agenti per questo task.
 - **Implicazioni:** il roster vale solo per l'invocazione ed è registrato nella
-  voce di ledger; il roster salvato del piano non cambia.
+  voce di ledger; il roster salvato del piano non cambia. Con l'autonomia
+  risolta a `false` (default) si ferma per la tua approvazione dopo il
+  mini-piano.
 - **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
   `false`; WIP dal §3 del piano collegato, altrimenti off; livello del piano
   collegato, `low` in `000_adhoc`; nessuna deadline; nessun piano nominato:
@@ -1281,7 +1308,9 @@ pianificata dal supervisore.
 
 - **Descrizione:** un solo agente implementa e revisiona il task.
 - **Implicazioni:** ogni revisione è self-review; vale solo per questa
-  invocazione.
+  invocazione. Con l'autonomia risolta a `false` (default) si ferma per la tua
+  approvazione dopo il mini-piano. La validazione di agent-1 è una self-review
+  etichettata.
 - **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
   `false`; WIP dal §3 del piano collegato, altrimenti off; livello del piano
   collegato, `low` in `000_adhoc`; nessuna deadline; nessun piano nominato:
@@ -1296,9 +1325,10 @@ pianificata dal supervisore.
 - **Descrizione:** esegue il task e prepara l'handoff entro le 17:30.
 - **Implicazioni:** se il task non si chiude in tempo, alla scadenza la voce
   resta OPEN con il suo checkpoint, viene creato il commit di handoff anche con
-  i commit disattivati e il report propone, per esempio,
-  `/plan-execute-verify resume 000_adhoc T-A004`. La deadline non viene
-  registrata come impostazione futura.
+  i commit disattivati e il report propone, per esempio, `/plan-execute-verify
+  resume 000_adhoc T-A004`. La deadline non viene registrata come impostazione
+  futura. Con l'autonomia risolta a `false` (default) si ferma per la tua
+  approvazione dopo il mini-piano.
 - **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
   `false`; WIP dal §3 del piano collegato, altrimenti off; livello del piano
   collegato, `low` in `000_adhoc`; roster del piano collegato, altrimenti legacy
@@ -1317,6 +1347,10 @@ Collegamento al piano, mini-piano e opzioni seguono le regole di Task; il
 ledger è `bugs.md` e l'identità è `B-A<NNN>`. Se la riproduzione fallisce, il
 bug registra tentativi e blocco invece di indovinare un fix.
 
+Lo stop per l'approvazione, quando c'è, arriva dopo riproduzione, causa radice e
+mini-piano, prima del test di regressione; agent-1 valida anche la causa radice.
+Prima dell'approvazione non viene modificato alcun file tracciato.
+
 ### BU-01 · nessuna opzione
 
 ```text
@@ -1326,7 +1360,9 @@ bug registra tentativi e blocco invece di indovinare un fix.
 - **Descrizione:** riproduce il difetto, scrive il test di regressione, corregge
   e chiude con evidenze.
 - **Implicazioni:** collegato a un piano vale il suo §3; in `000_adhoc` valgono
-  i default: nessun commit, con avviso e comando suggerito.
+  i default: nessun commit, con avviso e comando suggerito. Con l'autonomia
+  risolta a `false` (default) si ferma per la tua approvazione dopo diagnosi e
+  mini-piano.
 - **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
   `false`; WIP dal §3 del piano collegato, altrimenti off; livello del piano
   collegato, `low` in `000_adhoc`; roster del piano collegato, altrimenti legacy
@@ -1341,7 +1377,8 @@ bug registra tentativi e blocco invece di indovinare un fix.
 
 - **Descrizione:** completa il fix e lo committa.
 - **Implicazioni:** commit locale `bug(B-A<NNN>): …` solo dopo regressione e
-  revisioni obbligatorie; registrato solo nella voce di ledger.
+  revisioni obbligatorie; registrato solo nella voce di ledger. Nessuno stop per
+  l'approvazione: agent-1 valida il mini-piano e il lavoro prosegue.
 - **Default applicati:** WIP dal §3 del piano collegato, altrimenti off; livello
   del piano collegato, `low` in `000_adhoc`; roster del piano collegato,
   altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; nessun piano nominato:
@@ -1356,7 +1393,8 @@ bug registra tentativi e blocco invece di indovinare un fix.
 - **Descrizione:** completa il fix senza commit di completamento da questa
   opzione.
 - **Implicazioni:** se il WIP risolto è on (dal §3 del piano collegato), il
-  commit avviene comunque.
+  commit avviene comunque. Si ferma per la tua approvazione dopo diagnosi e
+  mini-piano validato da agent-1, poi prosegue.
 - **Default applicati:** WIP dal §3 del piano collegato, altrimenti off; livello
   del piano collegato, `low` in `000_adhoc`; roster del piano collegato,
   altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; nessun piano nominato:
@@ -1370,6 +1408,8 @@ bug registra tentativi e blocco invece di indovinare un fix.
 
 - **Descrizione:** attiva il WIP per questo bug.
 - **Implicazioni:** commit del fix completato e WIP a rotazione ai checkpoint.
+  Con l'autonomia risolta a `false` (default) si ferma per la tua approvazione
+  dopo diagnosi e mini-piano.
 - **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
   `false`; livello del piano collegato, `low` in `000_adhoc`; roster del piano
   collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; nessun piano
@@ -1384,7 +1424,8 @@ bug registra tentativi e blocco invece di indovinare un fix.
 
 - **Descrizione:** disattiva il WIP per questo bug.
 - **Implicazioni:** commit di completamento solo se l'autonomia risolta è
-  `true`.
+  `true`. Con l'autonomia risolta a `false` (default) si ferma per la tua
+  approvazione dopo diagnosi e mini-piano.
 - **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
   `false`; livello del piano collegato, `low` in `000_adhoc`; roster del piano
   collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; nessun piano
@@ -1398,7 +1439,8 @@ bug registra tentativi e blocco invece di indovinare un fix.
 ```
 
 - **Descrizione:** completa e committa il fix, con WIP ai checkpoint.
-- **Implicazioni:** commit di completamento più WIP a rotazione.
+- **Implicazioni:** commit di completamento più WIP a rotazione. Nessuno stop
+  per l'approvazione: agent-1 valida il mini-piano e il lavoro prosegue.
 - **Default applicati:** livello del piano collegato, `low` in `000_adhoc`;
   roster del piano collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna
   deadline; nessun piano nominato: `000_adhoc`, salvo che la richiesta cambi
@@ -1411,7 +1453,8 @@ bug registra tentativi e blocco invece di indovinare un fix.
 ```
 
 - **Descrizione:** completa il fix con commit dovuti al WIP.
-- **Implicazioni:** come BU-06.
+- **Implicazioni:** come BU-06. Si ferma per la tua approvazione dopo diagnosi e
+  mini-piano validato da agent-1, poi prosegue.
 - **Default applicati:** livello del piano collegato, `low` in `000_adhoc`;
   roster del piano collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna
   deadline; nessun piano nominato: `000_adhoc`, salvo che la richiesta cambi
@@ -1425,7 +1468,8 @@ bug registra tentativi e blocco invece di indovinare un fix.
 
 - **Descrizione:** completa il fix e lo committa solo alla fine.
 - **Implicazioni:** il lavoro interrotto resta nel working tree, con l'unità
-  OPEN e il suo checkpoint.
+  OPEN e il suo checkpoint. Nessuno stop per l'approvazione: agent-1 valida il
+  mini-piano e il lavoro prosegue.
 - **Default applicati:** livello del piano collegato, `low` in `000_adhoc`;
   roster del piano collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna
   deadline; nessun piano nominato: `000_adhoc`, salvo che la richiesta cambi
@@ -1439,7 +1483,8 @@ bug registra tentativi e blocco invece di indovinare un fix.
 
 - **Descrizione:** completa il fix senza alcun commit.
 - **Implicazioni:** ignora anche un §3 con commit attivi; il report suggerisce
-  il comando di commit.
+  il comando di commit. Si ferma per la tua approvazione dopo diagnosi e
+  mini-piano validato da agent-1, poi prosegue.
 - **Default applicati:** livello del piano collegato, `low` in `000_adhoc`;
   roster del piano collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna
   deadline; nessun piano nominato: `000_adhoc`, salvo che la richiesta cambi
@@ -1487,7 +1532,8 @@ bug registra tentativi e blocco invece di indovinare un fix.
 
 - **Descrizione:** assegna gli agenti per questo bug.
 - **Implicazioni:** solo per l'invocazione, registrato nella voce di ledger; il
-  roster del piano non cambia.
+  roster del piano non cambia. Con l'autonomia risolta a `false` (default) si
+  ferma per la tua approvazione dopo diagnosi e mini-piano.
 - **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
   `false`; WIP dal §3 del piano collegato, altrimenti off; livello del piano
   collegato, `low` in `000_adhoc`; nessuna deadline; nessun piano nominato:
@@ -1501,7 +1547,9 @@ bug registra tentativi e blocco invece di indovinare un fix.
 
 - **Descrizione:** un solo agente riproduce, corregge e revisiona.
 - **Implicazioni:** ogni revisione è self-review; vale solo per questa
-  invocazione.
+  invocazione. Con l'autonomia risolta a `false` (default) si ferma per la tua
+  approvazione dopo diagnosi e mini-piano. La validazione di agent-1 è una
+  self-review etichettata.
 - **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
   `false`; WIP dal §3 del piano collegato, altrimenti off; livello del piano
   collegato, `low` in `000_adhoc`; nessuna deadline; nessun piano nominato:
@@ -1515,7 +1563,8 @@ bug registra tentativi e blocco invece di indovinare un fix.
 
 - **Descrizione:** corregge il bug e prepara l'handoff entro le 17:30.
 - **Implicazioni:** come TA-15; la ripresa proposta è del tipo
-  `/plan-execute-verify resume 000_adhoc B-A002`.
+  `/plan-execute-verify resume 000_adhoc B-A002`. Con l'autonomia risolta a
+  `false` (default) si ferma per la tua approvazione dopo diagnosi e mini-piano.
 - **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
   `false`; WIP dal §3 del piano collegato, altrimenti off; livello del piano
   collegato, `low` in `000_adhoc`; roster del piano collegato, altrimenti legacy
@@ -1746,6 +1795,9 @@ non allarga lo scope e non riscrive impostazioni o roster salvati. L'unità
 ripresa usa impostazioni e roster registrati su di essa; lo scope continuato usa
 i suoi override, poi §3. Opzioni e prefisso espliciti prevalgono su entrambi
 solo per questa invocazione, e i commit seguono la modalità del lavoro ripreso.
+Una voce task o bug `PROPOSED` si riprende solo nominandone l'ID, per esempio
+`resume 000_adhoc T-A004`, e così la approvi; senza ID non viene mai toccata, ma
+il report la elenca con il comando di approvazione.
 
 ### RE-01 · nessuna opzione
 
