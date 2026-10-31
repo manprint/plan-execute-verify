@@ -42,6 +42,13 @@ In this order, finish recovery before anything else:
 A BLOCKED unit resumes only when its blocker is resolved; otherwise report the
 blocker, its owner, and the exact question instead of retrying.
 
+Work stopped by Handoff mode (invocation result `HANDOFF`) has already released
+ownership. Its handoff commit is the OPEN unit's own WIP commit and is never
+amended: continue from the §6 next action, and append later WIP and completion
+commits after it. Closed units it holds are committed
+(`handoff:<id>:<attempt>`), not pending. The interrupted run's deadline does not
+carry over.
+
 ## R3 — Continue the saved execution scope
 
 After recovery, without a unit ID, continue the saved execution scope while its

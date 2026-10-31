@@ -21,8 +21,10 @@ Use execution-contract.md for ownership, settings, recovery, reviews, and commit
   with reason; or 000_adhoc>
 - Plan impact: <affected decisions/units, or n/a — no plan>
 - Related findings: <IDs or none>
-- Settings: full-autonomous:<true|false>; WIP commits:<on|off>; roster: <saved or
-  invocation prefix> — this invocation only; never written to a plan's §3
+- Settings: full-autonomous:<true|false>; WIP commits:<on|off>; roster: <saved
+  or invocation prefix>; executor power: <attached plan's level, or low>;
+  deadline: <dd-mm-yyyy_hh_mm, or none> — this
+  invocation only; never written to a plan's §3
 - Identity: plan <folder ID or 000_adhoc>; unit <ID>; attempt <n>
 - Baseline / branch: <starting HEAD, working-tree snapshot tree, branch,
   pre-existing changes to preserve>
@@ -44,7 +46,9 @@ Use execution-contract.md for ownership, settings, recovery, reviews, and commit
 ### Checkpoint
 <In a real plan link STATE.md §6; do not duplicate live state here.
 In 000_adhoc: OPEN|IN_REVIEW|DONE|BLOCKED, owner, completed steps, actual changes, next step,
-last checks, pending resources, and stop reason. If research is active, retain
+last checks, pending resources, and stop reason (`handoff` with trigger
+user|deadline, time, and released ownership when Handoff mode stopped it;
+mode-handoff.md). If research is active, retain
 inspected sources, unanswered questions, and next lookup. Persist before handoff.>
 
 ### Outcome and evidence
@@ -53,7 +57,9 @@ inspected sources, unanswered questions, and next lookup. Persist before handoff
 - Review: <reviewer, inspected change, checks, verdict>
 - README: <affected sections, or no user-visible change>
 - Plan reconciliation: <decisions/contracts/tests updated, or N/A>
-- Commit: <uncommitted or unit:ID:attempt; resolve with PEV identity trailers>
+- Commit: <uncommitted base-tree..closure-tree, unit:ID:attempt, or
+  handoff:ID:attempt once a handoff commit holds it; resolve with PEV identity
+  trailers>
 ````
 
 For a bug, additionally require:

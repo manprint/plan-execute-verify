@@ -18,11 +18,12 @@ scenario. Resolve the repository root and plan folder per SKILL.md. Record the
 immutable starting commit and any existing dirty changes relevant to this plan;
 do not treat those as future agent output.
 
-Resolve the roster and runtime presets. Execution style is not a plan choice:
-each execution picks handoff or delegated by the fixed rule in agent-roster.md;
-record the host capabilities known now. A fresh weak-model session must know how
-to request the configured strong supervisor. If the host cannot supply it,
-preserve that limitation rather than promising automatic review.
+Resolve the roster, runtime presets, and executor power. Execution style is not
+a plan choice: each execution picks handoff or delegated by the fixed rule in
+agent-roster.md; record the host capabilities known now. A fresh weak-model
+session must know how to request the configured strong supervisor. If the host
+cannot supply it, preserve that limitation rather than promising automatic
+review.
 
 Separate questions requiring the user's product decision from technical choices
 the strong supervisor is authorized to make.
@@ -67,16 +68,19 @@ described there before research starts. Batch settled evidence into one update;
 save the next question/lookup before interruption or when a required unresolved
 claim blocks design. Do not rewrite state after every source lookup.
 This is a planning step, not an implementation sub-phase or a new commit unit;
-planning still writes no production code and makes no commits.
+planning still writes no production code and makes no commits. A `handoff`
+request or `--deadline` saves this checkpoint, or the current planning draft,
+and stops without committing (mode-handoff.md).
 
 ## C — Design and resolve ambiguity
 
 Write decisions D<n> with consequences; define interfaces, error behavior,
 compatibility, invariants I-<n>, and architecture. Decide algorithms and data
-representations before handing complex work to the weakest worker.
-Translate the R<n> results into these decisions and the later local phase
-contracts/tests. Record relevant alternatives rejected and why; do not hand a
-worker only links or an unresolved instruction to choose the best approach.
+representations before handing complex work to an executor, except internal ones
+left to a `high` executor. Translate the R<n> results into these decisions and
+the later local phase contracts/tests. Record relevant alternatives rejected and
+why; do not hand a worker only links or an unresolved instruction to choose the
+best approach.
 
 Ask the user only about unresolved requirements, externally visible tradeoffs,
 scope, or authority that existing instructions do not settle. Present relevant
@@ -94,14 +98,29 @@ unit's design and acceptance questions resolved and its contract validated.
 ## D — Decompose into executable units
 
 Group work into phases with an observable integration result and one full gate
-run at closure. Usually use 2–4 outcome-oriented sub-phases per phase, including
-documentation only when it is a substantial independent deliverable. This is a
-calibration target, not a quota: use fewer for a narrow change or more when real
-dependencies require them. Before adding a phase, ask whether its outcome and
-gate can be combined with an adjacent phase without making a weak worker choose
+run at closure. Add a documentation sub-phase only when it is a substantial
+independent deliverable. Before adding a phase, ask whether its outcome and gate
+can be combined with an adjacent phase without making the executor choose
 architecture, handle unrelated changes, or retain too much context. Start with
 additive scaffolding when useful. Assign stable logical phase/sub-phase IDs and
 map them explicitly to phase files; logical phase 0 is phase_01.md.
+
+Calibrate decomposition and detail to the recorded `executor-power`
+(invocation.md; default `low`): the least capable implementer that will receive
+units. Never derive the level from model names. Sub-phase counts are calibration
+targets, not quotas; the split criteria below still apply.
+
+| Level | Decomposition | Detail and executor latitude |
+|-------|---------------|------------------------------|
+| `low` | Most phases; usually 3–6 elementary sub-phases per phase, each one small, independently testable outcome | Mechanical numbered steps with exact locations; every architectural choice, pattern, and best practice stated; supervisor-verified code snippets for complex or error-prone parts. The executor decides only mechanical locator changes and details the plan expressly leaves open. |
+| `medium` | Usually 2–4 sub-phases per phase | Detailed contracts, decisions, patterns, and steps; snippets only where prose cannot state a contract precisely. The executor may fill routine detail (local naming, helper extraction, extra edge-case tests) that changes no decision. |
+| `high` | Fewest, larger phases; usually 1–3 outcome sub-phases per phase | Outcome, public interfaces, invariants, errors, acceptance tests, gates, and risks; steps may stay outcome-level. The executor plans its own steps and decides internal implementation within those contracts (execution-contract §4). |
+
+At every level the supervisor fixes requirements, public interfaces and
+contracts, invariants, acceptance tests, and gates; a lower level adds detail,
+never weaker acceptance. Snippets are contract excerpts the supervisor checked
+against the actual versions and APIs, not code to paste unread; a snippet that
+fails to build or contradicts its contract is escalated like any contract error.
 
 Each sub-phase retains seven top-level fields:
 Agent · Assignment · Files · Change · Unit tests · e2e tests · Done.
@@ -109,7 +128,7 @@ Agent and reviewers are roster positions (`agent-2`), never model names.
 The content requirements are in output-template.md; merely filling the headings
 does not satisfy the contract.
 
-Write for the least capable configured implementer, even when it will handle
+Write for the recorded executor power, even when the implementer will handle
 complex logic. Each unit needs:
 
 - Exact prerequisite unit IDs and artifacts, including newly created symbols.
@@ -129,6 +148,9 @@ complex logic. Each unit needs:
 - Required reviewer and review timing (state when the implementer is also the
   required reviewer: that review is `self-review`), targeted unit checks, and a
   checkable completion condition including state and the configured commit policy.
+
+At `high`, numbered steps may stay outcome-level and the internal algorithm or
+data structure may be left to the executor; every other item remains required.
 
 Keep an outcome in one sub-phase when its edits share a contract and one targeted
 validation set. Split only when there is an independent dependency/review boundary,

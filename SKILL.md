@@ -30,6 +30,7 @@ does not invoke its Plan/Execute workflow.
 | `task` / `bug` | [mode-taskbug](references/mode-taskbug.md) | One requested change/fix |
 | `verify` | [mode-verify](references/mode-verify.md) | Audit and truthful state; no code fixes |
 | `resume` | [mode-resume](references/mode-resume.md) | Recorded work continued; scope/settings unchanged |
+| `handoff` | [mode-handoff](references/mode-handoff.md) | Graceful stop: resumable state, handoff commit for code work, resume command |
 
 Read only references called for by the selected mode and the artifact being
 written. A later executor may lack this skill, so planning copies the concise
@@ -38,13 +39,17 @@ runtime/recovery contract and resolved settings into generated STATE.md.
 ## Shared boundaries
 
 - The strong supervisor designs the plan, resolves technical surprises within
-  approved requirements, reviews risky sub-phases, and approves every phase.
-  Any configured worker can implement complex work when the contract fully
-  specifies algorithm, interfaces, invariants, failure behavior, and test oracle.
+  approved requirements, reviews risky sub-phases, and approves every phase. Any
+  configured worker can implement complex work when the contract specifies what
+  the plan's executor power requires: interfaces, invariants, failure behavior,
+  and test oracle always, and the algorithm too except at `high`, where the
+  worker decides and records it.
 - A selector limits scope even under `full-autonomous:true`. That setting
   commits verified operational units locally and continues within the selected
   scope; it never authorizes a push, deployment, or broader work. With `false`,
-  execution stops after each phase closure instead. Preserve the saved execution
+  execution stops after each phase closure instead. A `handoff` request or a
+  `--deadline` stops any run gracefully, with one handoff commit for code work
+  ([mode-handoff](references/mode-handoff.md)). Preserve the saved execution
   scope and its option overrides across resumes and Task/Bug/Verify runs;
   Execute options never become plan defaults. Exact commit and handoff rules are
   in [execution-contract](references/execution-contract.md).
@@ -76,18 +81,24 @@ parent directories. Use the highest existing numeric prefix plus one, starting a
 kebab-case name without spaces. Honor an explicit user path. `000_adhoc` is
 reserved for task/bug ledgers without fake phases or STATE.md.
 
-Size phases by observable integration results; a typical phase has 2–4 coherent
-sub-phases. Keep a result in one unit when its edits share a contract and targeted
-checks. Split at actual dependency, review, or recovery boundaries. A README
-sub-phase is optional; every phase still has a documentation obligation.
+Size phases by observable integration results, calibrated by the Plan option
+`executor-power:low|medium|high` (default `low`;
+[mode-plan](references/mode-plan.md) step D): `low` gives more, elementary
+sub-phases with explicit patterns and verified snippets; `high` gives fewer
+outcome-level units whose internal implementation the executor decides within
+supervisor-fixed contracts. Keep a result in one unit when its edits share a
+contract and targeted checks. Split at actual dependency, review, or recovery
+boundaries. A README sub-phase is optional; every phase still has a
+documentation obligation.
 
 Keep the seven sub-phase fields: Agent (a roster position, never a model name),
 Assignment, Files, Change, Unit tests, e2e tests, Done. Define local design
 meanings once per phase and refer to their IDs within its units. Keep exact
-decisions, steps, postconditions, and test oracles that the weakest worker
-needs; omit repeated runtime instructions, duplicated command/setup text, and
-generic reminders. Follow [output-template](references/output-template.md) and
-[quality-checklist](references/quality-checklist.md) when authoring/reviewing.
+decisions, steps, postconditions, and test oracles that the recorded executor
+power needs; omit repeated runtime instructions, duplicated command/setup text,
+and generic reminders. Follow [output-template](references/output-template.md)
+and [quality-checklist](references/quality-checklist.md) when
+authoring/reviewing.
 
 Use docs/onboarding.md as a dated source map if present, after reading active
 state. Recheck relevant source contracts. Plan performs repository recon and

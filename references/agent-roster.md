@@ -29,9 +29,13 @@ not a fabricated review. Record the actual inspecting agent and limitations.
 
 Select work by the worker's required reasoning, available context, and contract
 completeness. The weakest worker can implement complex logic when the supervisor
-has already decided the design and supplied exact steps, edge cases, and tests.
-If a worker must invent a concurrency protocol or acceptance oracle, refine the
-plan or escalate that decision before implementation.
+has already decided the design and supplied exact steps, edge cases, and tests;
+only a plan written for executor power `high` leaves steps and internal design
+to its executors. If a worker must invent a concurrency protocol or acceptance
+oracle, refine the plan or escalate that decision before implementation. The
+plan's executor power (mode-plan D) names the least capable implementer the plan
+was written for; if a newly configured implementer is judged weaker, the
+supervisor recalibrates its units before dispatch.
 
 ## Assigned and actual agents
 
@@ -85,7 +89,9 @@ The skill cannot create host capabilities or restart a session autonomously.
 
 The coordinator alone changes shared state, plan specifications, ledgers, and
 commits. It opens a unit, sends a bounded assignment, then verifies the worker's
-result and invokes the strong supervisor for required reviews.
+result and invokes the strong supervisor for required reviews. On a handoff
+request or deadline it stops dispatching and bounds running workers
+(mode-handoff.md H3).
 
 The worker must not apply the root cold-start protocol as though the coordinator's
 OPEN unit were abandoned. It checks that plan/unit/revision/owner match its
@@ -101,6 +107,9 @@ Send the same facts that a cold handoff would need:
 - Phase file plus local contracts, prerequisites, allowed read/write paths.
 - Scope, relevant existing dirty changes, required tests/gates, and expected output.
 - Resolved full-autonomous/WIP settings; which agent owns state and commits.
+- The plan's executor power and the latitude it grants (execution-contract §4);
+  at `high`, the return includes expanded steps and internal decisions.
+- Any deadline of this invocation; the worker returns before it.
 - Explicit role: worker, reviewer, or coordinator; supervisor identity.
 - Return format: completed steps, actual paths/diff, test evidence and discovery,
   deviations, unresolved decisions, and the next action. Report what actually ran.

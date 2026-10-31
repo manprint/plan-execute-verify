@@ -6,10 +6,11 @@ invocation only and are recorded in the ledger entry; they never change a plan's
 §3 or its saved execution scope. Both modes implement only the requested change;
 full-autonomous:true does not authorize unrelated plan phases.
 
-Use a short but persistent mini-plan: exact files/symbols, prerequisites,
+Use a short but persistent mini-plan, calibrated to the attached plan's executor
+power (`low` in `000_adhoc`): exact files/symbols, prerequisites,
 input/output/error contract, numbered steps with postconditions, named tests,
-review requirements, and done criterion. Save it before editing so a model/session
-handoff can resume without chat history.
+review requirements, and done criterion. Save it before editing so a
+model/session handoff can resume without chat history.
 
 For a material external unknown, follow [research.md](research.md) before the
 dependent edit: reuse applicable evidence or run a targeted lookup, with design
@@ -65,6 +66,8 @@ requirements. New scope/product choices remain user decisions.
 At handoff retain OPEN with the next unverified step. With the separate WIP
 option, each recovery-boundary checkpoint also updates one rolling WIP commit
 (execution-contract §6). Completion reporting includes stable ID, outcome,
-verification, deviations, and commit SHA/branch when committed.
+verification, deviations, and commit SHA/branch when committed. A user
+`handoff` request or `--deadline` follows mode-handoff.md, including its
+handoff commit.
 
 Run the Coherence checklist in quality-checklist.md before the final report.

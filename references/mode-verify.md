@@ -60,9 +60,11 @@ prevents PASS; a proven contradiction is an evidenced finding.
 
 For each claimed completion verify the specified behavior, symbols/wiring, tests
 and their discovery, docs, dependencies, required review, and applicable gates.
-Resolve required completion commits by plan/unit/attempt/result trailers; legacy
-valid SHA references are also acceptable. An unresolved required commit reference
-is incomplete closure, not a reason to invent a SHA or commit on the unit's behalf.
+Resolve required completion commits by plan/unit/attempt/result trailers, and a
+`handoff:<id>:<attempt>` reference by the handoff commit's `PEV-Includes`
+(execution-contract §6); legacy valid SHA references are also acceptable. An
+unresolved required commit reference is incomplete closure, not a reason to
+invent a SHA or commit on the unit's behalf.
 
 Run applicable gates on the current tree, recording actual results and limitations.
 Do not treat tests from future units as currently required. Never turn an
@@ -75,7 +77,8 @@ Cover:
 2. Fidelity to approved requirements and the relevant plan revision.
 3. Tests: exact assertions, execution/discovery, negative cases, no weakening.
 4. Gates: current results and applicability.
-5. Decisions/invariants, compatibility, and supervisor-approved technical revisions.
+5. Decisions/invariants, compatibility, supervisor-approved technical revisions,
+   and high-power internal decisions staying within their contracts.
 6. External facts against the documented pinned version.
 7. Repository conventions and promised user-facing documentation.
 8. Scope: unexplained changes, distinguishing pre-existing user changes.
@@ -120,10 +123,12 @@ If a FAIL audit also has missing evidence, list that limitation explicitly.
 The historical verdict does not change when later fixes land.
 
 Write corrections as complete units with the same seven-field contract as a
-sub-phase: worker/reviewer, files, prerequisites, local decisions, numbered steps,
-test oracles/commands, and done criterion. Map each correction to findings and
+sub-phase, calibrated to the plan's executor power (mode-plan D):
+worker/reviewer, files, prerequisites, local decisions, numbered steps, test
+oracles/commands, and done criterion. Map each correction to findings and
 affected phases; flag phase reopening and required revalidation. Order by
-dependencies and severity. Do not leave design for a weaker correction executor.
+dependencies and severity. Do not leave design beyond that level's latitude to
+the correction executor.
 Apply the same readiness rule to correction plans: READY only after their
 contracts and prerequisites are validated. If a correction depends on an
 unresolved product decision or unavailable evidence, label it BLOCKED with the
@@ -142,6 +147,8 @@ Finish the agreed inspection and honestly record its result, including FAIL or
 INCOMPLETE. Close the audit unit with its ledger row, verification evidence,
 findings/blockers, progress corrections, and next action. Restore suspended work
 if any; do not lose its checkpoint. Failed phases/tests remain failed or blocked.
+A `handoff` request or `--deadline` instead keeps the audit OPEN with its
+checkpoint and makes no commit (mode-handoff.md).
 
 Under full-autonomous:true commit only owned audit/state changes on the current
 branch using the completion transaction. The subject states the audit verdict.

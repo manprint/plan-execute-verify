@@ -57,7 +57,11 @@ phase closure P<N>. Full autonomy does not expand that selection.
    §3), ownership, assigned and actual agent (agent-roster.md), intended files,
    and first step.
 2. Read the local design context and named source slices. Confirm interfaces and
-   relevant callers before editing. Follow numbered steps and their postconditions.
+   relevant callers before editing. Follow numbered steps and their
+   postconditions. At executor power `high`, expand the steps yourself and keep
+   internal decisions within the unit's contracts; the state writer records the
+   steps in §6 before editing and the decisions in §8, while a delegated worker
+   returns both with its result (execution-contract §4).
 3. Checkpoint at recovery boundaries: before risky/long work, delegation,
    blockers, or yielding. With WIP enabled, each such checkpoint also updates
    the unit's rolling WIP commit (execution-contract §6). Routine steps and
@@ -66,9 +70,10 @@ phase closure P<N>. Full autonomy does not expand that selection.
 4. Implement named tests with the stated fixtures and assertions. Verify that the
    intended tests actually execute; test absence or zero discovery is not success.
 5. For locator drift, find and inspect the symbol. For missing/contradictory
-   design, escalate to the strong supervisor. The supervisor may repair technical
-   steps within unchanged requirements/scope, version the plan, and update
-   dependents. The weak implementer must not quietly redesign it.
+   design, escalate to the strong supervisor. The supervisor may repair
+   technical steps within unchanged requirements/scope, version the plan, and
+   update dependents. The implementer must not quietly redesign it or exceed the
+   latitude of the plan's executor power.
 6. Run focused unit checks and required review against the actual diff; the unit
    is IN_REVIEW while a dispatched or handed-off review is pending. After two
    failed fixes of the same issue, escalate instead of retrying blindly or
@@ -138,4 +143,5 @@ When full autonomy is true, continue until the selected scope is verified
 complete or an actual blocker/user stop/host interruption prevents further work.
 With false, also stop after each phase closure, never at a sub-phase boundary.
 Save a checkpoint and exact handoff when the session ends; never imply an
-unavailable supervisor or host automatically performed the next step.
+unavailable supervisor or host automatically performed the next step. A
+`handoff` request or `--deadline` follows mode-handoff.md.

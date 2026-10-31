@@ -1,8 +1,8 @@
 # Token economy — reduce repetition, preserve correctness
 
 Optimize successful completion cost, including failed attempts and recovery.
-Correctness, adequate detail for the weakest worker, and verifiable reviews have
-priority over minimizing the initial plan or supervisor context.
+Correctness, detail adequate for the recorded executor power, and verifiable
+reviews have priority over minimizing the initial plan or supervisor context.
 
 ## Useful savings
 
@@ -26,9 +26,12 @@ priority over minimizing the initial plan or supervisor context.
 ## Detail that is worth its cost
 
 Complex work for a weak model needs an explicit algorithm, state representation,
-input/output/error contracts, boundary cases, synchronization/lifecycle decisions,
-ordered steps with postconditions, and a test oracle the worker did not invent.
-Use pseudocode or exact signatures where those remove real ambiguity.
+input/output/error contracts, boundary cases, synchronization/lifecycle
+decisions, ordered steps with postconditions, and a test oracle the worker did
+not invent. Use pseudocode or exact signatures where those remove real
+ambiguity. The plan's executor power sets this level (mode-plan D): `low` pays
+for finer units and verified snippets; `high` saves detail on internal
+implementation, never on contracts, invariants, or acceptance tests.
 
 A short instruction such as “implement a lock-free token bucket” is not a
 self-contained plan. Nor are “handle errors”, “add tests”, or an invariant ID

@@ -18,6 +18,8 @@ Assume recon has confirmed this Python repository:
 - No existing code exposes a quota primitive. No new third-party dependency is
   allowed. The new implementation stays in src/gw/limits.py.
 - The roster is agent-1:opus, agent-2:sonnet, agent-3:haiku.
+- Executor power is `low` (the default): units are elementary and fully
+  specified.
 - Execution uses handoff by default; the same unit can be delegated.
 
 The approved design is a fixed-window quota counter, not an unspecified token

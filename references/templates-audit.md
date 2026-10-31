@@ -12,7 +12,9 @@ phase sub-phase in output-template.md.
 
 Date: <date>. Auditor: <actual agent as position:name>.
 Settings for this audit: full-autonomous:<true|false>; WIP:<on|off>; roster:
-<saved, or invocation-only prefix>. Not written to STATE.md §3.
+<saved, or invocation-only prefix>; deadline: <dd-mm-yyyy_hh_mm, or none>. Not
+written to STATE.md §3. Handoff: <trigger and time when Handoff mode stopped
+this audit, leaving it OPEN; or none>.
 Plan: <path/ID/revision, or 000_adhoc>. Audit scope: <whole plan | phase |
 sub-phase | ledger entry> — <selected units>; the verdict covers only this scope.
 Baseline/range: <commits>; owned/uncommitted/pre-existing changes: <details>.

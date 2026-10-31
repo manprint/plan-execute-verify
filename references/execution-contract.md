@@ -9,7 +9,8 @@ state-changing recovery or completion steps; mode-onboard.md governs that mode.
 
 ## 1. Resolve the invocation once
 
-`full-autonomous:true|false` is a leading option, accepted by every mode.
+`full-autonomous:true|false` is a leading option, accepted by every mode;
+Handoff ignores it.
 Precedence: explicit invocation > saved execution scope override (only while
 continuing that scope) > selected plan's STATE.md §3 > `false`. Reject other
 values and duplicate occurrences before making changes. Plan persists an
@@ -32,6 +33,7 @@ and never persist to a plan or an ad-hoc ledger.
 | Task / bug | Finish the requested change, tests, documentation, and reconciliation | Every completed task / bug |
 | Verify | Complete the audit, including an honest FAIL or unverified result | Audit artifacts and state only; never automatic code corrections |
 | Resume | Recover recorded work, then continue the saved execution scope | As for the mode of the resumed unit or scope |
+| Handoff | Not applicable: the option is ignored; bounds the work in flight, saves resumable state, and stops | One handoff commit for code work, whatever the settings; none for Plan, Verify, or Onboard |
 
 With `false`, execution continues through the eligible units of the current
 phase inside the selected scope and stops after that phase's closure P<N>, with
@@ -39,7 +41,8 @@ a precise handoff that `resume` continues; Execute verify stops likewise after
 each reopened phase's closure. A sub-phase boundary inside a phase is not a
 stopping point, and this option adds no commit authorization. With `true`,
 neither a unit nor a phase boundary ends the selected scope. Either way, work
-stops early only at a real blocker, a user stop, or a host interruption. The
+stops early only at a real blocker, a user stop, a handoff request or deadline
+(mode-handoff.md), or a host interruption. The
 existing WIP option still applies independently:
 
 | Full autonomous | WIP commits | Commit completed code units and phase closures | Rolling WIP commit at checkpoints |
@@ -50,7 +53,8 @@ existing WIP option still applies independently:
 | true | on | Yes | Yes |
 
 `--no-wip-commit` disables interruption commits, not autonomous completion
-commits. Onboard never commits; WIP alone never commits audits or planning.
+commits. Onboard never commits; WIP alone never commits audits or planning. A
+handoff commits code work even when both settings are off (mode-handoff.md H5).
 Neither setting authorizes pushes, deployments, destructive cleanup, or changes
 outside the requested scope.
 
@@ -170,14 +174,15 @@ so `git gc` may eventually prune it; if it is missing, fall back to §5 and the
 checkpoint and record that limitation. Onboard takes no snapshot; Verify takes
 one only for the stale-ownership check (§2), never as a unit base.
 
-Execute the numbered steps and check each expected result. A step or successful
-targeted test does not itself require a state write. Keep §6 compact: last durable
-step, next action, owned diff, pending edits, and resources that need recovery.
-Update it at a real recovery boundary: before handoff/delegation, a risky or long
-external operation, an unresolved blocker, or a pause likely to outlive the current
-session. Opening and closing the unit are required writes; several ordinary
-edit/test batches between them may share one checkpoint or need none. On resume,
-inspect the actual diff because a crash may precede any checkpoint.
+Execute the numbered steps (at executor power `high`, the expanded steps
+recorded in §6) and check each expected result. A step or successful targeted
+test does not itself require a state write. Keep §6 compact: last durable step,
+next action, owned diff, pending edits, and resources that need recovery. Update
+it at a real recovery boundary: before handoff/delegation, a risky or long
+external operation, an unresolved blocker, or a pause likely to outlive the
+current session. Opening and closing the unit are required writes; several
+ordinary edit/test batches between them may share one checkpoint or need none.
+On resume, inspect the actual diff because a crash may precede any checkpoint.
 
 After implementation, run the targeted unit checks and required review, apply
 the coherence contract (§7), and close the unit using §6 below. Continue without
@@ -221,8 +226,10 @@ commits are enabled, the failed attempt's state records enter the reopened or
 added unit's completion commit as owned plan records. Retry limits in §4 apply
 to repeated failures.
 
-Stop at the selected scope's verified completion, an explicit user stop, or a
-documented blocker requiring unavailable capability/authority. The last phase
+Stop at the selected scope's verified completion, an explicit user stop, a
+handoff request or deadline, or a documented blocker requiring unavailable
+capability/authority. Under a deadline, check the minutes left at unit and step
+boundaries and before long commands (mode-handoff.md H2). The last phase
 also requires the reference scenario and final integration gates. Only then
 record COMPLETE: for Execute and Execute verify in both the saved execution
 scope and the invocation, for Task, Bug, and Verify in the invocation alone;
@@ -237,15 +244,25 @@ execution scope RUNNING, not COMPLETE, while scope work remains.
 
 The strong supervisor remains responsible during execution: it reviews every
 phase and every explicitly marked high-risk sub-phase. Any configured worker,
-including the weakest, may implement complex code only after the supervisor
-has specified the algorithm, interfaces, invariants, failure cases, and tests.
-The worker must not supply missing architecture implicitly.
+including the weakest, may implement complex code only after the supervisor has
+specified the algorithm, interfaces, invariants, failure cases, and tests. The
+worker must not supply missing architecture implicitly. The plan's executor
+power sets what the worker may decide: at `low`, mechanical locator changes and
+implementation details the plan expressly leaves open; at `medium`, also routine
+detail that changes no decision; at `high`, also internal implementation (its
+own steps, internal algorithms and structure, extra tests) within the unit's
+contracts. A `high` executor's expanded steps go to §6 and each internal
+decision to §8. In handoff style the executor, as state writer, records the
+steps before editing, since they are the recovery point. In delegated style the
+worker returns both with its result and the coordinator records them; an
+interrupted worker's partial diff is reconciled like any OPEN unit. agent-1
+reviews them at P<N>. Public interfaces, contracts, invariants, acceptance
+tests, and gates change only through the supervisor at every level.
 
-Workers may resolve mechanical locator changes and implementation details
-expressly left open by the plan. Missing contracts, contradictory requirements,
-unexpected cross-module effects, and failed design assumptions go to the strong
-supervisor with: unit/step, expected vs actual, minimal evidence, attempts,
-affected dependents, and proposed options.
+Missing contracts, contradictory requirements, unexpected cross-module effects,
+failed design assumptions, and any other decision beyond that latitude go to the
+strong supervisor with: unit/step, expected vs actual, minimal evidence,
+attempts, affected dependents, and proposed options.
 
 The supervisor may amend technical decisions and remaining steps autonomously
 within the user's approved requirements, observable behavior, and scope. Revise
@@ -327,8 +344,10 @@ Suggested subjects (adapt to the repository's convention without losing meaning)
    coherence updates (§7) before staging. Record the closed unit, its ledger
    result (`complete`, or `failed` for a failed P<N> attempt), evidence, next
    eligible unit, and ledger commit reference `unit:<id>:<attempt>` in the same
-   proposed snapshot. When commits are disabled, record `uncommitted`. Do not try
-   to embed a commit's own SHA inside itself.
+   proposed snapshot. When commits are disabled, record
+   `uncommitted <base-tree>..<closure-tree>`: the unit base tree and a fresh
+   closure snapshot (§3), which a later handoff commit needs to separate this
+   unit's changes. Do not try to embed a commit's own SHA inside itself.
    If completion commits are disabled, closure ends here; do not run steps 2–4.
    The final report then warns that the work and plan records are uncommitted
    and suggests a commit command, never run. A failed P<N> attempt records
@@ -350,12 +369,16 @@ Suggested subjects (adapt to the repository's convention without losing meaning)
    p="$(git rev-parse --git-dir)/pev-owned.patch"
    git diff --binary <base-tree> <closure-tree> -- <shared-paths> > "$p" &&
    git reset -q <unit-base-HEAD> -- <shared-paths> &&
-   git apply --cached --check "$p" && git apply --cached "$p"
+   { git apply --cached --check "$p" 2>/dev/null && git apply --cached "$p" ||
+     git apply --cached --3way "$p"; }
    rm -f "$p"
    ```
 
-   Skip the reset on an unborn branch. If the patch does not apply (overlapping
-   hunks, or an edited pre-existing untracked file), restore those index entries
+   Skip the reset on an unborn branch. The `--3way` fallback places owned hunks
+   whose context includes a nearby pre-existing change; it never touches the
+   working tree. If the patch still does not apply (overlapping hunks leave
+   unmerged index entries, an edited pre-existing untracked file, or a Git that
+   rejects `--3way` with `--cached`), restore those index entries
    with `git reset -q HEAD -- <shared-paths>`, commit nothing mixed, keep the work
    recoverable, and report a blocker. Inspect `git diff --cached` against the
    owned intent; unrelated changes must not enter the commit.
@@ -418,6 +441,15 @@ which the working-tree snapshot comparison still recovers. Finish into a
 completion commit under the same amend rule. Inspect current changes as well as
 the WIP diff. Full autonomy alone never requires committing broken or unreviewed
 work.
+
+A handoff commit (mode-handoff.md H5) is a WIP commit with the subject
+`handoff(request-by-user): …` and the extra trailer
+`PEV-Handoff: user|deadline`. It may also hold closed units recorded
+`uncommitted`, listed in the trailer `PEV-Includes: <id>:<attempt>, …`; their
+ledger reference becomes `handoff:<id>:<attempt>`, resolved like step 4 to the
+unique commit in HEAD's ancestry with that `PEV-Plan` whose `PEV-Includes` lists
+that exact unit and attempt. It is never amended: later WIP and completion
+commits append after it, using its closure tree as the last WIP snapshot.
 
 ## 7. Coherence contract
 

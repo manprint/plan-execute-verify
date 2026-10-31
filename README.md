@@ -28,7 +28,11 @@ names with identifiers supported by your host:
 
 Planning creates a numbered folder such as
 `docs/plans/003_plan-RateLimit/`. It does not implement or commit anything.
-The option and roster are saved for execution.
+The option and roster are saved for execution. Without `executor-power`, the
+plan targets `low` executors: the finest, most detailed decomposition, which
+also costs the most planning effort. Pass `executor-power:medium` or
+`executor-power:high` when every implementer is more capable
+([below](#tell-the-planner-how-capable-the-executors-are)).
 
 Then execute that plan:
 
@@ -60,19 +64,23 @@ different interface, select this skill and pass the same options and arguments.
 | Command after the skill name | Use it for | What it changes |
 |------------------------------|------------|-----------------|
 | `onboard [plan]` | Understand an existing repository or recover context and the next step | Only docs/onboarding.md; no code, plan-state changes or commits |
-| `plan <feature>` or `<feature>` | Design a feature, refactor, or migration | Plan files only |
+| `plan <feature>` or `<feature>` | Design a feature, refactor, or migration | Plan files only; options become plan defaults, and `executor-power` sets the plan's detail |
 | `execute [plan] [phase or sub-phase]` | Implement an existing plan | Code, tests, docs, and plan state |
 | `task <description>` | One small change | Requested change and its ledger |
 | `bug <description>` | One defect | Reproduction, regression test, fix, and ledger |
 | `verify [plan] [phase, sub-phase, or entry]` | Audit the whole plan or a narrower scope, including `000_adhoc` entries | Audit reports and state; no code fixes |
 | `execute verify [plan] [report ID]` | Apply audit corrections | Selected corrections and affected plan state |
 | `resume [plan] [unit ID]` | Continue interrupted or saved work exactly where it stopped | Whatever the resumed unit/scope changes; never its scope or settings |
+| `handoff [--deadline=dd-mm-yyyy_hh_mm]` | Stop the running work gracefully, now or by a deadline | State checkpoint, one handoff commit for code work, and the resume command |
+
+[USAGE_EXAMPLE.md](USAGE_EXAMPLE.md) (in Italian) expands every mode × option
+combination with its effect, implications, and invocation command.
 
 The first word after options selects the mode when it is `onboard`, `plan`,
-`execute`, `task`, `bug`, `verify`, or `resume`. Otherwise it starts a planning
-description. For a feature whose name begins with a mode word, use the explicit
-Plan form: `/plan-execute-verify plan task queue for background jobs`.
-Missing arguments or invalid selectors never silently switch modes.
+`execute`, `task`, `bug`, `verify`, `resume`, or `handoff`. Otherwise it starts
+a planning description. For a feature whose name begins with a mode word, use
+the explicit Plan form: `/plan-execute-verify plan task queue for background
+jobs`. Missing arguments or invalid selectors never silently switch modes.
 
 Task and bug take no selector. They attach to a plan only when the request names
 it (number, feature name, or path) or clearly changes an active plan's scope,
@@ -154,6 +162,7 @@ agent prefix:
 | `full-autonomous:false` | Continue through the current phase and stop after its closure (`resume` continues); adds no completion commits |
 | `--wip-commit` | Commit progress: completed code units, phase closures, and a rolling WIP commit at each recovery checkpoint |
 | `--no-wip-commit` | Disable WIP behavior; does not disable completion commits enabled by full autonomy |
+| `--deadline=dd-mm-yyyy_hh_mm` | Every mode: hand off gracefully by this local time; this run only ([Stop gracefully](#stop-gracefully-handoff)) |
 
 Default: `full-autonomous:false`, WIP off. Booleans are literal `true` or
 `false`; `full-autonomous:yes` is rejected.
@@ -165,11 +174,16 @@ Settings resolve independently:
 3. The plan default in STATE.md, set by Plan.
 4. The default.
 
+`executor-power` is not a runtime setting and does not follow this order: only
+Plan accepts it, it is stored with the plan, and every other mode rejects it
+([below](#tell-the-planner-how-capable-the-executors-are)).
+
 Options given to Plan become plan defaults. Options given to Execute or Execute
 verify belong to the scope they start: they survive resume and new sessions of
 that scope and lapse when a different selector replaces it, so a one-off
 autonomous run never changes later executions. To turn off all automatic
-commits, specify both `full-autonomous:false --no-wip-commit`. Task, Bug,
+commits, specify both `full-autonomous:false --no-wip-commit`; only a handoff
+still makes its one commit. Task, Bug,
 Verify, and Resume use explicit options for that invocation only and record them
 in their ledger entry, audit report, or resumed unit, even when attached to a
 plan; they never change its saved settings. Onboard never persists options or
@@ -202,7 +216,11 @@ task(T-A004): complete --json output
 bug(B-A002): fix missing-config exit code
 correction(V001-C1): complete Retry-After assertion
 verify(V001): complete audit; FAIL, 1 blocker
+handoff(request-by-user): 1.2 stopped before S3
 ```
+
+A handoff always creates one handoff commit for code work, whatever the
+settings in the table above ([Stop gracefully](#stop-gracefully-handoff)).
 
 The repository's commit-message convention is respected. All commits are local
 and use the current branch, including `main` if that is your current branch.
@@ -245,8 +263,10 @@ Phase files are numbered from 01; logical phases start at 0. Thus
 `phase_02.md` contains logical phase 1 and sub-phases such as 1.1 and 1.2.
 
 For execution/audit selection without a plan selector, the skill uses the highest
-numbered real plan unless multiple active plans make the target ambiguous. The reserved `000_adhoc`
-folder is never an execute/verify target. Audit corrections use the selected or
+numbered real plan unless multiple active plans make the target ambiguous. The
+reserved `000_adhoc` folder is never chosen by default and is never an Execute
+or Execute verify target (its audit corrections run as Task/Bug); Verify and
+Resume accept it only when named. Audit corrections use the selected or
 unambiguous active plan and the newest report unless a report ID is provided.
 To disambiguate, use `execute verify 003 V002` or replace `003` with a plan path.
 
@@ -271,10 +291,11 @@ prefix, reuse the saved roster; a new plan defaults to Opus/Sonnet/Haiku for
 compatibility. Use an explicit roster on other hosts.
 A single numbered entry (`agent-1:<name>`) is equivalent to `agent:<name>`.
 
-Opening the plan in another model does not silently change its assignments.
-In Plan, Execute, and Execute verify an explicit prefix overrides the roster and
-updates remaining assignments. In Task, Bug, and Verify it applies to that run
-only; in Onboard it applies to the inspection and never changes assignments.
+Opening the plan in another model does not silently change its assignments. In
+Plan, Execute, and Execute verify an explicit prefix overrides the roster and
+updates remaining assignments. In Task, Bug, Verify, and Resume it applies to
+that run only; in Onboard it applies to the inspection and never changes
+assignments.
 
 If the assigned agent cannot run a unit, only an agent with an equal or lower
 position number may substitute (agent-1 for agent-2, not the reverse), and the
@@ -284,8 +305,49 @@ can coordinate but not implement. A review by the unit's own implementer is
 labelled self-review.
 
 The weakest worker may implement complex logic, but the strong planner must
-already specify the algorithm, interfaces, synchronization, boundary cases,
-tests, and acceptance criteria. Missing design returns to the strong supervisor.
+already specify the algorithm (unless executors are `high`, below), interfaces,
+synchronization, boundary cases, tests, and acceptance criteria. Missing design
+returns to the strong supervisor.
+
+### Tell the planner how capable the executors are
+
+`executor-power:low|medium|high` is a Plan-only option that describes the least
+capable implementer that will receive the plan's units: agent-2 and later
+positions, or the single agent of `agent:<name>`. It sets how many sub-phases
+the supervisor writes, how much detail they carry, and what the executor may
+decide on its own.
+
+```text
+/plan-execute-verify executor-power:high agent-1:opus,agent-2:opus <feature>
+/plan-execute-verify executor-power:medium agent-1:opus,agent-2:sonnet <feature>
+```
+
+| Level | Typical executors (examples only) | Resulting plan |
+|-------|-----------------------------------|----------------|
+| `low` (default) | Haiku, Luna | Usually 3–6 elementary, individually testable sub-phases per phase; mechanical steps with exact locations; every architectural choice, pattern, and best practice explicit; supervisor-verified code snippets for complex parts. The executor decides only how to locate code and details the plan expressly leaves open |
+| `medium` | Sonnet, Terra, DeepSeek | Usually 2–4 detailed, testable sub-phases per phase; snippets only where prose cannot state a contract precisely. The executor also fills routine detail that changes no decision |
+| `high` | Fable, Opus, Astra, Sol, Kimi K3 | Usually 1–3 larger outcome sub-phases per phase. The executor plans its own steps and decides the internal implementation |
+
+The default is `low`, so a plan created without the option gets the finest
+decomposition, which costs the most planning effort; a legacy plan that predates
+the option counts as `low`. The skill never infers the level from model names:
+choose it for the weakest implementer you will assign.
+
+At every level agent-1 fixes requirements, public interfaces, invariants,
+acceptance tests, and gates; a lower level adds detail, never weaker acceptance.
+At `high`, in successive sessions the executor records its expanded steps in
+STATE.md before editing; with a coordinator, the worker returns them with its
+result and the coordinator records them. Internal decisions are recorded the
+same way for agent-1's review at phase closure, and any contract change still
+goes to agent-1.
+
+The level is stored with the plan. Execute cannot change it, and every mode
+other than Plan rejects the option. Task and Bug follow the attached plan's
+level (`low` in `000_adhoc`), and audit corrections are written for it. If you
+later assign an implementer weaker than the recorded level, the supervisor
+recalibrates its units before dispatch. Known limitation: no command changes
+the level of an existing plan, since that requires a supervisor plan revision
+of the remaining units; choose the level when planning.
 
 ## Continue in another session or model
 
@@ -340,13 +402,60 @@ If the host cannot invoke that supervisor, the executor saves a precise handoff
 for a strong-model session; it cannot manufacture that capability. Full autonomy
 does not automatically launch a new host session after the current one ends.
 
+## Stop gracefully: handoff
+
+Send `handoff` to a running session when you need to stop, or give it a
+deadline:
+
+```text
+/plan-execute-verify handoff
+/plan-execute-verify handoff --deadline=31-10-2026_17_30
+/plan-execute-verify --deadline=31-10-2026_17_30 execute 003
+```
+
+The deadline uses `dd-mm-yyyy_hh_mm`, 24-hour time, in the local time of the
+machine running the agent; a past deadline means "now". As a leading option it
+works with every mode and applies to that run only. A stop request is never
+rejected: `handoff` ignores any other option, agent prefix, or selector and says
+so, and an invalid deadline there means "now". This mode is unrelated to the
+successive-sessions execution style, which is also called handoff internally.
+
+The agent then:
+
+1. Starts nothing new. It finishes the open unit only if that takes about 10
+   minutes, including its checks and review; otherwise it stops at the next
+   step boundary and records commands it did not run.
+2. Saves a checkpoint with the exact next action, marks the run `HANDOFF`, and
+   releases ownership, so the next session continues without a takeover.
+3. For code work (Execute, Execute verify, Task, Bug, and Resume of them) it
+   always makes one local commit, even when commits are disabled:
+   `handoff(request-by-user): <unit> <stop point>`. It contains the open unit
+   and any finished units still uncommitted, so STATE.md never claims work the
+   commit lacks. Each unit's changes are staged separately, so edits you made
+   between units stay out of the commit. Later commits append after it; hooks
+   still run. Plan and Verify only save their checkpoint and warn that their
+   files are uncommitted; Onboard is simply rerun.
+4. Reports the command that continues exactly where it stopped, such as
+   `/plan-execute-verify resume 003` or
+   `/plan-execute-verify resume 003 T-A004`, and stops, even with
+   `full-autonomous:true`.
+
+With a deadline, the agent checks the clock before each unit, step, and long
+command, avoids starting work that would end after it, and bounds long commands
+with `timeout`. This is best effort: the agent sees a message only between tool
+calls, cannot interrupt its own running call, and an idle session does not wake
+up at a deadline. Set the deadline before the moment you really need the
+machine, for example 17:30 when you switch it off at 18:00.
+
 ## What makes a plan ready?
 
 Every sub-phase contains exact prerequisites, files/symbols, local design
-contracts, numbered steps and expected results, named focused tests with
-assertions, required reviews, and a completion condition. A typical phase groups
-2–4 coherent sub-phases around one integration result. Shared design appears once
-per phase, and documentation may be part of an implementation unit.
+contracts, numbered steps and expected results (outcome-level at executor power
+`high`), named focused tests with assertions, required reviews, and a completion
+condition. A phase groups coherent sub-phases around one integration result;
+their number follows `executor-power` (more and smaller at `low`, fewer and
+larger at `high`). Shared design appears once per phase, and documentation may
+be part of an implementation unit.
 
 The strong planner checks the critical source contracts and performs a cold-read
 validation before marking the plan READY. Unresolved design, contradictory
@@ -472,8 +581,13 @@ availability and the mechanism for starting subagents come from the host.
 The checks below predate later protocol revisions: recovery-boundary checkpoints,
 gate staging and phase sizing, working-tree snapshot unit bases, stale-ownership
 takeover, the saved execution scope, phase-closure failure handling, agent
-substitution, and audit severity definitions. Those revisions have been checked
-statically only; they have not been re-exercised end to end.
+substitution, audit severity definitions, the resume mode, scoped verify,
+rolling WIP commits, executor power, and the handoff mode with `--deadline`.
+Those revisions have been checked statically only; they have not been
+re-exercised end to end. The Git commands for owned-hunk staging, including the
+`--3way` fallback and a multi-unit handoff commit staged one patch per unit
+that keeps user edits made between units out, and the deadline parsing were
+exercised in scratch repositories only.
 
 Skill structure validation, static local-link checks, and `git diff --check` pass.
 These checks include onboarding and the research protocol/templates; the research

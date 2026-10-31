@@ -37,11 +37,19 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Phases have observable integration outcomes; adjacent work sharing a
       contract/checks is grouped. Each split has a dependency, review, or
       recovery reason; the weakest worker can still resume each unit.
+- [ ] Decomposition and detail match the recorded executor-power (mode-plan D):
+      low has elementary units, explicit patterns, and verified snippets for
+      complex parts; medium detailed contracts and steps; high outcome units
+      with the executor's latitude stated. Contracts, invariants, acceptance
+      tests, and gates are supervisor-fixed at every level.
 - [ ] Each sub-phase has all seven fields with complete structured contents:
       contracts, numbered steps/postconditions, checkpoint, scope, failure
       handling. Agents and reviewers are roster positions, not model names.
-- [ ] Complex units specify algorithm, representation, synchronization/lifecycle,
-      boundary cases, interfaces, and errors; the worker need not invent design.
+- [ ] Complex units specify algorithm, representation,
+      synchronization/lifecycle, boundary cases, interfaces, and errors; the
+      worker need not invent design. At executor power high, the internal
+      algorithm/representation may be left to the executor; contracts, boundary
+      cases, interfaces, and errors may not.
 - [ ] Files distinguish existing symbols from NEW paths and explain registration,
       imports/exports/callers, and existing directory conventions.
 - [ ] Local decision/invariant meanings are present; the phase works without
@@ -102,6 +110,8 @@ An unresolved required item prevents READY or implementation DONE.
       lower-numbered roster agent; supervisor reviews only by agent-1. Execution
       style chosen by the fixed rule in agent-roster.md and recorded with the
       invocation.
+- [ ] Executor latitude respected: at high, expanded steps were recorded in §6
+      and internal decisions in §8; no contract changed without the supervisor.
 - [ ] OPEN/close writes and recovery-boundary checkpoints reflect actual work,
       including pending edits and next action; no per-step state churn.
 - [ ] Specified behavior, wiring, tests, and documentation implemented.
@@ -141,6 +151,14 @@ An unresolved required item prevents READY or implementation DONE.
       With false, the only additional stop is after each phase closure.
 - [ ] In 000_adhoc, the ledger itself holds the durable mini-plan/checkpoint and
       settings; no fake STATE.md/phases created.
+- [ ] Handoff request or deadline (mode-handoff.md): nothing new started; the
+      OPEN unit closed only if it fit about 10 minutes; §6 checkpoint, HANDOFF
+      result, and released ownership recorded. Code work sits in one handoff
+      commit, never amended, holding the OPEN unit and every unit recorded
+      uncommitted, staged one patch per unit without changes made between
+      units; those units now reference handoff:<id>:<attempt>. Plan and Verify
+      stayed uncommitted with a warning. The deadline was not persisted, and the
+      exact resume command was reported.
 - [ ] Final report distinguishes completed, skipped, blocked, and unverified
       work, and warns when changes or plan records remain uncommitted, with a
       suggested commit command.

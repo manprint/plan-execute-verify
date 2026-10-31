@@ -177,7 +177,9 @@ Before finishing, run the Onboard checklist and check the actual resulting diff:
 only the permitted context artifact may have changed because of this invocation.
 Leave pre-existing dirty changes untouched; never stage/commit the map, even under
 full-autonomous:true or --wip-commit. Do not change runtime settings or rewrite
-STATE.md merely to record that onboarding ran.
+STATE.md merely to record that onboarding ran. A `handoff` request or
+`--deadline` stops the inspection without further writes; onboarding is then
+simply rerun (mode-handoff.md).
 
 Return a short recap: project/focus, recorded progress and evidence limits, open
 unit/blocker, next action with the exact supported command or handoff, and saved
