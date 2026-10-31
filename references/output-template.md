@@ -159,7 +159,8 @@ oracles below; do not leave "read these links and decide" to the implementer.>
   Failure handling: <known cases and action; unknown design → named supervisor>.
   <For migrations/external effects, also specify idempotency and resume checks.>
 - **Unit tests:** <test ID/name + path, fixture/inputs, exact assertions,
-  relevant negative/boundary cases, targeted gate ID and discovery evidence>.
+  relevant negative/boundary cases, targeted gate ID and discovery evidence>;
+  or N/A — <why no unit test applies, such as a documentation-only unit>.
 - **e2e tests:** <focused test ID/path, inputs, expected observations, targeted gate ID>;
   or N/A — <why this unit changes no observable behavior>.
 - **Done:** <artifact/behavior postconditions>; targeted checks <IDs> pass with intended
@@ -266,16 +267,24 @@ Last takeover: <previous writer → new writer, time, reason; or none>.
 6. Finish docs and plan/audit reconciliation, append the ledger row, update
    progress, and point to the next eligible unit. If commit is required, store
    unit:<id>:<attempt> as the reference in this snapshot, stage only owned
-   changes without interactive Git (`git add -A -- <paths>`; for a path with
-   other hunks, `git diff --binary <base-tree> <closure-tree> -- <path>` applied
-   with `git apply --cached`, falling back to `--3way`, else a blocker, never a
-   mixed commit), and commit on the current branch with PEV-Plan, PEV-Unit,
+   changes without interactive Git. Staged changes this unit does
+   not own are a blocker; never unstage them. Being inside the plan folder
+   alone does not establish ownership. Stage paths only this unit changed with
+   `git add -A -- <paths>`. For a path with other hunks, save
+   `git diff --binary <base-tree> <closure-tree> -- <path>` as a patch, run
+   `git reset -q <unit-base-HEAD> -- <path>` (not on an unborn branch), then
+   `git apply --cached` after `--check`, falling back to `--3way`; if it still
+   fails, restore with `git reset -q HEAD -- <path>` and report a blocker,
+   never a mixed commit (execution-contract §6 step 2). Inspect
+   `git diff --cached`, then commit on the current branch with PEV-Plan, PEV-Unit,
    PEV-Attempt, and PEV-Result: complete trailers in the final trailer block,
    beside any Co-Authored-By or Signed-off-by lines. Hooks always run; never use
-   --no-verify; a failing hook is a failed gate. Resolve the unique reachable
-   commit whose four trailer values
-   (`git log --format=%(trailers:key=PEV-Unit,valueonly)` and likewise) equal
-   the identity as exact strings before advancing. Do not store that commit's
+   --no-verify; a failing hook is a failed gate. Before advancing, resolve the
+   unique reachable commit whose four trailer values equal the identity as
+   exact whole strings, from
+   `git log --format='%H%x09%(trailers:key=PEV-Unit,valueonly,separator=%x2C)' HEAD`
+   and likewise for PEV-Plan, PEV-Attempt, and PEV-Result (execution-contract
+   §6 step 4). Do not store that commit's
    own SHA inside itself. If commits are disabled, record uncommitted with the
    unit base tree and closure snapshot tree (base..closure), and do not
    stage/commit. A failed P<N> attempt records commit none and is never
@@ -291,9 +300,9 @@ Last takeover: <previous writer → new writer, time, reason; or none>.
    With WIP enabled, each recovery-boundary checkpoint of an OPEN code unit also
    creates or amends one rolling wip(<id>) commit with PEV-Result: wip and OPEN
    state; amend only the unit's single owned, local-only WIP at HEAD on the unit
-   base HEAD; otherwise append, staging from the last WIP snapshot against HEAD.
-   On recovery, a HEAD that is this unit's own wip commit (exact trailers) is
-   expected, not foreign.
+   base HEAD, never a handoff commit; otherwise append, staging from the last
+   WIP snapshot against HEAD. On recovery, this unit's own wip commits (exact
+   trailers; several are normal after a handoff) are expected, not foreign.
 8. After sub-phases, open P<N> for full phase gates and strong review (phase
    IN_REVIEW). Record phase DONE and commit its closure when full autonomy or
    WIP is enabled. A sub-phase scope never includes P<N>. P<N> never repairs
@@ -313,8 +322,9 @@ Last takeover: <previous writer → new writer, time, reason; or none>.
    roster agent with an equal or lower position number may substitute, recorded
    as assigned → actual. Supervisor reviews and revisions are agent-1's only; a
    model outside the roster coordinates and dispatches but implements nothing.
-10. On handoff save exact next action, pending changes/resources, evidence, and
-    ownership release. Do not assume the host can automatically start a session.
+10. At every run end (completion, a phase-closure or approval stop, a blocker,
+    or a handoff) save the exact next action, pending changes/resources, and
+    evidence, and release ownership. Do not assume the host can automatically start a session.
     With full autonomy false, stop after each phase closure P<N>, never at a
     sub-phase boundary; the saved execution scope stays RUNNING while scope work
     remains.
@@ -324,18 +334,20 @@ Last takeover: <previous writer → new writer, time, reason; or none>.
     boundary; save §6 with commands not run; set the invocation result HANDOFF
     with trigger user|deadline and time; release ownership. For code work make
     one local handoff commit even when commits are disabled: owned changes of
-    the OPEN unit and of every unit recorded uncommitted, plus this file, staged
-    as one patch per unit (each recorded base..closure, then the OPEN unit to a
-    fresh snapshot) so changes made between units stay out; subject
-    `handoff(request-by-user): <unit> <stop point>`, trailers PEV-Plan, PEV-Unit,
-    PEV-Attempt, PEV-Result: wip, PEV-Handoff: user|deadline, and PEV-Includes
-    listing the closed units, whose references become handoff:<id>:<attempt>;
-    hooks run, and it is never amended later. Plan and Verify only checkpoint.
-    Report the exact resume command, then stop.
+    the OPEN or pending-closure unit and of every unit recorded uncommitted,
+    plus this file, staged as one patch per unit (each recorded base..closure,
+    then the OPEN unit to a fresh snapshot) so changes made between units stay
+    out; subject `handoff(request-by-user): <unit> <stop point>`, trailers
+    PEV-Plan, PEV-Unit, PEV-Attempt, PEV-Result: wip, PEV-Handoff:
+    user|deadline, and PEV-Includes listing the other units, whose references
+    become handoff:<id>:<attempt> with their trees, restored if the commit
+    fails; hooks run, and it is never amended later. Plan and Verify only
+    checkpoint. Report the exact resume command, then stop.
 12. Task/Bug mini-plan: agent-1 writes or validates it (a Bug's with its root
     cause) before any code edit; agent-1 unavailable means a BLOCKED handoff.
     With full-autonomous:false then stop once for user approval, warning the
-    entry is uncommitted: ledger entry PROPOSED with the mini-plan and a
+    entry is uncommitted: entry T-A<NNN> or B-A<NNN> in the plan's or
+    000_adhoc's tasks.md or bugs.md, PROPOSED with the mini-plan and a
     proposal snapshot tree, no edits besides the ledger entry (ignored
     build/test byproducts allowed), no unit opened, no ownership. Approval is a
     user reply to that proposal or a resume naming the entry ID, never a bare
@@ -345,14 +357,17 @@ Last takeover: <previous writer → new writer, time, reason; or none>.
     entry awaiting validation is not PROPOSED; once validated it still needs
     approval.
 13. End every report, however the run ends, with "Next" (labels in the user's
-    language). Continue: one exact /plan-execute-verify command with real IDs
-    and no options; first any conflict or missing decision or evidence (ask it,
-    then the command); then the corrected command after a rejection; the resume
-    command after a handoff; the approval resume for a PROPOSED entry; resume
-    <plan> <unit-id> for blocked or interrupted work; execute verify <plan>
-    V<NNN> only for ready, authorized corrections, never bypassing blocking
-    findings; resume <plan> for the saved scope; execute <plan> as a new scope;
-    verify <plan> for a finished plan; otherwise nothing, with the reason. Stop:
+    language; next-step.md). Continue: one exact /plan-execute-verify command
+    with real IDs and no options, from the first case that applies: the
+    corrected command after a rejection, keeping the user's valid options; the
+    resume command after a handoff; the approval resume for a PROPOSED entry;
+    the question for a choice, conflict, or missing source; the needed
+    decision, then resume <plan> <unit-id>, for blocked or interrupted work;
+    the supervisor decision for a DRAFT plan; the missing evidence for an
+    INCOMPLETE audit; execute verify <plan> V<NNN> for READY corrections, never
+    bypassing blocking findings; resume <plan> for the saved scope; execute
+    <plan> as a new scope with its effective settings; verify <plan> for a
+    finished plan; otherwise nothing, with the reason. Stop:
     handoff when OPEN changes, a pending closure, uncommitted units, or
     ownership this session holds remain, else nothing to save; list files a
     handoff never commits (PROPOSED entry, plan draft, audit, onboarding map)
@@ -372,7 +387,7 @@ checkpoint. Capture/open and restore/close are each one STATE.md update.
 - Saved execution scope: <plan|phase|sub-phase|report selector set by Execute or
   Execute verify, or none>; result: <NOT_STARTED|RUNNING|BLOCKED|COMPLETE>;
   overrides: <full-autonomous/WIP given with that selector, or none>
-- - Invocation: <mode and exact unit/scope of the current or last run>; result:
+- Invocation: <mode and exact unit/scope of the current or last run>; result:
   <RUNNING|BLOCKED|COMPLETE|HANDOFF|PROPOSED>; style: <handoff|delegated>;
   effective settings: <full-autonomous/WIP, each with source: explicit|scope
   override|plan default>; deadline: <dd-mm-yyyy_hh_mm local, this run only, or
@@ -435,16 +450,21 @@ Required supervisor reviews cannot be silently replaced by weaker self-review.
 | G-P0 | phase 0 closure | <command> | <integration assertion> | <setup> |
 | G-FINAL | final phase | <command> | <reference scenario> | <setup> |
 
+Gate IDs: G-BASE; G-U<NN> numbered in unit order across the plan (G-U01 for the
+first unit, never reused); G-P<N> for each phase closure; G-FINAL.
+
 ## 4. Work ledger
 
 | Type | ID / attempt | Plan revision | Agent | Result | Changes | Evidence/review | Commit |
 |------|--------------|---------------|-------|--------|---------|-----------------|--------|
-| <unit type> | <ID/n> | <revision> | <assigned → actual> | <complete or failed> | <paths/summary> | <refs> | <uncommitted base..closure tree, unit:ID:attempt, or handoff:ID:attempt; none for failed> |
+| <unit type> | <ID/n> | <revision> | <assigned → actual> | <complete or failed> | <paths/summary> | <refs> | <uncommitted base..closure tree, unit:ID:attempt, or handoff:ID:attempt base..closure tree; none for failed> |
 
 Commit references match trailers PEV-Plan, PEV-Unit, PEV-Attempt, PEV-Result;
-a handoff:ID:attempt reference matches PEV-Plan and an exact PEV-Includes entry.
-Compare exact trailer values in current HEAD's ancestry, not subject/substrings.
-No match is pending closure; multiple matches are a conflict requiring reconciliation.
+a handoff:ID:attempt reference matches PEV-Plan and an exact PEV-Includes entry,
+split on commas and trimmed. Compare exact trailer values in current HEAD's
+ancestry, not subject/substrings (execution-contract §6 step 4). No unit match
+is pending closure, and no handoff match means still uncommitted with the
+recorded trees; multiple matches are a conflict requiring reconciliation.
 An unresolved required reference prevents advancing, except when explicitly
 suspended for Verify; do not assume it was committed. A failed P<N> attempt has
 commit none and no reference to resolve.
@@ -481,11 +501,14 @@ required active gate. Keep relevant failing output/evidence references.
 
 ## 8. Technical revisions and deviations
 
-<At executor power high, also list each internal decision: unit, decision,
-reason, and why no contract changes; agent-1 reviews them at P<N>.>
-
 | Revision | Previous decision/step | Approved replacement and reason | Supervisor | Dependents/revalidation |
 |----------|------------------------|---------------------------------|------------|------------------------|
+
+<At executor power high, also list each internal decision; agent-1 reviews them
+at P<N>.>
+
+| Unit | Internal decision | Reason | Why no contract changes |
+|------|-------------------|--------|-------------------------|
 
 ## 9. Blockers
 <ID, affected units, evidence, resolution owner, exact next action; or none.>
@@ -509,8 +532,8 @@ at closure>. A separate documentation sub-phase is optional.
 |----|------|--------------|--------|---------|---------------------------|
 | 0 | phase_01.md | P0 | TODO | 1 | — |
 
-Statuses: TODO, IN_PROGRESS, IN_REVIEW (checks passed, required review pending),
-DONE, SKIPPED, BLOCKED. A phase is IN_REVIEW while its P<N> is OPEN, and BLOCKED
+Statuses: TODO, IN_PROGRESS, IN_REVIEW (a unit's checks passed and its required
+review is pending), DONE, SKIPPED, BLOCKED. A phase is IN_REVIEW while its P<N> is OPEN, and BLOCKED
 while that P<N> is blocked.
 SKIPPED retains a reason and does not automatically satisfy dependent units.
 
@@ -526,8 +549,8 @@ SKIPPED retains a reason and does not automatically satisfy dependent units.
 | ID | Report | Closes findings | Belongs to / reopens | Depends on | Status | Attempt | Evidence |
 |----|--------|-----------------|----------------------|------------|--------|---------|----------|
 
-Verify adds one row per correction (TODO, or BLOCKED with its question);
-Execute verify updates it. Finding statuses stay in verify/index.md.
+Verify adds one row per correction, ID `V<NNN>-C<n>` (TODO, or BLOCKED with
+its question); Execute verify updates it. Finding statuses stay in verify/index.md.
 
 ### Audits
 | Report | Verdict | Current unresolved findings | Evidence |

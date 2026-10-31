@@ -136,10 +136,10 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Version/environment changes or contradicted external assumptions triggered
       targeted research where needed; evidence, contracts and affected tests were
       updated under supervisor authority before dependent work continued.
-- [ ] README covers affected behavior or a named remaining unit owns the
-      obligation. Phase closure never
-      defers it; tasks/bugs/corrections finish their own affected docs. Language
-      and structure are preserved.
+- [ ] README covers affected behavior, or a named later unit or P<N> owns the
+      obligation; no phase or feature closes while an obligation it owns is
+      open. Tasks/bugs/corrections finish their own affected docs. Language and
+      structure are preserved.
 - [ ] Coherence contract (execution-contract §7) applied: state/ledgers/findings/
       reviews and sub-phase/phase/correction progress match reality.
 - [ ] Phase DONE requires its closure review, integration gates, and all sub-phases.
@@ -166,11 +166,14 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Handoff request or deadline (mode-handoff.md): nothing new started; the
       OPEN unit closed only if it fit about 10 minutes; §6 checkpoint, HANDOFF
       result, and released ownership recorded. Code work sits in one handoff
-      commit, never amended, holding the OPEN unit and every unit recorded
-      uncommitted, staged one patch per unit without changes made between
-      units; those units now reference handoff:<id>:<attempt>. Plan and Verify
-      stayed uncommitted with a warning. The deadline was not persisted, and the
-      exact resume command was reported.
+      commit, never amended, holding the OPEN or pending-closure unit and every
+      unit recorded uncommitted, staged one patch per unit without changes made
+      between units; those units now reference handoff:<id>:<attempt> with their
+      trees, restored on a failed commit. Plan and Verify
+      stayed uncommitted with a warning. The deadline was recorded for this run
+      only, not carried into the exact resume command that was reported.
+- [ ] The run released the ownership it claimed, with time and reason
+      (execution-contract §2).
 - [ ] Final report distinguishes completed, skipped, blocked, and unverified
       work, and warns when changes or plan records remain uncommitted, with a
       suggested commit command.

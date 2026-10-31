@@ -1,5 +1,7 @@
 # plan-execute-verify
 
+[Italiano](README_IT.md) · [Usage examples](USAGE_EXAMPLE.md)
+
 A skill for onboarding repositories, planning, implementing, and checking work across phases
 and sub-phases. A strong agent specifies the design and reviews the result;
 less capable agents can implement even complex changes from explicit contracts,
@@ -73,14 +75,21 @@ different interface, select this skill and pass the same options and arguments.
 | `resume [plan] [unit ID]` | Continue interrupted or saved work exactly where it stopped | Whatever the resumed unit/scope changes; never its scope or settings |
 | `handoff [--deadline=dd-mm-yyyy_hh_mm]` | Stop the running work gracefully, now or by a deadline | State checkpoint, one handoff commit for code work, and the resume command |
 
-[USAGE_EXAMPLE.md](USAGE_EXAMPLE.md) (in Italian) expands every mode × option
-combination with its effect, implications, and invocation command.
+[USAGE_EXAMPLE.md](USAGE_EXAMPLE.md) shows every mode with no option, each
+option alone, the four autonomy/WIP pairs, both agent-list forms, and a
+deadline: the command, what it does, and the complete settings that run uses.
+It is also available in Italian: [USAGE_EXAMPLE_IT.md](USAGE_EXAMPLE_IT.md).
 
 The first word after options selects the mode when it is `onboard`, `plan`,
 `execute`, `task`, `bug`, `verify`, `resume`, or `handoff`. Otherwise it starts
 a planning description. For a feature whose name begins with a mode word, use
 the explicit Plan form: `/plan-execute-verify plan task queue for background
 jobs`. Missing arguments or invalid selectors never silently switch modes.
+A request whose first word asks to continue recorded work, such as
+`/plan-execute-verify continue 003`, is never a new plan: it runs as
+`resume 003`, or the agent asks what you meant. Options go before the mode; if a
+description contains an option, such as a trailing `--deadline=…`, the agent
+asks before starting. Only `handoff` also accepts the deadline after it.
 
 Task and bug take no selector. They attach to a plan only when the request names
 it (number, feature name, or path) or clearly changes an active plan's scope,
@@ -113,9 +122,10 @@ Run from the target repository:
 ```
 
 The optional selector focuses an existing plan by number, unique name or path;
-it does not accept phase/report selectors. Without it, Onboard inventories the
-repository and discovered plans/ledgers. Multiple plausible work streams require
-a choice; the highest plan number is not automatically the work to resume.
+it does not accept phase/report selectors or `000_adhoc`. Without it, Onboard
+inventories the repository and discovered plans/ledgers. Multiple plausible work
+streams require a choice; the highest plan number is not automatically the work
+to resume.
 
 **First visit, no skill history:** the agent maps the project's purpose,
 components, entrypoints, stack/resolved versions, conventions, principal flows,
@@ -233,8 +243,10 @@ verify(V001): complete audit; FAIL, 1 blocker
 handoff(request-by-user): 1.2 stopped before S3
 ```
 
-A handoff always creates one handoff commit for code work, whatever the
-settings in the table above ([Stop gracefully](#stop-gracefully-handoff)).
+A handoff makes one handoff commit for code work, whatever the settings in the
+table above, whenever there is code work to commit; if a hook rejects it, the
+work stays uncommitted and the report shows the commit command
+([Stop gracefully](#stop-gracefully-handoff)).
 
 The repository's commit-message convention is respected. All commits are local
 and use the current branch, including `main` if that is your current branch.
@@ -276,13 +288,14 @@ running or blocked saved scope with a different one asks you first.
 Phase files are numbered from 01; logical phases start at 0. Thus
 `phase_02.md` contains logical phase 1 and sub-phases such as 1.1 and 1.2.
 
-For execution/audit selection without a plan selector, the skill uses the highest
-numbered real plan unless multiple active plans make the target ambiguous. The
-reserved `000_adhoc` folder is never chosen by default and is never an Execute
-or Execute verify target (its audit corrections run as Task/Bug); Verify and
-Resume accept it only when named. Audit corrections use the selected or
-unambiguous active plan and the newest report unless a report ID is provided.
-To disambiguate, use `execute verify 003 V002` or replace `003` with a plan path.
+Without a plan selector, Execute, Execute verify, and Verify use the only active
+real plan, or the highest numbered one when none is active; with several active
+plans, the agent asks. The reserved `000_adhoc` folder is never chosen by
+default and is never an Execute or Execute verify target (its audit corrections
+run as Task/Bug); Verify and Resume accept it only when named. Audit corrections
+use the selected or unambiguous active plan and the newest report unless a
+report ID is provided. To disambiguate, use `execute verify 003 V002` or replace
+`003` with a plan path.
 
 ## Configure the agents
 
@@ -371,8 +384,8 @@ the roster's models, and successive sessions otherwise, and records which.
 
 | Style | How it works |
 |-------|--------------|
-| Successive sessions/models | Each session resumes from STATE.md and the named step; ownership transfers after the previous session stops |
-| Coordinator with subagents | The coordinator owns state, plan edits, reviews, and commits; workers receive bounded implementation assignments |
+| Successive sessions/models (recorded as `handoff`) | Each session resumes from STATE.md and the named step; ownership transfers after the previous session stops |
+| Coordinator with subagents (recorded as `delegated`) | The coordinator owns state, plan edits, reviews, and commits; workers receive bounded implementation assignments |
 
 For orientation in a fresh session without starting work:
 
@@ -433,7 +446,13 @@ machine running the agent; a past deadline means "now". As a leading option it
 works with every mode and applies to that run only. A stop request is never
 rejected: `handoff` ignores any other option, agent prefix, or selector and says
 so, and an invalid deadline there means "now". This mode is unrelated to the
-successive-sessions execution style, which is also called handoff internally.
+successive-sessions execution style, which is also recorded as `handoff`.
+
+Sent during a run, `handoff` stops it now and cancels an earlier deadline, while
+`handoff --deadline=…` lets the run continue and replaces the earlier deadline.
+Sent to an idle session, it targets the plan or ledger that session last
+changed, or else the only one with unfinished or uncommitted work that no other
+live session owns; with several candidates it asks you to choose.
 
 The agent then:
 
@@ -441,15 +460,18 @@ The agent then:
    minutes, including its checks and review; otherwise it stops at the next
    step boundary and records commands it did not run.
 2. Saves a checkpoint with the exact next action, marks the run `HANDOFF`, and
-   releases ownership, so the next session continues without a takeover.
+   releases the ownership it holds, so the next session continues without a
+   takeover.
 3. For code work (Execute, Execute verify, Task, Bug, and Resume of them) it
-   always makes one local commit, even when commits are disabled:
+   makes one local commit, even when commits are disabled:
    `handoff(request-by-user): <unit> <stop point>`. It contains the open unit
    and any finished units still uncommitted, so STATE.md never claims work the
    commit lacks. Each unit's changes are staged separately, so edits you made
-   between units stay out of the commit. Later commits append after it; hooks
-   still run. Plan and Verify only save their checkpoint and warn that their
-   files are uncommitted; Onboard is simply rerun.
+   between units stay out of the commit. Later commits append after it. Hooks
+   still run: if one fails, the work stays uncommitted and the report shows the
+   commit command. With nothing to commit, no commit is made. Plan and Verify
+   only save their checkpoint and warn that their files are uncommitted; Onboard
+   is simply rerun.
 4. Reports the command that continues exactly where it stopped, such as
    `/plan-execute-verify resume 003` or
    `/plan-execute-verify resume 003 T-A004`, and stops, even with
@@ -475,9 +497,12 @@ Next
 
 Continue is one exact command with real IDs and no options: recorded settings
 travel with `resume`, while a new `execute` scope starts from the plan defaults
-and is labelled as new. When a decision is missing it reads "answer …, then …";
-when nothing follows it says why. Stop suggests `handoff` only when uncommitted
-code work or ownership remains; otherwise it says there is nothing to save.
+and is labelled as new, with the settings it will use. After a rejected command,
+the corrected command keeps your valid options. When a decision is missing it
+reads "answer …, then …"; when nothing follows it says why. Stop suggests
+`handoff` only when open or uncommitted code work, a pending closure, or
+ownership held by this session remains; otherwise it says there is nothing to
+save.
 Files a handoff never commits, such as a plan draft, an audit report, a proposed
 task, or docs/onboarding.md, are listed with a suggested commit command. Both
 lines are suggestions: the agent never runs them, even with
@@ -486,7 +511,8 @@ applies in each situation.
 
 ## What makes a plan ready?
 
-Every sub-phase contains exact prerequisites, files/symbols, local design
+Every sub-phase has seven fields (Agent, Assignment, Files, Change, Unit tests,
+e2e tests, Done) holding exact prerequisites, files/symbols, local design
 contracts, numbered steps and expected results (outcome-level at executor power
 `high`), named focused tests with assertions, required reviews, and a completion
 condition. A phase groups coherent sub-phases around one integration result;
@@ -570,7 +596,9 @@ docs/plans/003_plan-RateLimit/
 With no plan, task/bug work uses `docs/plans/000_adhoc/` and keeps its recovery
 information in the ledger entry itself. There are no fake phase or STATE files.
 
-Audit verdicts are PASS, PASS WITH FINDINGS, FAIL, or INCOMPLETE. Missing required
+Audit verdicts are PASS, PASS WITH FINDINGS, FAIL, or INCOMPLETE. A scoped
+audit's verdict covers only its phase, sub-phase, or entry, never the whole
+plan. Missing required
 evidence produces INCOMPLETE unless confirmed major/blocker findings already
 justify FAIL. Severity levels BLOCKER, MAJOR, and MINOR are defined in
 [mode-verify](references/mode-verify.md). Reports retain their historical
@@ -613,18 +641,17 @@ availability and the mechanism for starting subagents come from the host.
 [Worked example](references/worked-example.md) ·
 [Quality checklist](references/quality-checklist.md)
 
-### Validation scope (2026-09-22; protocol revised afterwards)
+### Validation scope
 
-The checks below predate later protocol revisions: recovery-boundary checkpoints,
-gate staging and phase sizing, working-tree snapshot unit bases, stale-ownership
-takeover, the saved execution scope, phase-closure failure handling, agent
-substitution, audit severity definitions, the resume mode, scoped verify,
-rolling WIP commits, executor power, the handoff mode with `--deadline`, and the
-task/bug approval gate,
-and the Next block.
-Those revisions have been checked statically only; they have not been
-re-exercised end to end. The Git commands for owned-hunk staging, including the
-`--3way` fallback and a multi-unit handoff commit staged one patch per unit
+The end-to-end checks below date from 2026-09-22 and predate later protocol
+revisions: recovery-boundary checkpoints, gate staging and phase sizing,
+working-tree snapshot unit bases, stale-ownership takeover, the saved execution
+scope, phase-closure failure handling, agent substitution, audit severity
+definitions, the resume mode, scoped verify, rolling WIP commits, executor
+power, the handoff mode with `--deadline`, the task/bug approval gate, and the
+Next block. Those revisions have been checked statically only; they have not
+been re-exercised end to end. The Git commands for owned-hunk staging, including
+the `--3way` fallback and a multi-unit handoff commit staged one patch per unit
 that keeps user edits made between units out, and the deadline parsing were
 exercised in scratch repositories only.
 

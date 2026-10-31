@@ -95,8 +95,9 @@ that could not run belong under Not verifiable, not invented findings.
 ## V4 — Save the report and executable corrections
 
 Use the next unused report number (highest existing plus one), filename
-verify_<NNN>_<YYYY-MM-DD>.md, report ID V<NNN>. Findings have stable global IDs
-V<NNN>-F<n>, never reused. Do not overwrite old reports.
+verify_<NNN>_<YYYY-MM-DD>.md, report ID V<NNN>. Findings have stable IDs
+V<NNN>-F<n>, unique within their plan or ledger and never reused. Do not
+overwrite old reports.
 
 Severity:
 - BLOCKER: the audited scope cannot be accepted or dependent work cannot proceed
@@ -123,10 +124,11 @@ Verdict rules:
 If a FAIL audit also has missing evidence, list that limitation explicitly.
 The historical verdict does not change when later fixes land.
 
-Write corrections as complete units with the same seven-field contract as a
-sub-phase, calibrated to the plan's executor power (mode-plan D):
-worker/reviewer, files, prerequisites, local decisions, numbered steps, test
-oracles/commands, and done criterion. Map each correction to findings and
+Write corrections as complete units with the same seven fields as a sub-phase
+(templates-audit.md), calibrated to the plan's executor power (mode-plan D):
+Agent, Assignment (worker and reviewer), Files, Change (prerequisites, local
+decisions, numbered steps), Unit tests and e2e tests (oracles and commands), and
+Done. Map each correction to findings and
 affected phases; flag phase reopening and required revalidation. Order by
 dependencies and severity. Do not leave design beyond that level's latitude to
 the correction executor.

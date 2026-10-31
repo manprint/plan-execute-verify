@@ -46,10 +46,11 @@ only for its checkpoint fields.
 - Sent to an idle session: the target is the plan or ledger whose state this
   session last wrote, else the unique plan or ledger with OPEN work, a pending
   closure, or units recorded `uncommitted`; several candidates require a user
-  choice. With none, report that nothing needs a handoff, release ownership the
-  session still holds, end with the Next block (next-step.md), and stop. An idle
-  session has nothing to schedule, so a deadline there means an immediate
-  handoff.
+  choice. Work owned by another live session is never a target: report it as an
+  ownership conflict (execution-contract §2) and leave it to that session. With
+  no target, report that nothing needs a handoff, release ownership this session
+  still holds, end with the Next block (next-step.md), and stop. An idle session
+  has nothing to schedule, so a deadline there means an immediate handoff.
 - Record the trigger (`user` or `deadline`), the request time, and the deadline
   in the invocation record (STATE.md §1, the ledger entry, or the audit report).
   The deadline belongs to this run only; it is never a scope override, never
@@ -95,8 +96,8 @@ diff:
   that is not closed. The saved execution scope keeps its result (RUNNING or
   BLOCKED); a COMPLETE scope needs no handoff.
 - The invocation result becomes `HANDOFF` with its trigger and time.
-- Release ownership with time and reason `handoff`, so the next session needs no
-  stale-ownership takeover.
+- Release the ownership this session holds with time and reason `handoff`, so
+  the next session needs no stale-ownership takeover.
 - In `000_adhoc` the ledger entry holds the same checkpoint, result, and
   release.
 - Plan: save the DRAFT research or planning checkpoint (mode-plan.md).
@@ -112,32 +113,39 @@ user's explicit handoff authorizes it. Plan and Verify never commit here; their
 report warns that the draft or audit files are uncommitted and suggests the
 commit command without running it. Onboard commits nothing.
 
-- Content: the owned changes of the OPEN unit and of every unit of this plan or
-  ledger recorded `uncommitted`, the plan files required by execution-contract
-  §6 step 2, and STATE.md and the ledgers whole. Committing STATE.md without
+- Content: the owned changes of the OPEN unit, of a unit with a pending
+  closure, and of every unit of this plan or ledger recorded `uncommitted`, the
+  plan files required by execution-contract §6 step 2, and STATE.md and the
+  ledgers whole. Committing STATE.md without
   those units' code would claim work the commit does not contain.
 - Staging: execution-contract §6 steps 2–3 with current HEAD as the reset
   target, but one owned patch per included unit. Reset the owned paths to HEAD
   once, then apply, in closure order, each closed unit's recorded
-  `<base-tree>..<closure-tree>` patch, and last the OPEN unit's patch from its
-  last WIP snapshot, or else its base tree, to a fresh snapshot. Patch every
+  `<base-tree>..<closure-tree>` patch, and last the patch of the OPEN or
+  pending-closure unit from its last WIP snapshot, or else its base tree, to a
+  fresh snapshot. Patch every
   owned path this way, not only shared ones, so changes made between units,
   such as user edits, stay out of the commit. A unit recorded `uncommitted`
   without both trees (a legacy record) or with a pruned tree cannot be
-  separated: leave it out, keep its reference, and list it in the report.
+  separated: leave it out and keep its reference, so the committed STATE.md
+  still shows it uncommitted, and list it in the report.
   Record the fresh snapshot as the last WIP snapshot in §1.
-- Ledger: change each included closed unit's reference from `uncommitted …` to
-  `handoff:<id>:<attempt>` (execution-contract §6) in the same state update.
+- Ledger: change each included closed or pending-closure unit's reference to
+  `handoff:<id>:<attempt> <base-tree>..<closure-tree>` (execution-contract §6)
+  in the same state update. If staging or the commit fails, restore the
+  previous references before reporting.
 - Message: subject
-  `handoff(request-by-user): <unit-id or plan-id> <stop point>`; trailers
+  `handoff(request-by-user): <unit-id or plan-id> <stop point>`, also for a
+  deadline, which the user set; trailers
   `PEV-Plan`, `PEV-Unit` (the OPEN unit, or `none`), `PEV-Attempt` (its attempt,
   or `0`), `PEV-Result: wip`, `PEV-Handoff: user|deadline`, and, when closed
-  units are included, `PEV-Includes: <id>:<attempt>, …`, in the final trailer
+  or pending-closure units are included, `PEV-Includes: <id>:<attempt>, …`, in
+  the final trailer
   block beside any `Co-Authored-By:` or `Signed-off-by:` lines.
 - A handoff commit is never amended; later WIP and completion commits append
   after it.
 - Hooks run; never use `--no-verify`. A failing hook leaves the work and
-  checkpoint on disk uncommitted: restore the included units' `uncommitted …`
+  checkpoint on disk uncommitted: restore the included units' previous
   references, then report the hook output and the commit command instead of
   fixing code now. With nothing to commit, make no empty commit.
 - Never push, switch branches, or commit unrelated changes.

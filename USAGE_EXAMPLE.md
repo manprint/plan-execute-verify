@@ -1,311 +1,222 @@
-# Esempi d'uso: matrice modalità × opzioni
+# plan-execute-verify — usage examples
 
-Questo documento espande, per ogni modalità di `/plan-execute-verify`, l'effetto
-di ogni opzione iniziale: una breve descrizione, le implicazioni e il comando di
-invocazione. Le regole normative restano in [SKILL.md](SKILL.md) e in
-[references/invocation.md](references/invocation.md); in caso di dubbio
-prevalgono quelle.
+[Italiano](USAGE_EXAMPLE_IT.md) · [README](README.md)
 
-## Come leggere la matrice
+This guide shows every mode of `/plan-execute-verify` with every option, one
+case at a time. Each case gives the command, what it does, what to expect, and
+the complete settings that run uses, including the ones you did not type.
 
-Forma del comando:
+## How to read this guide
 
-```text
-/plan-execute-verify [<opzioni e prefisso agenti, in qualsiasi ordine>] [<modalità>] <argomenti>
-```
+- **Modes** say what to do: `onboard`, `plan`, `execute`, `execute verify`,
+  `task`, `bug`, `verify`, `resume`, `handoff`.
+- **Options** go before the mode and change how it runs:
+  `full-autonomous:true|false`, `--wip-commit`, `--no-wip-commit`,
+  `executor-power:low|medium|high`, a list of agents, and
+  `--deadline=dd-mm-yyyy_hh_mm`.
+- Every mode has the same 15 cases: no option, each option alone, the four
+  autonomy × WIP pairs (together they decide the commits), the three
+  executor-power levels, the two forms of the agent list, and a deadline.
+  Options combine freely: see [Combining options](#combining-options).
+- Each case ends with **Settings for this run**: every setting, its value, and
+  where the value comes from: *from your command*, *default*, *from plan 003*,
+  or *from the resumed work*.
 
-- Le opzioni valgono solo nella sequenza iniziale. Il primo token che non è
-  un'opzione né un prefisso agenti chiude il parsing: in
-  `task aggiungi l'opzione --json al comando export` il token `--json` resta
-  testo della descrizione.
-- Modalità: `onboard`, `plan` (anche implicita: una descrizione senza parola
-  chiave), `execute`, `execute verify`, `task`, `bug`, `verify`, `resume`,
-  `handoff`.
-- Ogni modalità ha 15 casi: nessuna opzione; i due valori di
-  `full-autonomous`; le due opzioni WIP da sole; le quattro coppie autonomia ×
-  WIP, elencate perché insieme decidono i commit; i tre livelli di
-  `executor-power`; le due forme del prefisso agenti; `--deadline`.
-- La coppia autonomia/WIP, `executor-power`, il prefisso agenti e
-  `--deadline` sono indipendenti: i loro effetti si sommano senza influenzarsi,
-  quindi le combinazioni miste non sono enumerate (vedi
-  [Combinazioni](#combinazioni)).
-- I selettori (piano, fase, sotto-fase, report, voce di ledger) sono argomenti,
-  non opzioni: compaiono solo dove cambiano le implicazioni di un caso.
-- Gli esempi usano il piano `003` (`docs/plans/003_plan-RateLimit/`), il roster
-  `agent-1:opus,agent-2:sonnet,agent-3:haiku` e l'agente singolo `my-model`:
-  sostituiscili con identificativi supportati dal tuo host.
+## The example setup
 
-### Risoluzione delle impostazioni
+Every case starts from this same situation; no case changes it for the next one. All examples assume:
 
-`full-autonomous` e WIP si risolvono separatamente, in quest'ordine:
+- Plan `003` (`docs/plans/003_plan-RateLimit/`) was created with no options, so
+  its saved settings are the defaults: `full-autonomous:false`, WIP off,
+  `executor-power:low`, and the default agents agent-1 Opus, agent-2 Sonnet,
+  agent-3 Haiku.
+- Plan 003 is being executed: an earlier `execute 003`, run with no options,
+  stopped after a phase, so `resume 003` has work to continue.
+- Plan 003 has one audit report, `V001`, with corrections ready to apply; a new
+  audit gets `V002`.
+- A new plan gets number `004`.
+- The example tasks and bugs name no plan, so they go to the ad-hoc ledger
+  `docs/plans/000_adhoc/`. It already holds tasks up to `T-A003` and bug
+  `B-A002`, left open by an earlier session, so a new task gets `T-A004` and a
+  new bug `B-A003`.
+- `opus`, `sonnet`, `haiku`, and `my-model` stand for model names your host
+  supports.
+- `--deadline=31-10-2026_17_30` means 31 October 2026 at 17:30, local time.
 
-1. Opzione esplicita nell'invocazione.
-2. Override dello scope di esecuzione salvato, solo mentre si continua quello
-   scope.
-3. Default del piano in STATE.md §3, scritti da Plan.
-4. Default: `full-autonomous:false`, WIP off.
+## Words used in this guide
 
-`executor-power` non segue quest'ordine: lo accetta solo Plan, che lo salva in
-§3 (default `low`; un piano precedente all'opzione vale `low`). Ogni altra
-modalità rifiuta l'opzione.
+- **Plan**: a folder in `docs/plans/` that describes a feature step by step and
+  records its progress in `STATE.md`.
+- **Phase, sub-phase, unit**: a phase is a group of related steps; a sub-phase
+  is one small piece of it; each phase ends with a check called its closure
+  (`P1`, `P2`, …). Any piece the agent works on at once is a unit.
+- **Execution**: the part of a plan that an `execute` run was asked to do.
+  `resume` continues it; a different `execute` replaces it.
+- **Task, bug, ledger**: small changes and fixes outside a plan's phases. Each
+  gets an ID (`T-A004`, `B-A002`) and an entry in a list called a ledger:
+  `tasks.md` or `bugs.md`, in the plan's folder or in `docs/plans/000_adhoc/`.
+- **Mini-plan**: the short plan of a task or bug fix, written in its ledger
+  entry before any code changes.
+- **Agents, supervisor, self-review**: the models that do the work. agent-1 is
+  the supervisor: it designs, reviews, and approves. When a model reviews its
+  own work, the review is labelled a self-review.
+- **Checkpoint**: a saved note of where the work stands and what to do next, so
+  another session can continue.
+- **WIP commit**: a "work in progress" commit that saves unfinished work at a
+  checkpoint and is updated as the work goes on.
+- **Audit, correction**: `verify` checks finished work and writes a report
+  (`V001`, `V002`, …); each fix it proposes is a correction, applied later with
+  `execute verify`.
+- **Handoff**: a graceful stop that saves everything needed to continue later.
 
-`--deadline` non segue quest'ordine: vale solo per l'invocazione che la riceve,
-non viene salvata e non passa a un `resume` successivo.
+## Options and their defaults
 
-| Modalità | Opzioni esplicite | Prefisso agenti |
-|----------|-------------------|-----------------|
-| Onboard | Solo per l'ispezione, mai salvate | Solo per l'ispezione |
-| Plan | Default del piano in §3 | Roster salvato nel piano |
-| Execute, Execute verify | Override dello scope che avviano, mai §3 | Sostituisce il roster del piano |
-| Task, Bug, Verify, Resume | Solo per l'invocazione; registrate nella voce di ledger, nel report di audit o nell'unità ripresa | Solo per l'invocazione, registrato con essa |
-| Handoff | Ignorate e segnalate, tranne `--deadline` (solo per questa run) | Ignorato e segnalato |
+| Option | What it does | Default | Accepted by |
+|---|---|---|---|
+| `full-autonomous:true` / `:false` | `true`: keeps going until the selected work is done and commits each finished piece locally. `false`: stops after each phase (Task and Bug: once, to let you approve the mini-plan) and makes no completion commits | `false` | Every mode; Plan saves it for later runs; Onboard and Handoff ignore it |
+| `--wip-commit` / `--no-wip-commit` | Commits progress: finished units, closed phases, and a rolling "work in progress" commit at checkpoints. `--no-wip-commit` turns this off | off | Every mode; Plan saves it for later runs; no effect in Onboard and Verify; Handoff ignores it |
+| `executor-power:low` / `medium` / `high` | Tells the planner how capable the implementing models are: `low` gives small units with detailed instructions; `high` gives larger units whose internal design the implementer decides | `low` | Plan only |
+| `agent-1:<model>,agent-2:<model>,…` | Chooses the model for each role: agent-1 is the supervisor (designs, reviews, approves); the others implement | The plan's saved list, else agent-1 Opus, agent-2 Sonnet, agent-3 Haiku | Every mode; Handoff ignores it |
+| `agent:<model>` | One model does everything and reviews its own work | As above | Every mode; Handoff ignores it |
+| `--deadline=dd-mm-yyyy_hh_mm` | Stops gracefully by that local time: saves the state, commits code work, and shows the resume command. Set it a little before you really need to stop | none | Every mode |
 
-### Commit risultanti
+Where your options are kept:
 
-| `full-autonomous` | WIP | Unità di codice e chiusure di fase completate | Commit WIP a rotazione ai checkpoint | Audit completato |
-|-------------------|-----|-----------------------------------------------|--------------------------------------|------------------|
+- **Plan** saves them as the plan's defaults for later runs.
+- **Execute** and **Execute verify** keep them for that execution: `resume`
+  reuses them, and they never change the plan's defaults.
+- **Task**, **Bug**, **Verify**, and **Resume** use them for that run only.
+- **Onboard** never saves anything; **Handoff** ignores everything except a
+  deadline.
+- A **deadline** always applies to its own run only.
+
+## What gets committed
+
+| `full-autonomous` | WIP | Finished code units and phases | WIP commit at checkpoints | Finished audit |
+|---|---|---|---|---|
 | `false` | off | No | No | No |
-| `false` | on | Sì | Sì | No |
-| `true` | off | Sì | No | Sì, solo artefatti |
-| `true` | on | Sì | Sì | Sì, solo artefatti |
+| `false` | on | Yes | Yes | No |
+| `true` | off | Yes | No | Yes, audit files only |
+| `true` | on | Yes | Yes | Yes, audit files only |
 
-Un'unità di codice è una sotto-fase, un task, un bug fix o una correzione di
-audit. Plan e Onboard non fanno mai commit. Un handoff (`handoff` o
-`--deadline`) crea sempre un commit `handoff(request-by-user): …` per il lavoro
-sul codice, anche con i commit disattivati; Plan e Verify interrotti salvano
-solo il checkpoint. Nessuna combinazione autorizza push,
-deploy, cambi di branch o lavoro fuori scope: i commit sono locali, sul branch
-corrente. Con i commit disattivati il report finale avvisa che lavoro e record
-del piano non sono committati e suggerisce il comando di commit senza eseguirlo.
+Plan and Onboard never commit. A handoff makes one commit for code work even
+when commits are off, unless there is nothing to commit or a commit hook rejects
+it, in which case the report shows the commit command. Commits are always local,
+on the current branch: nothing is ever pushed.
 
-## Default quando le opzioni sono omesse
+## Summary matrix
 
-Un'opzione omessa non vale sempre il default di fabbrica: prima si cercano i
-valori salvati.
+Each cell gives the case ID and its effect in a few words.
 
-| Opzione omessa | Valore usato | Effetto del default di fabbrica |
-|----------------|--------------|---------------------------------|
-| `full-autonomous` | Override dello scope salvato (solo continuando lo stesso scope) → §3 del piano → **`false`** | Stop dopo ogni chiusura di fase (Task e Bug: uno stop per approvare il mini-piano); nessun commit di completamento |
-| `--wip-commit` / `--no-wip-commit` | Override dello scope salvato → §3 del piano → **WIP off** | Nessun commit WIP a rotazione |
-| `executor-power` | In Plan **`low`**; un piano senza valore salvato vale `low` | Le altre modalità usano sempre il livello del piano; `low` in `000_adhoc` |
-| Prefisso agenti | Roster salvato nel piano → roster legacy **Opus/Sonnet/Haiku** in agent-1/agent-2/agent-3 | Revisioni obbligatorie e chiusure di fase ad agent-1 |
-| `--deadline` | **Nessuna deadline** | La run si ferma solo a fine scope, blocco, stop dell'utente o `handoff`; `handoff` senza deadline si ferma subito |
+| # | Options | Onboard | Plan | Execute | Execute verify | Task | Bug | Verify | Resume | Handoff |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 01 | no option | ON-01 inspect only | PL-01 defaults saved | EX-01 stop per phase, no commit | EV-01 stop per phase, no commit | TA-01 approval, no commit | BU-01 approval, no commit | VE-01 no commit | RE-01 stop per phase, no commit | HA-01 stop now |
+| 02 | `full-autonomous:true` | ON-02 no effect | PL-02 defaults saved | EX-02 all, commit | EV-02 all, commit | TA-02 no stop, commit | BU-02 no stop, commit | VE-02 report committed | RE-02 all, commit | HA-02 ignored, stop now |
+| 03 | `full-autonomous:false` | ON-03 no effect | PL-03 defaults saved | EX-03 stop per phase, no commit | EV-03 stop per phase, no commit | TA-03 approval, no commit | BU-03 approval, no commit | VE-03 no commit | RE-03 stop per phase, no commit | HA-03 ignored, stop now |
+| 04 | `--wip-commit` | ON-04 no effect | PL-04 defaults saved | EX-04 stop per phase, commit + WIP | EV-04 stop per phase, commit + WIP | TA-04 approval, commit + WIP | BU-04 approval, commit + WIP | VE-04 no commit | RE-04 stop per phase, commit + WIP | HA-04 ignored, stop now |
+| 05 | `--no-wip-commit` | ON-05 no effect | PL-05 defaults saved | EX-05 stop per phase, no commit | EV-05 stop per phase, no commit | TA-05 approval, no commit | BU-05 approval, no commit | VE-05 no commit | RE-05 stop per phase, no commit | HA-05 ignored, stop now |
+| 06 | `full-autonomous:true --wip-commit` | ON-06 no effect | PL-06 defaults saved | EX-06 all, commit + WIP | EV-06 all, commit + WIP | TA-06 no stop, commit + WIP | BU-06 no stop, commit + WIP | VE-06 report committed | RE-06 all, commit + WIP | HA-06 ignored, stop now |
+| 07 | `full-autonomous:false --wip-commit` | ON-07 no effect | PL-07 defaults saved | EX-07 stop per phase, commit + WIP | EV-07 stop per phase, commit + WIP | TA-07 approval, commit + WIP | BU-07 approval, commit + WIP | VE-07 no commit | RE-07 stop per phase, commit + WIP | HA-07 ignored, stop now |
+| 08 | `full-autonomous:true --no-wip-commit` | ON-08 no effect | PL-08 defaults saved | EX-08 all, commit | EV-08 all, commit | TA-08 no stop, commit | BU-08 no stop, commit | VE-08 report committed | RE-08 all, commit | HA-08 ignored, stop now |
+| 09 | `full-autonomous:false --no-wip-commit` | ON-09 no effect | PL-09 defaults saved | EX-09 stop per phase, no commit | EV-09 stop per phase, no commit | TA-09 approval, no commit | BU-09 approval, no commit | VE-09 no commit | RE-09 B-A002 only, no commit | HA-09 ignored, stop now |
+| 10 | `executor-power:low` | ON-10 rejected | PL-10 small detailed units | EX-10 rejected | EV-10 rejected | TA-10 rejected | BU-10 rejected | VE-10 rejected | RE-10 rejected | HA-10 ignored, stop now |
+| 11 | `executor-power:medium` | ON-11 rejected | PL-11 medium units | EX-11 rejected | EV-11 rejected | TA-11 rejected | BU-11 rejected | VE-11 rejected | RE-11 rejected | HA-11 ignored, stop now |
+| 12 | `executor-power:high` | ON-12 rejected | PL-12 outcome units | EX-12 rejected | EV-12 rejected | TA-12 rejected | BU-12 rejected | VE-12 rejected | RE-12 rejected | HA-12 ignored, stop now |
+| 13 | `agent-1:opus,agent-2:sonnet,agent-3:haiku` | ON-13 these inspectors | PL-13 list saved | EX-13 replaces list | EV-13 replaces list | TA-13 this run only | BU-13 this run only | VE-13 this run only | RE-13 this run only | HA-13 ignored, stop now |
+| 14 | `agent:my-model` | ON-14 one model | PL-14 one model | EX-14 one model | EV-14 one model | TA-14 one model | BU-14 one model | VE-14 one model | RE-14 one model | HA-14 ignored, stop now |
+| 15 | `--deadline=31-10-2026_17_30` | ON-15 stops by deadline | PL-15 draft saved at deadline | EX-15 handoff at deadline | EV-15 handoff at deadline | TA-15 handoff at deadline | BU-15 handoff at deadline | VE-15 audit paused at deadline | RE-15 handoff at deadline | HA-15 stop by the deadline |
 
-Default effettivi per modalità, senza alcuna opzione:
+## At the end of every run
 
-| Modalità | `full-autonomous` | WIP | `executor-power` | Roster |
-|----------|-------------------|-----|------------------|--------|
-| Onboard | Irrilevante: mai commit | Irrilevante | Mostra quello del piano | Del piano, altrimenti legacy; solo per l'ispezione |
-| Plan | `false`, salvato in §3 | Off, salvato in §3 | `low`, salvato in §3 | Legacy Opus/Sonnet/Haiku, salvato |
-| Execute | Override dello scope → §3 → `false` | Override dello scope → §3 → off | Del piano | Del piano |
-| Execute verify | Override dello scope → §3 → `false` | Override dello scope → §3 → off | Del piano | Del piano |
-| Task, Bug su un piano | §3 → `false` | §3 → off | Del piano | Del piano |
-| Task, Bug in `000_adhoc` | `false` | Off | `low` | Legacy |
-| Verify | §3 → `false` (`false` in `000_adhoc`) | Irrilevante: il WIP non committa audit | Del piano, per le correzioni | Del piano, altrimenti legacy |
-| Resume | Registrato sull'unità ripresa; per lo scope continuato, override → §3 → `false` | Come per `full-autonomous`, con default off | Del piano | Registrato sull'unità ripresa, altrimenti del piano |
-| Handoff | Ignorato: il commit di handoff avviene comunque per il codice | Ignorato | Invariato | Invariato |
-
-In nessuna modalità c'è una deadline di default.
-
-Default degli argomenti omessi:
-
-| Modalità | Argomento omesso | Default |
-|----------|------------------|---------|
-| Onboard | Piano | Inventario di piani e ledger ad-hoc; non sceglie il numero più alto |
-| Plan | Descrizione | Nessuno: è obbligatoria |
-| Execute | Piano | Piano reale con il numero più alto, ignorando `000_adhoc`; chiede se più piani attivi sono ambigui |
-| Execute | Fase o sotto-fase | Intero piano |
-| Execute verify | Piano | Come Execute |
-| Execute verify | Report `V<NNN>` | Report più recente del piano |
-| Task, Bug | Piano (non è un selettore) | `000_adhoc`, salvo richiesta che nomina un piano o ne cambia chiaramente uno attivo |
-| Verify | Piano | Come Execute |
-| Verify | Fase, sotto-fase o voce | Intero piano |
-| Resume | Piano | Unico piano o ledger con lavoro riprendibile o scope salvato NOT_STARTED, RUNNING o BLOCKED; con più candidati chiede |
-| Resume | ID unità | Recupera il lavoro aperto, poi continua lo scope salvato |
-| Handoff | Deadline | Handoff immediato |
-| Handoff | Target (non è un selettore) | La run in corso; da sessione inattiva, il piano o ledger scritto per ultimo, altrimenti l'unico con lavoro aperto o non committato |
-
-## Matrice riassuntiva
-
-Ogni cella riporta l'ID del caso e l'effetto in breve; i dettagli sono nelle
-sezioni per modalità.
-
-| # | Opzioni | Onboard | Plan | Execute | Execute verify | Task | Bug | Verify | Resume | Handoff |
-|---|---------|---------|------|---------|----------------|------|-----|--------|--------|---------|
-| 01 | nessuna (default) | ON-01 solo ispezione | PL-01 default in §3 | EX-01 impostazioni salvate | EV-01 impostazioni salvate | TA-01 §3 o default | BU-01 §3 o default | VE-01 §3 o default | RE-01 impostazioni registrate | HA-01 handoff immediato |
-| 02 | `full-autonomous:true` | ON-02 nessun effetto | PL-02 salvato in §3 | EX-02 tutto lo scope, commit | EV-02 tutte le correzioni, commit | TA-02 commit del task | BU-02 commit del fix | VE-02 commit dell'audit | RE-02 solo questa run | HA-02 ignorata, handoff |
-| 03 | `full-autonomous:false` | ON-03 nessun effetto | PL-03 salvato in §3 | EX-03 stop dopo la fase | EV-03 stop dopo fase riaperta | TA-03 approvazione, niente commit di completamento | BU-03 approvazione, niente commit di completamento | VE-03 nessun commit | RE-03 solo questa run | HA-03 ignorata, handoff |
-| 04 | `--wip-commit` | ON-04 nessun effetto | PL-04 salvato in §3 | EX-04 commit + WIP | EV-04 commit + WIP | TA-04 commit + WIP | BU-04 commit + WIP | VE-04 nessun effetto | RE-04 solo questa run | HA-04 ignorata, handoff |
-| 05 | `--no-wip-commit` | ON-05 nessun effetto | PL-05 salvato in §3 | EX-05 niente WIP | EV-05 niente WIP | TA-05 niente WIP | BU-05 niente WIP | VE-05 nessun effetto | RE-05 solo questa run | HA-05 ignorata, handoff |
-| 06 | `full-autonomous:true --wip-commit` | ON-06 nessun effetto | PL-06 salvati in §3 | EX-06 tutto lo scope, commit + WIP | EV-06 tutte le correzioni, commit + WIP | TA-06 commit + WIP | BU-06 commit + WIP | VE-06 commit dell'audit | RE-06 solo questa run | HA-06 ignorata, handoff |
-| 07 | `full-autonomous:false --wip-commit` | ON-07 nessun effetto | PL-07 salvati in §3 | EX-07 stop dopo la fase, commit + WIP | EV-07 stop dopo fase riaperta, commit + WIP | TA-07 approvazione, commit + WIP | BU-07 approvazione, commit + WIP | VE-07 nessun commit | RE-07 solo questa run | HA-07 ignorata, handoff |
-| 08 | `full-autonomous:true --no-wip-commit` | ON-08 nessun effetto | PL-08 salvati in §3 | EX-08 tutto lo scope, solo commit di completamento | EV-08 tutte le correzioni, solo commit di completamento | TA-08 solo commit di completamento | BU-08 solo commit di completamento | VE-08 commit dell'audit | RE-08 solo questa run | HA-08 ignorata, handoff |
-| 09 | `full-autonomous:false --no-wip-commit` | ON-09 nessun effetto | PL-09 salvati in §3 | EX-09 stop dopo la fase, nessun commit | EV-09 stop dopo fase riaperta, nessun commit | TA-09 approvazione, nessun commit | BU-09 approvazione, nessun commit | VE-09 nessun commit | RE-09 solo questa run | HA-09 ignorata, handoff |
-| 10 | `executor-power:low` | ON-10 errore | PL-10 piano `low` | EX-10 errore | EV-10 errore | TA-10 errore | BU-10 errore | VE-10 errore | RE-10 errore | HA-10 ignorata, handoff |
-| 11 | `executor-power:medium` | ON-11 errore | PL-11 piano `medium` | EX-11 errore | EV-11 errore | TA-11 errore | BU-11 errore | VE-11 errore | RE-11 errore | HA-11 ignorata, handoff |
-| 12 | `executor-power:high` | ON-12 errore | PL-12 piano `high` | EX-12 errore | EV-12 errore | TA-12 errore | BU-12 errore | VE-12 errore | RE-12 errore | HA-12 ignorata, handoff |
-| 13 | `agent-1:opus,agent-2:sonnet,agent-3:haiku` | ON-13 solo ispettori | PL-13 roster salvato | EX-13 sostituisce il roster | EV-13 sostituisce il roster | TA-13 solo questa run | BU-13 solo questa run | VE-13 solo questo audit | RE-13 solo questa run | HA-13 ignorato, handoff |
-| 14 | `agent:my-model` | ON-14 un solo ispettore | PL-14 agente unico salvato | EX-14 agente unico, self-review | EV-14 agente unico, self-review | TA-14 agente unico, self-review | BU-14 agente unico, self-review | VE-14 agente unico | RE-14 solo questa run | HA-14 ignorato, handoff |
-| 15 | `--deadline=31-10-2026_17_30` | ON-15 stop alla scadenza, si rilancia | PL-15 bozza salvata alla scadenza | EX-15 handoff alla scadenza | EV-15 handoff alla scadenza | TA-15 handoff alla scadenza | BU-15 handoff alla scadenza | VE-15 audit OPEN alla scadenza | RE-15 handoff alla scadenza | HA-15 handoff entro la scadenza |
-
-## Errori indipendenti dalla modalità
-
-Queste invocazioni vengono rifiutate prima di qualsiasi lavoro, in ogni
-modalità tranne `handoff`. Un errore non fa mai ripiegare su un'altra modalità.
-
-| Invocazione | Motivo |
-|-------------|--------|
-| `/plan-execute-verify full-autonomous:yes execute 003` | Valore non letterale: solo `true` o `false` |
-| `/plan-execute-verify full-autonomous:true full-autonomous:false execute 003` | Opzione di autonomia duplicata |
-| `/plan-execute-verify --wip-commit --no-wip-commit execute 003` | Opzioni WIP in conflitto |
-| `/plan-execute-verify executor-power:max plan aggiungi export CSV` | Valore di `executor-power` non valido |
-| `/plan-execute-verify executor-power:low executor-power:high plan aggiungi export CSV` | `executor-power` duplicato |
-| `/plan-execute-verify executor-power:high execute 003` | `executor-power` fuori da Plan (casi 10–12 delle altre modalità) |
-| `/plan-execute-verify --deadline=31-10-26_17_30 execute 003` | Deadline non valida: formato `dd-mm-yyyy_hh_mm` |
-| `/plan-execute-verify --deadline=31-10-2026_17_30 --deadline=31-10-2026_18_00 execute 003` | `--deadline` duplicata |
-| `/plan-execute-verify --deadline=31-02-2026_17_30 execute 003` | Deadline non valida: data inesistente |
-| `/plan-execute-verify --fast execute 003` | Opzione iniziale sconosciuta |
-| `/plan-execute-verify agent:opus,agent-2:sonnet execute 003` | Forme del prefisso miste |
-| `/plan-execute-verify agent-1:opus,agent-3:haiku execute 003` | Indici con buchi: partono da 1, contigui |
-| `/plan-execute-verify agent-1:opus,agent-1:sonnet execute 003` | Indice duplicato |
-| `/plan-execute-verify agent-1:opus,agent-2: execute 003` | Nome mancante |
-
-Le sole opzioni, come `/plan-execute-verify full-autonomous:true`, non
-selezionano alcun lavoro. Argomenti mancanti o selettori non validi sono errori.
-
-`handoff` fa eccezione: non rifiuta mai una richiesta di stop, perché fermarsi
-prima non perde lavoro. Ignora e segnala opzioni, prefisso e selettori che non
-usa; una deadline non valida o due deadline diverse valgono come handoff
-immediato (casi HA-02…HA-15).
-
-## Prossimo passo: Continua o Fermati
-
-Ogni run, in ogni modalità e comunque finisca (completamento, stop a fine fase,
-blocco, gate di approvazione, handoff, invocazione rifiutata, anche con
-`full-autonomous:true`), chiude il report con il blocco "Prossimo passo" (nella
-lingua dell'utente): un comando esatto per continuare e l'opzione per fermarsi.
-Sono solo suggerimenti: l'agente non li esegue mai.
-
-- Continua: un solo comando, con ID reali e il piano per numero, senza opzioni
-  (le impostazioni registrate viaggiano con `resume`; la deadline non passa
-  mai). Un nuovo scope di Execute parte dai default di §3 ed è indicato come
-  nuovo. Se manca una decisione: "rispondi a …, poi …". Se non c'è seguito, lo
-  dice con il motivo. Dopo un rifiuto è il comando corretto, con le tue opzioni
-  valide.
-- Fermati: `handoff` solo se restano lavoro sul codice non committato o
-  ownership; altrimenti "niente da salvare". Bozze di piano, report di audit,
-  voci `PROPOSED` e docs/onboarding.md non vengono committati dall'handoff: sono
-  elencati con il comando di commit suggerito.
-
-### Stop dopo la chiusura di fase P1, con commit disattivati
+Every run, in every mode and however it ends, closes its report with two
+suggestions: the command to continue, and how to stop. They are only
+suggestions: the agent never runs them by itself, even with
+`full-autonomous:true`.
 
 ```text
-Prossimo passo
-- Continua: `/plan-execute-verify resume 003` — prosegue con 2.1, prossima unità dello scope salvato
-- Fermati: `/plan-execute-verify handoff` — committa 1.1, 1.2 e P1, ancora non committati, in un commit di handoff; poi chiudi la sessione
+Next
+- Continue: `/plan-execute-verify resume 003` — continues with sub-phase 2.1
+- Stop: `/plan-execute-verify handoff` — commits 1.1, 1.2, and P1, still uncommitted; then close the session
 ```
 
-### Scope di sotto-fase completato, con altro lavoro nel piano e commit attivi
+- **Continue** is one exact command, ready to copy, with no options: the
+  settings already recorded travel with `resume`. A brand-new run is marked as
+  new, with the settings it will use. If a decision is missing, it reads "answer
+  …, then …". If nothing follows, it says so.
+- **Stop** suggests `handoff` only when there is code work left uncommitted;
+  otherwise it says there is nothing to save and you can close the session. Plan
+  drafts, audit reports, proposed tasks, and `docs/onboarding.md` are never
+  committed by a handoff: they are listed with a suggested commit command.
 
-```text
-Prossimo passo
-- Continua: `/plan-execute-verify execute 003 phase_03` — nuovo scope: parte dai default di §3 (`full-autonomous:false`, WIP off)
-- Fermati: niente da salvare; puoi chiudere la sessione
-```
+## Rejected commands
 
-### Plan arrivato a READY
+These commands are refused before anything runs, in every mode except `handoff`.
+A refusal never switches to another mode; the report suggests the corrected
+command when the fix is clear.
 
-```text
-Prossimo passo
-- Continua: `/plan-execute-verify execute 004` — nuovo scope sull'intero piano, con i default salvati in §3
-- Fermati: niente da salvare; i file del piano non sono committati: `git add docs/plans/004_plan-Export && git commit -m "plan(004): Export"` (suggerito, non eseguito)
-```
+| Command | Why |
+|---|---|
+| `/plan-execute-verify full-autonomous:yes execute 003` | Only `true` or `false` |
+| `/plan-execute-verify full-autonomous:true full-autonomous:false execute 003` | Autonomy given twice |
+| `/plan-execute-verify --wip-commit --no-wip-commit execute 003` | Conflicting WIP options |
+| `/plan-execute-verify executor-power:max plan add CSV export` | Not a valid level |
+| `/plan-execute-verify executor-power:low executor-power:high plan add CSV export` | Level given twice |
+| `/plan-execute-verify executor-power:high execute 003` | Only Plan accepts it (cases 10–12 of the other modes) |
+| `/plan-execute-verify --deadline=31-10-26_17_30 execute 003` | Wrong format: `dd-mm-yyyy_hh_mm` |
+| `/plan-execute-verify --deadline=31-02-2026_17_30 execute 003` | That date does not exist |
+| `/plan-execute-verify --deadline=31-10-2026_17_30 --deadline=31-10-2026_18_00 execute 003` | Deadline given twice |
+| `/plan-execute-verify --fast execute 003` | Unknown option |
+| `/plan-execute-verify agent:opus,agent-2:sonnet execute 003` | The two agent-list forms mixed |
+| `/plan-execute-verify agent-1:opus,agent-3:haiku execute 003` | Numbers must start at 1 with no gaps |
+| `/plan-execute-verify agent-1:opus,agent-1:sonnet execute 003` | Same number twice |
+| `/plan-execute-verify agent-1:opus,agent-2: execute 003` | Missing model name |
 
-### Task fermo al gate di approvazione (`PROPOSED`)
+Two more rules protect you from typing mistakes. An option written after the
+mode, inside a description, such as `task fix the export
+--deadline=31-10-2026_17_30`, is not applied: the agent asks before starting
+whether you meant it as an option, which belongs before the mode. A command that
+only asks to continue, such as `/plan-execute-verify continue 003`, never
+creates a plan: it runs as `resume 003`, or the agent asks what you meant.
 
-```text
-Prossimo passo
-- Continua: `/plan-execute-verify resume 000_adhoc T-A004` — approva il mini-piano e implementa il task
-- Fermati: niente da salvare; la voce `PROPOSED` non è committata (comando di commit suggerito)
-```
-
-### Sotto-fase BLOCKED su una decisione, con modifiche parziali
-
-```text
-Prossimo passo
-- Continua: rispondi a "il limite vale per utente o per token?", poi `/plan-execute-verify resume 003 2.1`
-- Fermati: `/plan-execute-verify handoff` — committa il lavoro parziale di 2.1 in un commit di handoff, rilasciando l'ownership se ancora tenuta
-```
-
-### Verify FAIL con correzioni pronte
-
-```text
-Prossimo passo
-- Continua: `/plan-execute-verify execute verify 003 V002` — applica le correzioni del report V002
-- Fermati: niente da salvare; il report di audit non è committato (comando di commit suggerito)
-```
-
-### Verify PASS su un piano completo
-
-```text
-Prossimo passo
-- Continua: niente: il piano 003 è completo e verificato (V003 PASS)
-- Fermati: niente da salvare; puoi chiudere la sessione
-```
-
-### Task ad-hoc completato con commit disattivati
-
-```text
-Prossimo passo
-- Continua (facoltativo): `/plan-execute-verify verify 000_adhoc T-A004` — audit indipendente della modifica
-- Fermati: `/plan-execute-verify handoff` — committa T-A004 in un commit di handoff, anche con i commit disattivati
-```
-
-### Rifiuto di `executor-power:high execute 003`
-
-```text
-Prossimo passo
-- Continua: `/plan-execute-verify execute 003` — `executor-power` vale solo in Plan; il livello del piano resta quello salvato
-- Fermati: niente da salvare
-```
-
-### Dopo un handoff
-
-```text
-Prossimo passo
-- Continua: `/plan-execute-verify resume 003` — riprende dal checkpoint salvato
-- Fermati: la sessione si può chiudere ora
-```
+Options alone, such as `/plan-execute-verify full-autonomous:true`, select no
+work. Missing arguments or invalid selectors are errors too. `handoff` is the
+exception: it never refuses a stop request, it ignores and reports what it does
+not use, and an invalid or duplicate deadline there means "stop now".
 
 ## Onboard
 
 ```text
-/plan-execute-verify [<opzioni>] onboard [<piano>]
+/plan-execute-verify [<options>] onboard [<plan>]
 ```
 
-Ispeziona il repository, o il piano indicato per numero, nome univoco o
-percorso, scrive solo `docs/onboarding.md` e suggerisce un comando successivo
-senza eseguirlo. Non accetta selettori di fase o di report. Le opzioni sono
-validate normalmente ma non autorizzano commit, modifiche di stato o
-l'esecuzione del suggerimento; non vengono salvate né riportate nel comando
-suggerito. Il recap mostra separatamente i default del piano (§3), gli override
-dello scope salvato (§1) e le impostazioni locali all'invocazione.
+Onboard reads the repository and any existing plans, then tells you where the
+work stands and what to do next. It writes only `docs/onboarding.md`: no code,
+no plan changes, no commits, and it starts nothing by itself. Add a plan number
+to focus on that plan.
 
-### ON-01 · nessuna opzione
+### ON-01 · no option
 
 ```text
-/plan-execute-verify onboard 003
+/plan-execute-verify onboard
 ```
 
-- **Descrizione:** mappa il progetto con il focus sul piano 003, confronta il
-  checkpoint con il repository reale e propone un comando successivo.
-- **Implicazioni:** nessun commit e nessuna modifica a codice, piani,
-  impostazioni o roster. Se lo scope salvato o il piano hanno
-  `full-autonomous:true`, il recap avverte che riprendere erediterebbe i commit
-  automatici.
-- **Default applicati:** autonomia e WIP non contano (Onboard non fa mai
-  commit); roster del piano, altrimenti legacy Opus/Sonnet/Haiku, solo per
-  l'ispezione; nessuna deadline.
+**What it does:** Maps the repository and its plans, shows where the work
+stands, and suggests the next command.
+
+**What to expect:** It writes only `docs/onboarding.md`, left uncommitted. It
+changes no code or plan and starts nothing.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default; no effect: Onboard only
+  inspects)
+- WIP commits: off (default; no effect)
+- Executor power: not used: each plan keeps its own level
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; inspection only)
+- Deadline: none (default)
+- Target: every plan and ad-hoc ledger, as an inventory (no plan given)
+- Where it stops: after the report; it never starts the suggested work
+- Commits made by this run: none: this mode never commits
 
 ### ON-02 · `full-autonomous:true`
 
@@ -313,13 +224,23 @@ dello scope salvato (§1) e le impostazioni locali all'invocazione.
 /plan-execute-verify full-autonomous:true onboard
 ```
 
-- **Descrizione:** opzione accettata e validata, senza effetto operativo.
-- **Implicazioni:** Onboard non esegue l'azione suggerita e non fa commit.
-  L'opzione non viene salvata, non cambia il default del piano e non compare nel
-  comando suggerito.
-- **Default applicati:** roster del piano, altrimenti legacy Opus/Sonnet/Haiku,
-  solo per l'ispezione; nessuna deadline; selettore omesso: inventario di piani
-  e ledger.
+**What it does:** Same as without options: the option is accepted but changes
+nothing.
+
+**What to expect:** Onboard never commits and never starts work, so autonomy and
+WIP have no effect, and nothing is saved.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; no effect: Onboard
+  only inspects)
+- WIP commits: off (default; no effect)
+- Executor power: not used: each plan keeps its own level
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; inspection only)
+- Deadline: none (default)
+- Target: every plan and ad-hoc ledger, as an inventory (no plan given)
+- Where it stops: after the report; it never starts the suggested work
+- Commits made by this run: none: this mode never commits
 
 ### ON-03 · `full-autonomous:false`
 
@@ -327,12 +248,23 @@ dello scope salvato (§1) e le impostazioni locali all'invocazione.
 /plan-execute-verify full-autonomous:false onboard
 ```
 
-- **Descrizione:** opzione accettata e validata, senza effetto operativo.
-- **Implicazioni:** identiche a ON-01; il valore salvato nel piano resta quello
-  che era.
-- **Default applicati:** roster del piano, altrimenti legacy Opus/Sonnet/Haiku,
-  solo per l'ispezione; nessuna deadline; selettore omesso: inventario di piani
-  e ledger.
+**What it does:** Same as without options: the option is accepted but changes
+nothing.
+
+**What to expect:** Onboard never commits and never starts work, so autonomy and
+WIP have no effect, and nothing is saved.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; no effect: Onboard
+  only inspects)
+- WIP commits: off (default; no effect)
+- Executor power: not used: each plan keeps its own level
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; inspection only)
+- Deadline: none (default)
+- Target: every plan and ad-hoc ledger, as an inventory (no plan given)
+- Where it stops: after the report; it never starts the suggested work
+- Commits made by this run: none: this mode never commits
 
 ### ON-04 · `--wip-commit`
 
@@ -340,12 +272,23 @@ dello scope salvato (§1) e le impostazioni locali all'invocazione.
 /plan-execute-verify --wip-commit onboard
 ```
 
-- **Descrizione:** opzione accettata, senza effetto.
-- **Implicazioni:** Onboard non fa commit, nemmeno di `docs/onboarding.md`.
-  L'opzione non viene salvata.
-- **Default applicati:** autonomia e WIP non contano (Onboard non fa mai
-  commit); roster del piano, altrimenti legacy Opus/Sonnet/Haiku, solo per
-  l'ispezione; nessuna deadline; selettore omesso: inventario di piani e ledger.
+**What it does:** Same as without options: the option is accepted but changes
+nothing.
+
+**What to expect:** Onboard never commits and never starts work, so autonomy and
+WIP have no effect, and nothing is saved.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default; no effect: Onboard only
+  inspects)
+- WIP commits: on (from your command; no effect)
+- Executor power: not used: each plan keeps its own level
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; inspection only)
+- Deadline: none (default)
+- Target: every plan and ad-hoc ledger, as an inventory (no plan given)
+- Where it stops: after the report; it never starts the suggested work
+- Commits made by this run: none: this mode never commits
 
 ### ON-05 · `--no-wip-commit`
 
@@ -353,12 +296,23 @@ dello scope salvato (§1) e le impostazioni locali all'invocazione.
 /plan-execute-verify --no-wip-commit onboard
 ```
 
-- **Descrizione:** opzione accettata, senza effetto.
-- **Implicazioni:** Onboard non fa comunque commit; il WIP salvato nel piano non
-  cambia.
-- **Default applicati:** autonomia e WIP non contano (Onboard non fa mai
-  commit); roster del piano, altrimenti legacy Opus/Sonnet/Haiku, solo per
-  l'ispezione; nessuna deadline; selettore omesso: inventario di piani e ledger.
+**What it does:** Same as without options: the option is accepted but changes
+nothing.
+
+**What to expect:** Onboard never commits and never starts work, so autonomy and
+WIP have no effect, and nothing is saved.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default; no effect: Onboard only
+  inspects)
+- WIP commits: off (from your command; no effect)
+- Executor power: not used: each plan keeps its own level
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; inspection only)
+- Deadline: none (default)
+- Target: every plan and ad-hoc ledger, as an inventory (no plan given)
+- Where it stops: after the report; it never starts the suggested work
+- Commits made by this run: none: this mode never commits
 
 ### ON-06 · `full-autonomous:true --wip-commit`
 
@@ -366,12 +320,23 @@ dello scope salvato (§1) e le impostazioni locali all'invocazione.
 /plan-execute-verify full-autonomous:true --wip-commit onboard
 ```
 
-- **Descrizione:** coppia accettata e validata, senza effetto.
-- **Implicazioni:** nessun commit, nessuna esecuzione del suggerimento, niente
-  salvato.
-- **Default applicati:** roster del piano, altrimenti legacy Opus/Sonnet/Haiku,
-  solo per l'ispezione; nessuna deadline; selettore omesso: inventario di piani
-  e ledger.
+**What it does:** Same as without options: the option is accepted but changes
+nothing.
+
+**What to expect:** Onboard never commits and never starts work, so autonomy and
+WIP have no effect, and nothing is saved.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; no effect: Onboard
+  only inspects)
+- WIP commits: on (from your command; no effect)
+- Executor power: not used: each plan keeps its own level
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; inspection only)
+- Deadline: none (default)
+- Target: every plan and ad-hoc ledger, as an inventory (no plan given)
+- Where it stops: after the report; it never starts the suggested work
+- Commits made by this run: none: this mode never commits
 
 ### ON-07 · `full-autonomous:false --wip-commit`
 
@@ -379,11 +344,23 @@ dello scope salvato (§1) e le impostazioni locali all'invocazione.
 /plan-execute-verify full-autonomous:false --wip-commit onboard
 ```
 
-- **Descrizione:** coppia accettata e validata, senza effetto.
-- **Implicazioni:** come ON-06.
-- **Default applicati:** roster del piano, altrimenti legacy Opus/Sonnet/Haiku,
-  solo per l'ispezione; nessuna deadline; selettore omesso: inventario di piani
-  e ledger.
+**What it does:** Same as without options: the option is accepted but changes
+nothing.
+
+**What to expect:** Onboard never commits and never starts work, so autonomy and
+WIP have no effect, and nothing is saved.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; no effect: Onboard
+  only inspects)
+- WIP commits: on (from your command; no effect)
+- Executor power: not used: each plan keeps its own level
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; inspection only)
+- Deadline: none (default)
+- Target: every plan and ad-hoc ledger, as an inventory (no plan given)
+- Where it stops: after the report; it never starts the suggested work
+- Commits made by this run: none: this mode never commits
 
 ### ON-08 · `full-autonomous:true --no-wip-commit`
 
@@ -391,11 +368,23 @@ dello scope salvato (§1) e le impostazioni locali all'invocazione.
 /plan-execute-verify full-autonomous:true --no-wip-commit onboard
 ```
 
-- **Descrizione:** coppia accettata e validata, senza effetto.
-- **Implicazioni:** come ON-06.
-- **Default applicati:** roster del piano, altrimenti legacy Opus/Sonnet/Haiku,
-  solo per l'ispezione; nessuna deadline; selettore omesso: inventario di piani
-  e ledger.
+**What it does:** Same as without options: the option is accepted but changes
+nothing.
+
+**What to expect:** Onboard never commits and never starts work, so autonomy and
+WIP have no effect, and nothing is saved.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; no effect: Onboard
+  only inspects)
+- WIP commits: off (from your command; no effect)
+- Executor power: not used: each plan keeps its own level
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; inspection only)
+- Deadline: none (default)
+- Target: every plan and ad-hoc ledger, as an inventory (no plan given)
+- Where it stops: after the report; it never starts the suggested work
+- Commits made by this run: none: this mode never commits
 
 ### ON-09 · `full-autonomous:false --no-wip-commit`
 
@@ -403,11 +392,23 @@ dello scope salvato (§1) e le impostazioni locali all'invocazione.
 /plan-execute-verify full-autonomous:false --no-wip-commit onboard
 ```
 
-- **Descrizione:** coppia accettata e validata, senza effetto.
-- **Implicazioni:** come ON-06.
-- **Default applicati:** roster del piano, altrimenti legacy Opus/Sonnet/Haiku,
-  solo per l'ispezione; nessuna deadline; selettore omesso: inventario di piani
-  e ledger.
+**What it does:** Same as without options: the option is accepted but changes
+nothing.
+
+**What to expect:** Onboard never commits and never starts work, so autonomy and
+WIP have no effect, and nothing is saved.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; no effect: Onboard
+  only inspects)
+- WIP commits: off (from your command; no effect)
+- Executor power: not used: each plan keeps its own level
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; inspection only)
+- Deadline: none (default)
+- Target: every plan and ad-hoc ledger, as an inventory (no plan given)
+- Where it stops: after the report; it never starts the suggested work
+- Commits made by this run: none: this mode never commits
 
 ### ON-10 · `executor-power:low`
 
@@ -415,11 +416,26 @@ dello scope salvato (§1) e le impostazioni locali all'invocazione.
 /plan-execute-verify executor-power:low onboard
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** nessuna ispezione. Il recap di un'esecuzione corretta
-  riporta comunque il livello salvato nel piano.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses each plan's own level.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (default; no effect: Onboard only
+  inspects)
+- WIP commits: off (default; no effect)
+- Executor power: not used: each plan keeps its own level
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; inspection only)
+- Deadline: none (default)
+- Target: every plan and ad-hoc ledger, as an inventory (no plan given)
+- Where it stops: after the report; it never starts the suggested work
+- Commits made by this run: none: this mode never commits
 
 ### ON-11 · `executor-power:medium`
 
@@ -427,10 +443,26 @@ dello scope salvato (§1) e le impostazioni locali all'invocazione.
 /plan-execute-verify executor-power:medium onboard
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** come ON-10.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses each plan's own level.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (default; no effect: Onboard only
+  inspects)
+- WIP commits: off (default; no effect)
+- Executor power: not used: each plan keeps its own level
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; inspection only)
+- Deadline: none (default)
+- Target: every plan and ad-hoc ledger, as an inventory (no plan given)
+- Where it stops: after the report; it never starts the suggested work
+- Commits made by this run: none: this mode never commits
 
 ### ON-12 · `executor-power:high`
 
@@ -438,10 +470,26 @@ dello scope salvato (§1) e le impostazioni locali all'invocazione.
 /plan-execute-verify executor-power:high onboard
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** come ON-10.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses each plan's own level.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (default; no effect: Onboard only
+  inspects)
+- WIP commits: off (default; no effect)
+- Executor power: not used: each plan keeps its own level
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; inspection only)
+- Deadline: none (default)
+- Target: every plan and ad-hoc ledger, as an inventory (no plan given)
+- Where it stops: after the report; it never starts the suggested work
+- Commits made by this run: none: this mode never commits
 
 ### ON-13 · `agent-1:opus,agent-2:sonnet,agent-3:haiku`
 
@@ -449,14 +497,24 @@ dello scope salvato (§1) e le impostazioni locali all'invocazione.
 /plan-execute-verify agent-1:opus,agent-2:sonnet,agent-3:haiku onboard
 ```
 
-- **Descrizione:** sceglie gli agenti che svolgono questa ispezione; per la
-  ricostruzione architetturale iniziale è preferito l'agente forte (agent-1).
-- **Implicazioni:** il roster vale solo per l'ispezione e non cambia le
-  assegnazioni salvate del piano. Il report registra l'agente che ha ispezionato
-  davvero e i limiti; un'interpretazione architetturale incerta resta
-  etichettata come non revisionata, con l'handoff necessario.
-- **Default applicati:** autonomia e WIP non contano (Onboard non fa mai
-  commit); nessuna deadline; selettore omesso: inventario di piani e ledger.
+**What it does:** Inspects with the agents you list; agent-1 does the
+architectural reading.
+
+**What to expect:** The list is used for this inspection only; the plans' saved
+lists do not change. The report says which agent actually inspected.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default; no effect: Onboard only
+  inspects)
+- WIP commits: off (default; no effect)
+- Executor power: not used: each plan keeps its own level
+- Agents: agent-1 opus, agent-2 sonnet, agent-3 haiku (from your command; this
+  inspection only)
+- Deadline: none (default)
+- Target: every plan and ad-hoc ledger, as an inventory (no plan given)
+- Where it stops: after the report; it never starts the suggested work
+- Commits made by this run: none: this mode never commits
 
 ### ON-14 · `agent:my-model`
 
@@ -464,11 +522,23 @@ dello scope salvato (§1) e le impostazioni locali all'invocazione.
 /plan-execute-verify agent:my-model onboard
 ```
 
-- **Descrizione:** un solo agente svolge l'ispezione.
-- **Implicazioni:** ogni revisione è self-review. Le assegnazioni salvate del
-  piano non cambiano.
-- **Default applicati:** autonomia e WIP non contano (Onboard non fa mai
-  commit); nessuna deadline; selettore omesso: inventario di piani e ledger.
+**What it does:** One model, my-model, does the whole inspection.
+
+**What to expect:** Nothing is saved. Uncertain architectural readings are
+marked as not reviewed by a stronger model.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default; no effect: Onboard only
+  inspects)
+- WIP commits: off (default; no effect)
+- Executor power: not used: each plan keeps its own level
+- Agents: my-model in every role; it reviews its own work (self-review) (from
+  your command; this inspection only)
+- Deadline: none (default)
+- Target: every plan and ad-hoc ledger, as an inventory (no plan given)
+- Where it stops: after the report; it never starts the suggested work
+- Commits made by this run: none: this mode never commits
 
 ### ON-15 · `--deadline=31-10-2026_17_30`
 
@@ -476,298 +546,455 @@ dello scope salvato (§1) e le impostazioni locali all'invocazione.
 /plan-execute-verify --deadline=31-10-2026_17_30 onboard
 ```
 
-- **Descrizione:** ispezione normale, che si ferma entro la deadline.
-- **Implicazioni:** Onboard è breve e di sola lettura: la deadline evita solo
-  di sforare. Alla scadenza l'ispezione si interrompe senza altre scritture né
-  commit, e il report propone di rilanciare `/plan-execute-verify onboard`. Se
-  l'ispezione finisce prima, termina normalmente. La deadline non viene salvata.
-- **Default applicati:** autonomia e WIP non contano (Onboard non fa mai
-  commit); roster del piano, altrimenti legacy Opus/Sonnet/Haiku, solo per
-  l'ispezione; selettore omesso: inventario di piani e ledger.
+**What it does:** Normal onboarding that stops by 17:30.
+
+**What to expect:** Onboarding is short and read-only. At the deadline it simply
+stops without writing more; run `onboard` again later.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default; no effect: Onboard only
+  inspects)
+- WIP commits: off (default; no effect)
+- Executor power: not used: each plan keeps its own level
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; inspection only)
+- Deadline: 31 October 2026 at 17:30 local time, this run only (from your
+  command)
+- Target: every plan and ad-hoc ledger, as an inventory (no plan given)
+- Where it stops: after the report; it never starts the suggested work; in any
+  case by 17:30
+- Commits made by this run: none: this mode never commits
 
 ## Plan
 
 ```text
-/plan-execute-verify [<opzioni>] plan <descrizione>
-/plan-execute-verify [<opzioni>] <descrizione>
+/plan-execute-verify [<options>] plan <description>
 ```
 
-Crea `docs/plans/<NNN>_plan-<Nome>/` con overview.md, i file di fase e
-STATE.md, usando il numero più alto esistente più uno. Non scrive codice di
-produzione e non fa commit: le opzioni preimpostano l'esecuzione futura ma non
-la autorizzano. Le opzioni esplicite diventano default del piano in §3 e il
-prefisso diventa il roster salvato; lo scope di esecuzione resta `none` finché
-Execute non lo imposta. Se la cartella del piano non è committata, il report
-finale lo dice e suggerisce
-`git add docs/plans/<id> && git commit -m "plan(<id>): <feature>"` senza
-eseguirlo. Usa la forma esplicita `plan` quando la descrizione inizia con una
-parola riservata, per esempio `plan task queue per i job in background`.
+Plan designs a feature before any code is written: it studies the repository,
+researches open questions, and writes a phased plan in
+`docs/plans/<NNN>_plan-<Name>/` (overview, phase files, `STATE.md`). It writes
+no production code and never commits. Options given here become the plan's
+defaults for later runs. You can also skip the word `plan`: a description alone
+starts a plan.
 
-### PL-01 · nessuna opzione
+### PL-01 · no option
 
 ```text
-/plan-execute-verify aggiungi limiti di richieste per utente
+/plan-execute-verify plan add per-user rate limits
 ```
 
-- **Descrizione:** Plan implicito: crea il piano successivo con le impostazioni
-  di default.
-- **Implicazioni:** §3 riceve `full-autonomous:false`, WIP off e
-  `executor-power:low`: la scomposizione più fine (di solito 3–6 sotto-fasi
-  elementari per fase, con snippet verificati), quindi il piano più costoso da
-  scrivere. Senza prefisso un nuovo piano usa il roster legacy
-  Opus/Sonnet/Haiku. Un successivo `execute 003` senza opzioni si ferma dopo
-  ogni chiusura di fase e non fa commit.
-- **Default applicati:** `full-autonomous:false` salvato in §3; WIP off salvato
-  in §3; `executor-power:low` salvato in §3; roster legacy Opus/Sonnet/Haiku
-  salvato nel piano; nessuna deadline.
+**What it does:** Creates the plan with all defaults.
+
+**What to expect:** Later `execute` runs stop after each phase and make no
+commits, unless you choose otherwise when you run them. Plan itself writes no
+code and never commits; the report suggests the command to commit the plan
+files.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default; saved as plan 004 default)
+- WIP commits: off (default; saved as plan 004 default)
+- Executor power: `low` (default; saved in plan 004; only a plan revision
+  changes it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; saved in plan
+  004)
+- Deadline: none (default)
+- Target: a new plan, number 004, in `docs/plans/004_plan-<Name>/`
+- Where it stops: when the plan is ready, or at a question only you can answer
+- Commits made by this run: none: this mode never commits
 
 ### PL-02 · `full-autonomous:true`
 
 ```text
-/plan-execute-verify full-autonomous:true plan aggiungi limiti di richieste per utente
+/plan-execute-verify full-autonomous:true plan add per-user rate limits
 ```
 
-- **Descrizione:** salva `true` come default del piano.
-- **Implicazioni:** la pianificazione resta senza implementazione e senza
-  commit. Senza opzioni esplicite, un successivo `execute 003` procede su tutto
-  lo scope selezionato e committa ogni sotto-fase e chiusura di fase; anche
-  `verify 003` committa i propri artefatti e un Task o Bug collegato al piano
-  viene committato al completamento.
-- **Default applicati:** WIP off salvato in §3; `executor-power:low` salvato in
-  §3; roster legacy Opus/Sonnet/Haiku salvato nel piano; nessuna deadline.
+**What it does:** Creates the plan and saves this choice as its default.
+
+**What to expect:** A later `execute 004` with no options runs the whole plan
+and commits each finished unit. Plan itself writes no code and never commits;
+the report suggests the command to commit the plan files.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; saved as plan 004
+  default)
+- WIP commits: off (default; saved as plan 004 default)
+- Executor power: `low` (default; saved in plan 004; only a plan revision
+  changes it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; saved in plan
+  004)
+- Deadline: none (default)
+- Target: a new plan, number 004, in `docs/plans/004_plan-<Name>/`
+- Where it stops: when the plan is ready, or at a question only you can answer
+- Commits made by this run: none: this mode never commits
 
 ### PL-03 · `full-autonomous:false`
 
 ```text
-/plan-execute-verify full-autonomous:false plan aggiungi limiti di richieste per utente
+/plan-execute-verify full-autonomous:false plan add per-user rate limits
 ```
 
-- **Descrizione:** salva esplicitamente `false`, uguale al default.
-- **Implicazioni:** le esecuzioni future senza opzioni si fermano dopo ogni
-  chiusura di fase e non fanno commit di completamento, salvo WIP attivo.
-  Un'esecuzione può comunque passare `full-autonomous:true` per il proprio
-  scope.
-- **Default applicati:** WIP off salvato in §3; `executor-power:low` salvato in
-  §3; roster legacy Opus/Sonnet/Haiku salvato nel piano; nessuna deadline.
+**What it does:** Creates the plan and saves this choice as its default.
+
+**What to expect:** Later runs stop after each phase and make no completion
+commits (this is also the default). Plan itself writes no code and never
+commits; the report suggests the command to commit the plan files.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; saved as plan 004
+  default)
+- WIP commits: off (default; saved as plan 004 default)
+- Executor power: `low` (default; saved in plan 004; only a plan revision
+  changes it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; saved in plan
+  004)
+- Deadline: none (default)
+- Target: a new plan, number 004, in `docs/plans/004_plan-<Name>/`
+- Where it stops: when the plan is ready, or at a question only you can answer
+- Commits made by this run: none: this mode never commits
 
 ### PL-04 · `--wip-commit`
 
 ```text
-/plan-execute-verify --wip-commit plan aggiungi limiti di richieste per utente
+/plan-execute-verify --wip-commit plan add per-user rate limits
 ```
 
-- **Descrizione:** salva WIP on come default del piano.
-- **Implicazioni:** con l'autonomia di default (`false`), le esecuzioni future
-  committano unità e chiusure di fase completate e aggiornano un commit
-  `wip(<id>)` a rotazione a ogni checkpoint, fermandosi dopo ogni chiusura di
-  fase. Il solo WIP non committa mai audit né pianificazione.
-- **Default applicati:** `full-autonomous:false` salvato in §3;
-  `executor-power:low` salvato in §3; roster legacy Opus/Sonnet/Haiku salvato
-  nel piano; nessuna deadline.
+**What it does:** Creates the plan and saves this choice as its default.
+
+**What to expect:** Later runs commit finished units, phases, and progress
+checkpoints, and still stop after each phase. Plan itself writes no code and
+never commits; the report suggests the command to commit the plan files.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default; saved as plan 004 default)
+- WIP commits: on (from your command; saved as plan 004 default)
+- Executor power: `low` (default; saved in plan 004; only a plan revision
+  changes it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; saved in plan
+  004)
+- Deadline: none (default)
+- Target: a new plan, number 004, in `docs/plans/004_plan-<Name>/`
+- Where it stops: when the plan is ready, or at a question only you can answer
+- Commits made by this run: none: this mode never commits
 
 ### PL-05 · `--no-wip-commit`
 
 ```text
-/plan-execute-verify --no-wip-commit plan aggiungi limiti di richieste per utente
+/plan-execute-verify --no-wip-commit plan add per-user rate limits
 ```
 
-- **Descrizione:** salva esplicitamente WIP off, uguale al default.
-- **Implicazioni:** nessun commit WIP nelle esecuzioni future. Non disattiva i
-  commit di completamento dovuti a `full-autonomous:true`.
-- **Default applicati:** `full-autonomous:false` salvato in §3;
-  `executor-power:low` salvato in §3; roster legacy Opus/Sonnet/Haiku salvato
-  nel piano; nessuna deadline.
+**What it does:** Creates the plan and saves this choice as its default.
+
+**What to expect:** Later runs make no WIP commits (this is also the default).
+Plan itself writes no code and never commits; the report suggests the command to
+commit the plan files.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default; saved as plan 004 default)
+- WIP commits: off (from your command; saved as plan 004 default)
+- Executor power: `low` (default; saved in plan 004; only a plan revision
+  changes it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; saved in plan
+  004)
+- Deadline: none (default)
+- Target: a new plan, number 004, in `docs/plans/004_plan-<Name>/`
+- Where it stops: when the plan is ready, or at a question only you can answer
+- Commits made by this run: none: this mode never commits
 
 ### PL-06 · `full-autonomous:true --wip-commit`
 
 ```text
-/plan-execute-verify full-autonomous:true --wip-commit plan aggiungi limiti di richieste per utente
+/plan-execute-verify full-autonomous:true --wip-commit plan add per-user rate limits
 ```
 
-- **Descrizione:** salva entrambe le impostazioni al massimo.
-- **Implicazioni:** le esecuzioni future percorrono tutto lo scope con commit di
-  completamento e commit WIP a rotazione ai checkpoint: recupero più fine,
-  storia Git più fitta.
-- **Default applicati:** `executor-power:low` salvato in §3; roster legacy
-  Opus/Sonnet/Haiku salvato nel piano; nessuna deadline.
+**What it does:** Creates the plan and saves this choice as its default.
+
+**What to expect:** Later runs go all the way and commit everything: finished
+units and checkpoints. Plan itself writes no code and never commits; the report
+suggests the command to commit the plan files.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; saved as plan 004
+  default)
+- WIP commits: on (from your command; saved as plan 004 default)
+- Executor power: `low` (default; saved in plan 004; only a plan revision
+  changes it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; saved in plan
+  004)
+- Deadline: none (default)
+- Target: a new plan, number 004, in `docs/plans/004_plan-<Name>/`
+- Where it stops: when the plan is ready, or at a question only you can answer
+- Commits made by this run: none: this mode never commits
 
 ### PL-07 · `full-autonomous:false --wip-commit`
 
 ```text
-/plan-execute-verify full-autonomous:false --wip-commit plan aggiungi limiti di richieste per utente
+/plan-execute-verify full-autonomous:false --wip-commit plan add per-user rate limits
 ```
 
-- **Descrizione:** salva autonomia off e WIP on.
-- **Implicazioni:** le esecuzioni future si fermano dopo ogni chiusura di fase,
-  ma committano unità e fasi completate e il WIP a rotazione.
-- **Default applicati:** `executor-power:low` salvato in §3; roster legacy
-  Opus/Sonnet/Haiku salvato nel piano; nessuna deadline.
+**What it does:** Creates the plan and saves this choice as its default.
+
+**What to expect:** Later runs stop after each phase, but commit finished work
+and checkpoints. Plan itself writes no code and never commits; the report
+suggests the command to commit the plan files.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; saved as plan 004
+  default)
+- WIP commits: on (from your command; saved as plan 004 default)
+- Executor power: `low` (default; saved in plan 004; only a plan revision
+  changes it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; saved in plan
+  004)
+- Deadline: none (default)
+- Target: a new plan, number 004, in `docs/plans/004_plan-<Name>/`
+- Where it stops: when the plan is ready, or at a question only you can answer
+- Commits made by this run: none: this mode never commits
 
 ### PL-08 · `full-autonomous:true --no-wip-commit`
 
 ```text
-/plan-execute-verify full-autonomous:true --no-wip-commit plan aggiungi limiti di richieste per utente
+/plan-execute-verify full-autonomous:true --no-wip-commit plan add per-user rate limits
 ```
 
-- **Descrizione:** salva autonomia on e WIP off.
-- **Implicazioni:** le esecuzioni future percorrono tutto lo scope e committano
-  solo unità e fasi completate e verificate; il lavoro interrotto resta nel
-  working tree, non in un commit.
-- **Default applicati:** `executor-power:low` salvato in §3; roster legacy
-  Opus/Sonnet/Haiku salvato nel piano; nessuna deadline.
+**What it does:** Creates the plan and saves this choice as its default.
+
+**What to expect:** Later runs go all the way, committing each finished unit,
+without WIP commits. Plan itself writes no code and never commits; the report
+suggests the command to commit the plan files.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; saved as plan 004
+  default)
+- WIP commits: off (from your command; saved as plan 004 default)
+- Executor power: `low` (default; saved in plan 004; only a plan revision
+  changes it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; saved in plan
+  004)
+- Deadline: none (default)
+- Target: a new plan, number 004, in `docs/plans/004_plan-<Name>/`
+- Where it stops: when the plan is ready, or at a question only you can answer
+- Commits made by this run: none: this mode never commits
 
 ### PL-09 · `full-autonomous:false --no-wip-commit`
 
 ```text
-/plan-execute-verify full-autonomous:false --no-wip-commit plan aggiungi limiti di richieste per utente
+/plan-execute-verify full-autonomous:false --no-wip-commit plan add per-user rate limits
 ```
 
-- **Descrizione:** salva esplicitamente entrambi i valori di default.
-- **Implicazioni:** le esecuzioni future senza opzioni si fermano dopo ogni
-  fase e non fanno commit automatici.
-- **Default applicati:** `executor-power:low` salvato in §3; roster legacy
-  Opus/Sonnet/Haiku salvato nel piano; nessuna deadline.
+**What it does:** Creates the plan and saves this choice as its default.
+
+**What to expect:** Later runs stop after each phase and make no commits at all.
+Plan itself writes no code and never commits; the report suggests the command to
+commit the plan files.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; saved as plan 004
+  default)
+- WIP commits: off (from your command; saved as plan 004 default)
+- Executor power: `low` (default; saved in plan 004; only a plan revision
+  changes it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; saved in plan
+  004)
+- Deadline: none (default)
+- Target: a new plan, number 004, in `docs/plans/004_plan-<Name>/`
+- Where it stops: when the plan is ready, or at a question only you can answer
+- Commits made by this run: none: this mode never commits
 
 ### PL-10 · `executor-power:low`
 
 ```text
-/plan-execute-verify executor-power:low plan aggiungi limiti di richieste per utente
+/plan-execute-verify executor-power:low plan add per-user rate limits
 ```
 
-- **Descrizione:** piano per esecutori deboli (esempi: Haiku, Luna); uguale al
-  default, ma esplicito.
-- **Implicazioni:** più fasi e di solito 3–6 sotto-fasi elementari e testabili
-  per fase; passi meccanici con posizioni esatte; ogni scelta architetturale,
-  pattern e best practice esplicitata; snippet di codice verificati dal
-  supervisore per le parti complesse. L'esecutore decide solo come ritrovare il
-  codice e i dettagli che il piano lascia esplicitamente aperti. È il piano più
-  lungo e costoso da produrre.
-- **Default applicati:** `full-autonomous:false` salvato in §3; WIP off salvato
-  in §3; roster legacy Opus/Sonnet/Haiku salvato nel piano; nessuna deadline.
+**What it does:** Writes the plan for less capable implementing models (the
+default).
+
+**What to expect:** Many small units with step-by-step instructions, and worked
+snippets for the hard parts.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default; saved as plan 004 default)
+- WIP commits: off (default; saved as plan 004 default)
+- Executor power: `low` (from your command; saved in plan 004; only a plan
+  revision changes it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; saved in plan
+  004)
+- Deadline: none (default)
+- Target: a new plan, number 004, in `docs/plans/004_plan-<Name>/`
+- Where it stops: when the plan is ready, or at a question only you can answer
+- Commits made by this run: none: this mode never commits
 
 ### PL-11 · `executor-power:medium`
 
 ```text
-/plan-execute-verify executor-power:medium plan aggiungi limiti di richieste per utente
+/plan-execute-verify executor-power:medium plan add per-user rate limits
 ```
 
-- **Descrizione:** piano per esecutori abbastanza capaci (esempi: Sonnet, Terra,
-  DeepSeek).
-- **Implicazioni:** di solito 2–4 sotto-fasi per fase, con contratti, decisioni,
-  pattern e passi dettagliati; snippet solo dove la prosa non basta a fissare un
-  contratto. L'esecutore può anche riempire dettagli di routine (nomi locali,
-  estrazione di helper, test aggiuntivi sui casi limite) che non cambiano alcuna
-  decisione.
-- **Default applicati:** `full-autonomous:false` salvato in §3; WIP off salvato
-  in §3; roster legacy Opus/Sonnet/Haiku salvato nel piano; nessuna deadline.
+**What it does:** Writes the plan for mid-level implementing models.
+
+**What to expect:** Fewer units with precise contracts and steps; the
+implementer fills in routine details.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default; saved as plan 004 default)
+- WIP commits: off (default; saved as plan 004 default)
+- Executor power: `medium` (from your command; saved in plan 004; only a plan
+  revision changes it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; saved in plan
+  004)
+- Deadline: none (default)
+- Target: a new plan, number 004, in `docs/plans/004_plan-<Name>/`
+- Where it stops: when the plan is ready, or at a question only you can answer
+- Commits made by this run: none: this mode never commits
 
 ### PL-12 · `executor-power:high`
 
 ```text
-/plan-execute-verify executor-power:high plan aggiungi limiti di richieste per utente
+/plan-execute-verify executor-power:high plan add per-user rate limits
 ```
 
-- **Descrizione:** piano per esecutori forti (esempi: Fable, Opus, Astra, Sol,
-  Kimi K3).
-- **Implicazioni:** fasi più grandi, di solito 1–3 sotto-fasi di risultato per
-  fase. Il supervisore fissa risultato, interfacce pubbliche, invarianti,
-  errori, test di accettazione, gate e rischi; l'esecutore pianifica i propri
-  passi e decide l'implementazione interna. I passi espansi vanno in STATE.md
-  §6 prima delle modifiche (in stile delegato il worker li restituisce con il
-  risultato e il coordinatore li registra), le decisioni interne in §8, riviste
-  da agent-1 alla chiusura di fase. Ogni cambio di contratto passa da agent-1.
-- **Default applicati:** `full-autonomous:false` salvato in §3; WIP off salvato
-  in §3; roster legacy Opus/Sonnet/Haiku salvato nel piano; nessuna deadline.
+**What it does:** Writes the plan for strong implementing models.
 
-Per PL-10, PL-11 e PL-12 il livello resta quello del piano per tutta la sua
-vita: Execute non lo cambia e non esiste ancora un comando per cambiarlo. Task e
-Bug collegati e le correzioni scritte da Verify seguono questo livello. La skill
-non deduce il livello dai nomi dei modelli: sceglilo per l'implementatore più
-debole che riceverà unità. Se in seguito assegni un implementatore più debole,
-il supervisore ricalibra le sue unità prima del dispatch.
+**What to expect:** Larger units described by their outcome; the implementer
+decides the internal design and records it, while interfaces, tests, and rules
+stay fixed by the supervisor. Use it only when every implementing model is
+strong.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default; saved as plan 004 default)
+- WIP commits: off (default; saved as plan 004 default)
+- Executor power: `high` (from your command; saved in plan 004; only a plan
+  revision changes it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; saved in plan
+  004)
+- Deadline: none (default)
+- Target: a new plan, number 004, in `docs/plans/004_plan-<Name>/`
+- Where it stops: when the plan is ready, or at a question only you can answer
+- Commits made by this run: none: this mode never commits
 
 ### PL-13 · `agent-1:opus,agent-2:sonnet,agent-3:haiku`
 
 ```text
-/plan-execute-verify agent-1:opus,agent-2:sonnet,agent-3:haiku plan aggiungi limiti di richieste per utente
+/plan-execute-verify agent-1:opus,agent-2:sonnet,agent-3:haiku plan add per-user rate limits
 ```
 
-- **Descrizione:** agent-1 pianifica e supervisiona, agent-2 è
-  l'implementatore principale, agent-3 fa ricognizione e implementazione
-  assegnata.
-- **Implicazioni:** il roster viene salvato in STATE.md; i file di fase nominano
-  solo posizioni (`agent-2`), mai modelli, quindi un cambio di roster non
-  richiede revisioni del piano. Execute ed Execute verify possono sostituirlo;
-  Task, Bug, Verify e Resume lo cambiano solo per la propria invocazione. Con
-  `agent-3:haiku` tra gli implementatori, `executor-power:low` è coerente.
-- **Default applicati:** `full-autonomous:false` salvato in §3; WIP off salvato
-  in §3; `executor-power:low` salvato in §3; nessuna deadline.
+**What it does:** Creates the plan and saves this agent list in it.
+
+**What to expect:** agent-1 (opus) designs, reviews, and approves; units are
+assigned to agent-2 (sonnet) and agent-3 (haiku). Later runs use this list
+unless you give another.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default; saved as plan 004 default)
+- WIP commits: off (default; saved as plan 004 default)
+- Executor power: `low` (default; saved in plan 004; only a plan revision
+  changes it)
+- Agents: agent-1 opus, agent-2 sonnet, agent-3 haiku (from your command; saved
+  in plan 004)
+- Deadline: none (default)
+- Target: a new plan, number 004, in `docs/plans/004_plan-<Name>/`
+- Where it stops: when the plan is ready, or at a question only you can answer
+- Commits made by this run: none: this mode never commits
 
 ### PL-14 · `agent:my-model`
 
 ```text
-/plan-execute-verify agent:my-model plan aggiungi limiti di richieste per utente
+/plan-execute-verify agent:my-model plan add per-user rate limits
 ```
 
-- **Descrizione:** un solo agente pianifica, implementa e revisiona; equivale a
-  `agent-1:my-model`.
-- **Implicazioni:** il roster salvato contiene solo quell'agente e ogni
-  revisione è etichettata self-review. Scegli `executor-power` in base alla
-  capacità di quell'agente.
-- **Default applicati:** `full-autonomous:false` salvato in §3; WIP off salvato
-  in §3; `executor-power:low` salvato in §3; nessuna deadline.
+**What it does:** Creates the plan with one model for every role.
+
+**What to expect:** my-model plans, implements, and reviews its own work;
+reviews are marked as self-reviews.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default; saved as plan 004 default)
+- WIP commits: off (default; saved as plan 004 default)
+- Executor power: `low` (default; saved in plan 004; only a plan revision
+  changes it)
+- Agents: my-model in every role; it reviews its own work (self-review) (from
+  your command; saved in plan 004)
+- Deadline: none (default)
+- Target: a new plan, number 004, in `docs/plans/004_plan-<Name>/`
+- Where it stops: when the plan is ready, or at a question only you can answer
+- Commits made by this run: none: this mode never commits
 
 ### PL-15 · `--deadline=31-10-2026_17_30`
 
 ```text
-/plan-execute-verify --deadline=31-10-2026_17_30 plan aggiungi limiti di richieste per utente
+/plan-execute-verify --deadline=31-10-2026_17_30 plan add per-user rate limits
 ```
 
-- **Descrizione:** ricerca e pianificazione procedono; alla scadenza Plan
-  salva il checkpoint della bozza (DRAFT) e si ferma senza commit.
-- **Implicazioni:** la bozza resta non committata: il report lo segnala e
-  suggerisce il comando di commit senza eseguirlo. Si riprende con
-  `/plan-execute-verify resume <piano>`, usando il numero del nuovo piano. Se il
-  piano diventa READY prima della scadenza, Plan termina normalmente. La
-  deadline non viene salvata in §3.
-- **Default applicati:** `full-autonomous:false` salvato in §3; WIP off
-  salvato in §3; `executor-power:low` salvato in §3; roster legacy
-  Opus/Sonnet/Haiku salvato nel piano.
+**What it does:** Plans normally; at 17:30 it saves the draft and stops.
+
+**What to expect:** The draft stays uncommitted; continue later with `resume
+004`. If the plan is ready earlier, it ends normally. The deadline is not saved
+in the plan.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default; saved as plan 004 default)
+- WIP commits: off (default; saved as plan 004 default)
+- Executor power: `low` (default; saved in plan 004; only a plan revision
+  changes it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default; saved in plan
+  004)
+- Deadline: 31 October 2026 at 17:30 local time, this run only (from your
+  command)
+- Target: a new plan, number 004, in `docs/plans/004_plan-<Name>/`
+- Where it stops: when the plan is ready, or at a question only you can answer;
+  in any case by 17:30
+- Commits made by this run: none: this mode never commits
 
 ## Execute
 
 ```text
-/plan-execute-verify [<opzioni>] execute [<piano>] [<fase o sotto-fase>]
+/plan-execute-verify [<options>] execute [<plan>] [<phase or sub-phase>]
 ```
 
-Implementa le unità eleggibili dentro lo scope selezionato: il piano intero,
-`phase_02`, `1.2`, `§ 1.2` o `phase_02 § 1.2`. Senza piano usa il piano reale
-con il numero più alto e chiede se più piani attivi rendono ambiguo il target.
-Il selettore e le opzioni esplicite diventano lo scope di esecuzione salvato con
-i suoi override: durano attraverso resume e nuove sessioni, decadono quando un
-selettore diverso lo sostituisce e non cambiano mai §3. Lo stesso selettore su
-uno scope RUNNING o BLOCKED lo continua, e le nuove opzioni esplicite ne
-sostituiscono gli override; un selettore diverso su uno scope RUNNING o BLOCKED
-chiede conferma prima di sostituirlo. Uno scope di sotto-fase termina alla sua
-chiusura e non include mai la chiusura di fase `P<N>`; `execute 003 phase_02`
-la include.
+Execute implements an existing plan unit by unit, with tests and reviews, and
+keeps `STATE.md` up to date. Without a phase it runs the whole plan; with one
+(`execute 003 phase_02`, `execute 003 1.2`) it stays inside it. Options given
+here are kept for this execution: `resume` reuses them, and they never change
+the plan's defaults.
 
-### EX-01 · nessuna opzione
+### EX-01 · no option
 
 ```text
 /plan-execute-verify execute 003
 ```
 
-- **Descrizione:** esegue il piano 003 con le impostazioni risolte.
-- **Implicazioni:** se continui lo stesso scope RUNNING o BLOCKED valgono i suoi
-  override, altrimenti §3, altrimenti i default. Con i default procede fino alla
-  chiusura della fase corrente, si ferma dopo `P<N>` (riprendi con
-  `resume 003`) e non fa commit. Se Plan aveva salvato `full-autonomous:true`,
-  procede su tutto lo scope e committa.
-- **Default applicati:** autonomia dall'override dello scope (stesso selettore),
-  poi §3, poi `false`; WIP dall'override dello scope, poi §3, poi off; livello
-  salvato nel piano; roster del piano; nessuna deadline; fase omessa: intero
-  piano.
+**What it does:** Runs plan 003 with plan 003's saved settings.
+
+**What to expect:** It stops after the first phase it closes and makes no
+commits; continue with `resume 003`.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase given)
+- Where it stops: after each phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EX-02 · `full-autonomous:true`
 
@@ -775,16 +1002,25 @@ la include.
 /plan-execute-verify full-autonomous:true execute 003
 ```
 
-- **Descrizione:** procede su tutto lo scope senza fermarsi ai confini di unità
-  o di fase.
-- **Implicazioni:** commit locale di ogni sotto-fase e chiusura di fase
-  completate; si ferma solo per un blocco reale, uno stop dell'utente o
-  un'interruzione dell'host. L'opzione resta come override dello scope e non
-  cambia §3. Con `execute 003 § 1.2` resta limitato alla sotto-fase 1.2: non
-  prosegue in 1.3 né esegue `P1`. Il WIP si risolve da override, §3 o default.
-- **Default applicati:** WIP dall'override dello scope, poi §3, poi off; livello
-  salvato nel piano; roster del piano; nessuna deadline; fase omessa: intero
-  piano.
+**What it does:** Runs plan 003, without pausing between phases, and commits
+each finished piece, with no WIP commits.
+
+**What to expect:** Commits are local and never pushed. It stops early only at a
+real blocker, a stop request, or a deadline. `resume` keeps these options for
+this execution; the plan defaults do not change.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; kept by `resume` for
+  this execution)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase given)
+- Where it stops: when the whole selected work is done, or at a real blocker
+- Commits made by this run: each finished unit and phase
 
 ### EX-03 · `full-autonomous:false`
 
@@ -792,15 +1028,24 @@ la include.
 /plan-execute-verify full-autonomous:false execute 003
 ```
 
-- **Descrizione:** procede fino alla fine della fase corrente e si ferma dopo la
-  sua chiusura.
-- **Implicazioni:** un confine di sotto-fase non è un punto di stop. L'opzione
-  non aggiunge commit, ma se il WIP risolto è on (da override o §3) i commit
-  avvengono comunque: per escluderli tutti vedi EX-09. Lo scope resta RUNNING e
-  `resume 003` continua con la fase successiva.
-- **Default applicati:** WIP dall'override dello scope, poi §3, poi off; livello
-  salvato nel piano; roster del piano; nessuna deadline; fase omessa: intero
-  piano.
+**What it does:** Runs plan 003, stopping after each phase, and commits nothing:
+you commit when you want.
+
+**What to expect:** Only a handoff still makes its one commit. `resume` keeps
+these options for this execution; the plan defaults do not change.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; kept by `resume` for
+  this execution)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase given)
+- Where it stops: after each phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EX-04 · `--wip-commit`
 
@@ -808,15 +1053,24 @@ la include.
 /plan-execute-verify --wip-commit execute 003
 ```
 
-- **Descrizione:** attiva il WIP come override dello scope; l'autonomia si
-  risolve da override, §3 o default.
-- **Implicazioni:** commit di ogni sotto-fase e chiusura di fase completate, più
-  un unico commit `wip(<id>)` a rotazione aggiornato a ogni checkpoint
-  dell'unità aperta: un crash perde al più il lavoro dall'ultimo checkpoint. Con
-  autonomia `false` si ferma comunque dopo ogni chiusura di fase.
-- **Default applicati:** autonomia dall'override dello scope (stesso selettore),
-  poi §3, poi `false`; livello salvato nel piano; roster del piano; nessuna
-  deadline; fase omessa: intero piano.
+**What it does:** Runs plan 003, stopping after each phase, and still commits
+each finished piece and a WIP commit at checkpoints.
+
+**What to expect:** Commits are local and never pushed. `resume` keeps these
+options for this execution; the plan defaults do not change.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: on (from your command; kept by `resume` for this execution)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase given)
+- Where it stops: after each phase is closed
+- Commits made by this run: each finished unit and phase, plus a rolling WIP
+  commit at each checkpoint
 
 ### EX-05 · `--no-wip-commit`
 
@@ -824,13 +1078,23 @@ la include.
 /plan-execute-verify --no-wip-commit execute 003
 ```
 
-- **Descrizione:** disattiva il WIP per questo scope.
-- **Implicazioni:** niente commit WIP. Se l'autonomia risolta è `true` (per
-  esempio da §3) i commit di completamento restano; se è `false` non c'è alcun
-  commit.
-- **Default applicati:** autonomia dall'override dello scope (stesso selettore),
-  poi §3, poi `false`; livello salvato nel piano; roster del piano; nessuna
-  deadline; fase omessa: intero piano.
+**What it does:** Runs plan 003, stopping after each phase, and commits nothing:
+you commit when you want.
+
+**What to expect:** Only a handoff still makes its one commit. `resume` keeps
+these options for this execution; the plan defaults do not change.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from your command; kept by `resume` for this execution)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase given)
+- Where it stops: after each phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EX-06 · `full-autonomous:true --wip-commit`
 
@@ -838,11 +1102,26 @@ la include.
 /plan-execute-verify full-autonomous:true --wip-commit execute 003
 ```
 
-- **Descrizione:** tutto lo scope, con il massimo dei commit.
-- **Implicazioni:** commit di completamento per ogni sotto-fase e fase, più il
-  WIP a rotazione ai checkpoint. Entrambi restano come override dello scope.
-- **Default applicati:** livello salvato nel piano; roster del piano; nessuna
-  deadline; fase omessa: intero piano.
+**What it does:** Runs plan 003, without pausing between phases, and commits
+each finished piece and a WIP commit at checkpoints.
+
+**What to expect:** Commits are local and never pushed. It stops early only at a
+real blocker, a stop request, or a deadline. `resume` keeps these options for
+this execution; the plan defaults do not change.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; kept by `resume` for
+  this execution)
+- WIP commits: on (from your command; kept by `resume` for this execution)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase given)
+- Where it stops: when the whole selected work is done, or at a real blocker
+- Commits made by this run: each finished unit and phase, plus a rolling WIP
+  commit at each checkpoint
 
 ### EX-07 · `full-autonomous:false --wip-commit`
 
@@ -850,11 +1129,25 @@ la include.
 /plan-execute-verify full-autonomous:false --wip-commit execute 003
 ```
 
-- **Descrizione:** si ferma dopo ogni chiusura di fase, ma committa.
-- **Implicazioni:** commit di unità e fasi completate e WIP a rotazione;
-  `resume 003` riparte dalla fase successiva con gli stessi override.
-- **Default applicati:** livello salvato nel piano; roster del piano; nessuna
-  deadline; fase omessa: intero piano.
+**What it does:** Runs plan 003, stopping after each phase, and still commits
+each finished piece and a WIP commit at checkpoints.
+
+**What to expect:** Commits are local and never pushed. `resume` keeps these
+options for this execution; the plan defaults do not change.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; kept by `resume` for
+  this execution)
+- WIP commits: on (from your command; kept by `resume` for this execution)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase given)
+- Where it stops: after each phase is closed
+- Commits made by this run: each finished unit and phase, plus a rolling WIP
+  commit at each checkpoint
 
 ### EX-08 · `full-autonomous:true --no-wip-commit`
 
@@ -862,12 +1155,25 @@ la include.
 /plan-execute-verify full-autonomous:true --no-wip-commit execute 003
 ```
 
-- **Descrizione:** tutto lo scope, solo commit di completamento.
-- **Implicazioni:** viene committato solo lavoro completato, verificato e
-  revisionato. A un'interruzione il lavoro parziale resta nel working tree e
-  `resume` lo riconcilia con la base dell'unità.
-- **Default applicati:** livello salvato nel piano; roster del piano; nessuna
-  deadline; fase omessa: intero piano.
+**What it does:** Runs plan 003, without pausing between phases, and commits
+each finished piece, with no WIP commits.
+
+**What to expect:** Commits are local and never pushed. It stops early only at a
+real blocker, a stop request, or a deadline. `resume` keeps these options for
+this execution; the plan defaults do not change.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; kept by `resume` for
+  this execution)
+- WIP commits: off (from your command; kept by `resume` for this execution)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase given)
+- Where it stops: when the whole selected work is done, or at a real blocker
+- Commits made by this run: each finished unit and phase
 
 ### EX-09 · `full-autonomous:false --no-wip-commit`
 
@@ -875,12 +1181,24 @@ la include.
 /plan-execute-verify full-autonomous:false --no-wip-commit execute 003
 ```
 
-- **Descrizione:** si ferma dopo ogni chiusura di fase, senza commit.
-- **Implicazioni:** è l'unico modo per escludere tutti i commit automatici,
-  qualunque cosa dica §3; solo un handoff crea comunque il suo commit. Il report
-  avvisa del lavoro non committato e suggerisce il comando.
-- **Default applicati:** livello salvato nel piano; roster del piano; nessuna
-  deadline; fase omessa: intero piano.
+**What it does:** Runs plan 003, stopping after each phase, and commits nothing:
+you commit when you want.
+
+**What to expect:** Only a handoff still makes its one commit. `resume` keeps
+these options for this execution; the plan defaults do not change.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; kept by `resume` for
+  this execution)
+- WIP commits: off (from your command; kept by `resume` for this execution)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase given)
+- Where it stops: after each phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EX-10 · `executor-power:low`
 
@@ -888,11 +1206,26 @@ la include.
 /plan-execute-verify executor-power:low execute 003
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** nessuna esecuzione. Execute usa sempre il livello salvato
-  nel piano e non esiste ancora un comando per cambiarlo.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses plan 003's saved level.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase given)
+- Where it stops: after each phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EX-11 · `executor-power:medium`
 
@@ -900,10 +1233,26 @@ la include.
 /plan-execute-verify executor-power:medium execute 003
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** come EX-10.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses plan 003's saved level.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase given)
+- Where it stops: after each phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EX-12 · `executor-power:high`
 
@@ -911,11 +1260,26 @@ la include.
 /plan-execute-verify executor-power:high execute 003
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** come EX-10. Un esecutore forte non ottiene più autonomia di
-  quella prevista dal livello salvato.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses plan 003's saved level.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase given)
+- Where it stops: after each phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EX-13 · `agent-1:opus,agent-2:sonnet,agent-3:haiku`
 
@@ -923,19 +1287,22 @@ la include.
 /plan-execute-verify agent-1:opus,agent-2:sonnet,agent-3:haiku execute 003
 ```
 
-- **Descrizione:** sostituisce il roster del piano e aggiorna le assegnazioni
-  rimanenti.
-- **Implicazioni:** il nuovo roster viene salvato e vale anche per le esecuzioni
-  successive; non serve una revisione del piano. Se un nuovo implementatore è
-  giudicato più debole del livello `executor-power` registrato, il supervisore
-  ricalibra le sue unità prima del dispatch. Un agente assegnato non disponibile
-  può essere sostituito solo da una posizione uguale o inferiore (agent-1 al
-  posto di agent-2, mai il contrario), con la sostituzione registrata;
-  altrimenti l'unità diventa un handoff BLOCKED. Revisioni obbligatorie e
-  revisioni del piano spettano solo ad agent-1.
-- **Default applicati:** autonomia dall'override dello scope (stesso selettore),
-  poi §3, poi `false`; WIP dall'override dello scope, poi §3, poi off; livello
-  salvato nel piano; nessuna deadline; fase omessa: intero piano.
+**What it does:** Runs plan 003 with the agents you list.
+
+**What to expect:** agent-1 (opus) reviews and approves; the other agents
+implement the units assigned to them. This list replaces plan 003's saved one.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 opus, agent-2 sonnet, agent-3 haiku (from your command;
+  replaces plan 003's saved list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase given)
+- Where it stops: after each phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EX-14 · `agent:my-model`
 
@@ -943,12 +1310,22 @@ la include.
 /plan-execute-verify agent:my-model execute 003
 ```
 
-- **Descrizione:** un solo agente implementa e revisiona tutto.
-- **Implicazioni:** il roster del piano diventa quell'agente; ogni revisione,
-  incluse le chiusure di fase, è etichettata self-review.
-- **Default applicati:** autonomia dall'override dello scope (stesso selettore),
-  poi §3, poi `false`; WIP dall'override dello scope, poi §3, poi off; livello
-  salvato nel piano; nessuna deadline; fase omessa: intero piano.
+**What it does:** Runs plan 003 with one model for everything.
+
+**What to expect:** my-model implements and reviews its own work; reviews are
+marked as self-reviews. It replaces plan 003's saved list.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: my-model in every role; it reviews its own work (self-review) (from
+  your command; replaces plan 003's saved list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase given)
+- Where it stops: after each phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EX-15 · `--deadline=31-10-2026_17_30`
 
@@ -956,61 +1333,94 @@ la include.
 /plan-execute-verify --deadline=31-10-2026_17_30 execute 003
 ```
 
-- **Descrizione:** esegue lo scope e prepara l'handoff entro le 17:30.
-- **Implicazioni:** controlla l'ora prima di ogni unità, passo e comando lungo,
-  non avvia lavoro che finirebbe dopo la scadenza e limita i comandi lunghi con
-  `timeout`. Alla scadenza esegue l'handoff (trigger `deadline`): checkpoint,
-  commit `handoff(request-by-user): …` anche con i commit disattivati, comando
-  di ripresa, stop. Se lo scope finisce prima, termina normalmente. La deadline
-  vale solo per questa run: non diventa override dello scope e non passa a
-  `resume`. È best effort: può sforare di poco.
-- **Default applicati:** autonomia dall'override dello scope (stesso selettore),
-  poi §3, poi `false`; WIP dall'override dello scope, poi §3, poi off; livello
-  salvato nel piano; roster del piano; fase omessa: intero piano.
+**What it does:** Runs plan 003 until 17:30 at the latest, then stops
+gracefully.
+
+**What to expect:** Before 17:30 it finishes or pauses the current unit, saves
+the state, makes one handoff commit for the code, and shows the resume command.
+If the work ends earlier, it ends normally. A later `resume` does not inherit
+the deadline.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: 31 October 2026 at 17:30 local time, this run only (from your
+  command)
+- Target: the whole plan 003 (no phase given)
+- Where it stops: after each phase is closed; in any case by 17:30
+- Commits made by this run: none: changes stay uncommitted; at the deadline, one
+  handoff commit for unfinished code
 
 ## Execute verify
 
 ```text
-/plan-execute-verify [<opzioni>] execute verify [<piano>] [V<NNN>]
+/plan-execute-verify [<options>] execute verify [<plan>] [<report>]
 ```
 
-Applica le correzioni del report più recente del piano selezionato o attivo, o
-del report `V<NNN>` indicato. Ogni correzione è un'unità `V<NNN>-C<n>`; una
-correzione che tocca una fase completata la riapre e ne riesegue la chiusura
-`P<N>` con gate completi e revisione del supervisore. Correzioni BLOCKED o
-sottospecificate richiedono prima un raffinamento del supervisore. Scope e
-opzioni si salvano come in Execute: override dello scope, mai §3. Le correzioni
-di un audit su `000_adhoc` non usano questa modalità: diventano richieste Task o
-Bug.
+Execute verify applies the corrections listed in an audit report (by default the
+plan's newest report) and rechecks the phases they touch. It applies only those
+corrections, not new plan work. Give a report ID, such as `execute verify 003
+V002`, to pick another report. In this example plan 003 is still being executed,
+so the agent first asks whether to replace that running execution with the
+corrections; the cases below assume you answer yes, and `resume 003` then
+continues the corrections.
 
-### EV-01 · nessuna opzione
+### EV-01 · no option
 
 ```text
 /plan-execute-verify execute verify 003
 ```
 
-- **Descrizione:** applica le correzioni del report più recente del piano 003
-  con le impostazioni risolte come in EX-01.
-- **Implicazioni:** con i default si ferma dopo la chiusura di ogni fase
-  riaperta e non fa commit. Un finding diventa FIXED solo con evidenza; il
-  verdetto storico del report non cambia.
-- **Default applicati:** autonomia dall'override dello scope (stesso selettore),
-  poi §3, poi `false`; WIP dall'override dello scope, poi §3, poi off; livello
-  salvato nel piano; roster del piano; nessuna deadline; report omesso: il più
-  recente.
+**What it does:** Applies the corrections of the newest audit report with plan
+003's saved settings.
+
+**What to expect:** It stops after the first phase it closes and makes no
+commits; continue with `resume 003`.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the corrections of V001, plan 003's newest audit report (no report
+  given)
+- Where it stops: first it asks before replacing the running execution of plan
+  003; then after each reopened phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EV-02 · `full-autonomous:true`
 
 ```text
-/plan-execute-verify full-autonomous:true execute verify 003 V002
+/plan-execute-verify full-autonomous:true execute verify 003
 ```
 
-- **Descrizione:** applica tutte le correzioni del report V002.
-- **Implicazioni:** commit di ogni correzione completata
-  (`correction(V002-C1): …`) e di ogni chiusura di fase riaperta. L'opzione
-  resta come override dello scope.
-- **Default applicati:** WIP dall'override dello scope, poi §3, poi off; livello
-  salvato nel piano; roster del piano; nessuna deadline.
+**What it does:** Applies the corrections of the newest audit report, without
+pausing between phases, and commits each finished piece, with no WIP commits.
+
+**What to expect:** Commits are local and never pushed. It stops early only at a
+real blocker, a stop request, or a deadline. These options are kept while these
+corrections continue; the plan defaults do not change.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the corrections of V001, plan 003's newest audit report (no report
+  given)
+- Where it stops: first it asks before replacing the running execution of plan
+  003; then when all corrections are done, or at a real blocker
+- Commits made by this run: each finished correction and rechecked phase
 
 ### EV-03 · `full-autonomous:false`
 
@@ -1018,13 +1428,25 @@ Bug.
 /plan-execute-verify full-autonomous:false execute verify 003
 ```
 
-- **Descrizione:** applica le correzioni fermandosi dopo la chiusura di ogni
-  fase riaperta.
-- **Implicazioni:** nessun commit di completamento da questa opzione; il WIP
-  risolto on committa comunque. `resume 003` continua le correzioni rimanenti.
-- **Default applicati:** WIP dall'override dello scope, poi §3, poi off; livello
-  salvato nel piano; roster del piano; nessuna deadline; report omesso: il più
-  recente.
+**What it does:** Applies the corrections of the newest audit report, stopping
+after each phase, and commits nothing: you commit when you want.
+
+**What to expect:** Only a handoff still makes its one commit. These options are
+kept while these corrections continue; the plan defaults do not change.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the corrections of V001, plan 003's newest audit report (no report
+  given)
+- Where it stops: first it asks before replacing the running execution of plan
+  003; then after each reopened phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EV-04 · `--wip-commit`
 
@@ -1032,13 +1454,27 @@ Bug.
 /plan-execute-verify --wip-commit execute verify 003
 ```
 
-- **Descrizione:** attiva il WIP per questo scope di correzioni.
-- **Implicazioni:** commit di ogni correzione e fase riaperta completate, più il
-  WIP a rotazione ai checkpoint; l'autonomia si risolve da override, §3 o
-  default.
-- **Default applicati:** autonomia dall'override dello scope (stesso selettore),
-  poi §3, poi `false`; livello salvato nel piano; roster del piano; nessuna
-  deadline; report omesso: il più recente.
+**What it does:** Applies the corrections of the newest audit report, stopping
+after each phase, and still commits each finished piece and a WIP commit at
+checkpoints.
+
+**What to expect:** Commits are local and never pushed. These options are kept
+while these corrections continue; the plan defaults do not change.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: on (from your command; kept by `resume` for this execution)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the corrections of V001, plan 003's newest audit report (no report
+  given)
+- Where it stops: first it asks before replacing the running execution of plan
+  003; then after each reopened phase is closed
+- Commits made by this run: each finished correction and rechecked phase, plus a
+  rolling WIP commit at each checkpoint
 
 ### EV-05 · `--no-wip-commit`
 
@@ -1046,12 +1482,25 @@ Bug.
 /plan-execute-verify --no-wip-commit execute verify 003
 ```
 
-- **Descrizione:** disattiva il WIP per questo scope di correzioni.
-- **Implicazioni:** commit di completamento solo se l'autonomia risolta è
-  `true`.
-- **Default applicati:** autonomia dall'override dello scope (stesso selettore),
-  poi §3, poi `false`; livello salvato nel piano; roster del piano; nessuna
-  deadline; report omesso: il più recente.
+**What it does:** Applies the corrections of the newest audit report, stopping
+after each phase, and commits nothing: you commit when you want.
+
+**What to expect:** Only a handoff still makes its one commit. These options are
+kept while these corrections continue; the plan defaults do not change.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from your command; kept by `resume` for this execution)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the corrections of V001, plan 003's newest audit report (no report
+  given)
+- Where it stops: first it asks before replacing the running execution of plan
+  003; then after each reopened phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EV-06 · `full-autonomous:true --wip-commit`
 
@@ -1059,11 +1508,28 @@ Bug.
 /plan-execute-verify full-autonomous:true --wip-commit execute verify 003
 ```
 
-- **Descrizione:** tutte le correzioni, con il massimo dei commit.
-- **Implicazioni:** commit di completamento per correzioni e fasi riaperte, più
-  il WIP a rotazione.
-- **Default applicati:** livello salvato nel piano; roster del piano; nessuna
-  deadline; report omesso: il più recente.
+**What it does:** Applies the corrections of the newest audit report, without
+pausing between phases, and commits each finished piece and a WIP commit at
+checkpoints.
+
+**What to expect:** Commits are local and never pushed. It stops early only at a
+real blocker, a stop request, or a deadline. These options are kept while these
+corrections continue; the plan defaults do not change.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command)
+- WIP commits: on (from your command; kept by `resume` for this execution)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the corrections of V001, plan 003's newest audit report (no report
+  given)
+- Where it stops: first it asks before replacing the running execution of plan
+  003; then when all corrections are done, or at a real blocker
+- Commits made by this run: each finished correction and rechecked phase, plus a
+  rolling WIP commit at each checkpoint
 
 ### EV-07 · `full-autonomous:false --wip-commit`
 
@@ -1071,11 +1537,27 @@ Bug.
 /plan-execute-verify full-autonomous:false --wip-commit execute verify 003
 ```
 
-- **Descrizione:** si ferma dopo ogni fase riaperta, ma committa.
-- **Implicazioni:** commit di correzioni e fasi riaperte completate e WIP a
-  rotazione.
-- **Default applicati:** livello salvato nel piano; roster del piano; nessuna
-  deadline; report omesso: il più recente.
+**What it does:** Applies the corrections of the newest audit report, stopping
+after each phase, and still commits each finished piece and a WIP commit at
+checkpoints.
+
+**What to expect:** Commits are local and never pushed. These options are kept
+while these corrections continue; the plan defaults do not change.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command)
+- WIP commits: on (from your command; kept by `resume` for this execution)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the corrections of V001, plan 003's newest audit report (no report
+  given)
+- Where it stops: first it asks before replacing the running execution of plan
+  003; then after each reopened phase is closed
+- Commits made by this run: each finished correction and rechecked phase, plus a
+  rolling WIP commit at each checkpoint
 
 ### EV-08 · `full-autonomous:true --no-wip-commit`
 
@@ -1083,11 +1565,26 @@ Bug.
 /plan-execute-verify full-autonomous:true --no-wip-commit execute verify 003
 ```
 
-- **Descrizione:** tutte le correzioni, solo commit di completamento.
-- **Implicazioni:** il lavoro interrotto resta nel working tree, non in un
-  commit.
-- **Default applicati:** livello salvato nel piano; roster del piano; nessuna
-  deadline; report omesso: il più recente.
+**What it does:** Applies the corrections of the newest audit report, without
+pausing between phases, and commits each finished piece, with no WIP commits.
+
+**What to expect:** Commits are local and never pushed. It stops early only at a
+real blocker, a stop request, or a deadline. These options are kept while these
+corrections continue; the plan defaults do not change.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command)
+- WIP commits: off (from your command; kept by `resume` for this execution)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the corrections of V001, plan 003's newest audit report (no report
+  given)
+- Where it stops: first it asks before replacing the running execution of plan
+  003; then when all corrections are done, or at a real blocker
+- Commits made by this run: each finished correction and rechecked phase
 
 ### EV-09 · `full-autonomous:false --no-wip-commit`
 
@@ -1095,11 +1592,25 @@ Bug.
 /plan-execute-verify full-autonomous:false --no-wip-commit execute verify 003
 ```
 
-- **Descrizione:** si ferma dopo ogni fase riaperta, senza commit.
-- **Implicazioni:** nessun commit automatico; il report suggerisce il comando
-  di commit.
-- **Default applicati:** livello salvato nel piano; roster del piano; nessuna
-  deadline; report omesso: il più recente.
+**What it does:** Applies the corrections of the newest audit report, stopping
+after each phase, and commits nothing: you commit when you want.
+
+**What to expect:** Only a handoff still makes its one commit. These options are
+kept while these corrections continue; the plan defaults do not change.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command)
+- WIP commits: off (from your command; kept by `resume` for this execution)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the corrections of V001, plan 003's newest audit report (no report
+  given)
+- Where it stops: first it asks before replacing the running execution of plan
+  003; then after each reopened phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EV-10 · `executor-power:low`
 
@@ -1107,11 +1618,28 @@ Bug.
 /plan-execute-verify executor-power:low execute verify 003
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** nessuna correzione applicata. Le correzioni sono già scritte
-  da Verify per il livello del piano.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses plan 003's saved level.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the corrections of V001, plan 003's newest audit report (no report
+  given)
+- Where it stops: first it asks before replacing the running execution of plan
+  003; then after each reopened phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EV-11 · `executor-power:medium`
 
@@ -1119,10 +1647,28 @@ Bug.
 /plan-execute-verify executor-power:medium execute verify 003
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** come EV-10.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses plan 003's saved level.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the corrections of V001, plan 003's newest audit report (no report
+  given)
+- Where it stops: first it asks before replacing the running execution of plan
+  003; then after each reopened phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EV-12 · `executor-power:high`
 
@@ -1130,10 +1676,28 @@ Bug.
 /plan-execute-verify executor-power:high execute verify 003
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** come EV-10.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses plan 003's saved level.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the corrections of V001, plan 003's newest audit report (no report
+  given)
+- Where it stops: first it asks before replacing the running execution of plan
+  003; then after each reopened phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EV-13 · `agent-1:opus,agent-2:sonnet,agent-3:haiku`
 
@@ -1141,14 +1705,25 @@ Bug.
 /plan-execute-verify agent-1:opus,agent-2:sonnet,agent-3:haiku execute verify 003
 ```
 
-- **Descrizione:** sostituisce il roster del piano per le correzioni e per le
-  esecuzioni successive.
-- **Implicazioni:** come EX-13: roster salvato, ricalibrazione se un
-  implementatore è più debole del livello registrato, sostituzioni solo verso
-  posizioni uguali o inferiori, revisioni solo di agent-1.
-- **Default applicati:** autonomia dall'override dello scope (stesso selettore),
-  poi §3, poi `false`; WIP dall'override dello scope, poi §3, poi off; livello
-  salvato nel piano; nessuna deadline; report omesso: il più recente.
+**What it does:** Applies the corrections of the newest audit report with the
+agents you list.
+
+**What to expect:** agent-1 (opus) reviews and approves; the other agents
+implement the units assigned to them. This list replaces plan 003's saved one.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 opus, agent-2 sonnet, agent-3 haiku (from your command;
+  replaces plan 003's saved list)
+- Deadline: none (default)
+- Target: the corrections of V001, plan 003's newest audit report (no report
+  given)
+- Where it stops: first it asks before replacing the running execution of plan
+  003; then after each reopened phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EV-14 · `agent:my-model`
 
@@ -1156,12 +1731,25 @@ Bug.
 /plan-execute-verify agent:my-model execute verify 003
 ```
 
-- **Descrizione:** un solo agente applica e revisiona le correzioni.
-- **Implicazioni:** roster del piano sostituito da quell'agente; ogni revisione
-  è self-review.
-- **Default applicati:** autonomia dall'override dello scope (stesso selettore),
-  poi §3, poi `false`; WIP dall'override dello scope, poi §3, poi off; livello
-  salvato nel piano; nessuna deadline; report omesso: il più recente.
+**What it does:** Applies the corrections of the newest audit report with one
+model for everything.
+
+**What to expect:** my-model implements and reviews its own work; reviews are
+marked as self-reviews. It replaces plan 003's saved list.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: my-model in every role; it reviews its own work (self-review) (from
+  your command; replaces plan 003's saved list)
+- Deadline: none (default)
+- Target: the corrections of V001, plan 003's newest audit report (no report
+  given)
+- Where it stops: first it asks before replacing the running execution of plan
+  003; then after each reopened phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### EV-15 · `--deadline=31-10-2026_17_30`
 
@@ -1169,551 +1757,949 @@ Bug.
 /plan-execute-verify --deadline=31-10-2026_17_30 execute verify 003
 ```
 
-- **Descrizione:** applica le correzioni e prepara l'handoff entro le 17:30.
-- **Implicazioni:** come EX-15; la correzione aperta resta OPEN con il suo
-  checkpoint e `resume 003` continua le correzioni.
-- **Default applicati:** autonomia dall'override dello scope (stesso selettore),
-  poi §3, poi `false`; WIP dall'override dello scope, poi §3, poi off; livello
-  salvato nel piano; roster del piano; report omesso: il più recente.
+**What it does:** Applies the corrections of the newest audit report until 17:30
+at the latest, then stops gracefully.
+
+**What to expect:** Before 17:30 it finishes or pauses the current unit, saves
+the state, makes one handoff commit for the code, and shows the resume command.
+If the work ends earlier, it ends normally. A later `resume` does not inherit
+the deadline.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: 31 October 2026 at 17:30 local time, this run only (from your
+  command)
+- Target: the corrections of V001, plan 003's newest audit report (no report
+  given)
+- Where it stops: first it asks before replacing the running execution of plan
+  003; then after each reopened phase is closed; in any case by 17:30
+- Commits made by this run: none: changes stay uncommitted; at the deadline, one
+  handoff commit for unfinished code
 
 ## Task
 
 ```text
-/plan-execute-verify [<opzioni>] task <descrizione>
+/plan-execute-verify [<options>] task <description>
 ```
 
-Un singolo cambiamento piccolo. Non accetta selettori: si collega a un piano
-reale solo se la richiesta lo nomina (numero, nome o percorso) o cambia
-chiaramente scope, contratti o file di un piano attivo; altrimenti usa
-`docs/plans/000_adhoc/tasks.md`. Il mini-piano persistente è calibrato sul
-livello del piano collegato (`low` in `000_adhoc`). Opzioni e prefisso valgono
-solo per questa invocazione e sono registrati nella voce di ledger; non cambiano
-mai §3 né lo scope salvato, e `full-autonomous:true` non autorizza altre fasi
-del piano. Una richiesta molto più grande di una piccola unità viene prima
-pianificata dal supervisore.
+Task makes one small change. Before touching code, agent-1 writes or checks a
+short plan of the change (the mini-plan) and saves it in
+`docs/plans/000_adhoc/tasks.md`, or in the plan's own ledger when your request
+names a plan. With `full-autonomous:false`, the default, it then stops so you
+can read it: approve by replying in the same session or with `resume 000_adhoc
+T-A004`; reject by saying so or by marking the entry `WITHDRAWN`. With
+`full-autonomous:true` there is no stop. Everything after `task` is the
+description, even text like `--json`; only text shaped like one of this skill's
+options, such as `--deadline=…`, makes the agent ask first.
 
-Prima di toccare il codice, agent-1 scrive o valida il mini-piano nella voce di
-ledger. Con `full-autonomous:false` (il default) la run si ferma una volta con
-la voce `PROPOSED` e ti mostra il mini-piano: puoi modificarlo nel file, poi
-approvi rispondendo nella stessa sessione o con `/plan-execute-verify resume
-000_adhoc T-A004`. Serve l'ID della voce: un `resume` senza ID non approva mai.
-File cambiati nel frattempo o tue modifiche vengono rivalidati da agent-1 prima
-del codice; l'approvazione esegue solo quella voce. Per rifiutare la proposta
-dillo nella stessa sessione, oppure imposta a mano lo stato della voce a
-`WITHDRAWN` con il motivo: la voce non viene mai cancellata né ripresa. La voce
-`PROPOSED` non è committata, e il report lo segnala. Con `full-autonomous:true`
-non c'è stop, ma la validazione resta: una sessione debole che non raggiunge
-agent-1 si blocca prima di scrivere codice. Nessuna combinazione dà un task
-senza stop e senza commit di completamento: `false` si ferma, `true` committa.
-
-### TA-01 · nessuna opzione
+### TA-01 · no option
 
 ```text
-/plan-execute-verify task aggiungi l'opzione --json al comando export
+/plan-execute-verify task add a --json option to the export command
 ```
 
-- **Descrizione:** implementa il cambiamento con test nominati e lo chiude con
-  evidenze; `--json` resta testo della descrizione.
-- **Implicazioni:** collegato a un piano vale il suo §3 (nessun override di
-  scope): con `true` in §3 il task viene committato. In `000_adhoc` valgono i
-  default: nessun commit, e il report lo segnala suggerendo il comando. Con
-  l'autonomia risolta a `false` (default) si ferma per la tua approvazione dopo
-  il mini-piano.
-- **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
-  `false`; WIP dal §3 del piano collegato, altrimenti off; livello del piano
-  collegato, `low` in `000_adhoc`; roster del piano collegato, altrimenti legacy
-  Opus/Sonnet/Haiku; nessuna deadline; nessun piano nominato: `000_adhoc`, salvo
-  che la richiesta cambi chiaramente un piano attivo.
+**What it does:** Writes a short plan of the change (mini-plan), has agent-1
+check it, waits for your approval, then implements it with tests.
+
+**What to expect:** No commits: the change stays uncommitted and the report
+suggests the commit command. To approve, reply in the same session or run the
+`resume` command the report shows.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/tasks.md`, because the request
+  names no plan
+- Where it stops: once, after the mini-plan, for your approval; then at the end
+  of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### TA-02 · `full-autonomous:true`
 
 ```text
-/plan-execute-verify full-autonomous:true task aggiungi l'opzione --json al comando export
+/plan-execute-verify full-autonomous:true task add a --json option to the export command
 ```
 
-- **Descrizione:** completa il task e lo committa.
-- **Implicazioni:** commit locale `task(T-A<NNN>): …` dopo gate e revisioni
-  obbligatorie; un gate o una revisione non risolti impediscono il commit.
-  L'impostazione è registrata solo nella voce di ledger. Nessuno stop per
-  l'approvazione: agent-1 valida il mini-piano e il lavoro prosegue.
-- **Default applicati:** WIP dal §3 del piano collegato, altrimenti off; livello
-  del piano collegato, `low` in `000_adhoc`; roster del piano collegato,
-  altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; nessun piano nominato:
-  `000_adhoc`, salvo che la richiesta cambi chiaramente un piano attivo.
+**What it does:** Writes a short plan of the change (mini-plan), has agent-1
+check it, and implements it with tests.
+
+**What to expect:** One local commit for the change once tests and reviews pass.
+No approval stop, but agent-1 still checks the mini-plan first. These options
+apply to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; this run only)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/tasks.md`, because the request
+  names no plan
+- Where it stops: no approval stop; at the end of the change
+- Commits made by this run: the finished task
 
 ### TA-03 · `full-autonomous:false`
 
 ```text
-/plan-execute-verify full-autonomous:false task aggiungi l'opzione --json al comando export
+/plan-execute-verify full-autonomous:false task add a --json option to the export command
 ```
 
-- **Descrizione:** completa il task senza commit di completamento da questa
-  opzione.
-- **Implicazioni:** il task è un'unità singola, quindi lo stop a fine fase non
-  si applica. Se il WIP risolto è on (dal §3 del piano collegato), il commit
-  avviene comunque. Si ferma per la tua approvazione dopo il mini-piano validato
-  da agent-1, poi prosegue.
-- **Default applicati:** WIP dal §3 del piano collegato, altrimenti off; livello
-  del piano collegato, `low` in `000_adhoc`; roster del piano collegato,
-  altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; nessun piano nominato:
-  `000_adhoc`, salvo che la richiesta cambi chiaramente un piano attivo.
+**What it does:** Writes a short plan of the change (mini-plan), has agent-1
+check it, waits for your approval, then implements it with tests.
+
+**What to expect:** No commits: the change stays uncommitted and the report
+suggests the commit command. To approve, reply in the same session or run the
+`resume` command the report shows. These options apply to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; this run only)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/tasks.md`, because the request
+  names no plan
+- Where it stops: once, after the mini-plan, for your approval; then at the end
+  of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### TA-04 · `--wip-commit`
 
 ```text
-/plan-execute-verify --wip-commit task aggiungi l'opzione --json al comando export
+/plan-execute-verify --wip-commit task add a --json option to the export command
 ```
 
-- **Descrizione:** attiva il WIP per questo task.
-- **Implicazioni:** commit del task completato e commit WIP a rotazione a ogni
-  checkpoint (handoff, operazioni rischiose, blocchi). Con l'autonomia risolta a
-  `false` (default) si ferma per la tua approvazione dopo il mini-piano.
-- **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
-  `false`; livello del piano collegato, `low` in `000_adhoc`; roster del piano
-  collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; nessun piano
-  nominato: `000_adhoc`, salvo che la richiesta cambi chiaramente un piano
-  attivo.
+**What it does:** Writes a short plan of the change (mini-plan), has agent-1
+check it, waits for your approval, then implements it with tests.
+
+**What to expect:** Commits the change and a WIP commit at checkpoints, even
+without full autonomy. To approve, reply in the same session or run the `resume`
+command the report shows. These options apply to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: on (from your command; this run only)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/tasks.md`, because the request
+  names no plan
+- Where it stops: once, after the mini-plan, for your approval; then at the end
+  of the change
+- Commits made by this run: the finished task, plus a rolling WIP commit at each
+  checkpoint
 
 ### TA-05 · `--no-wip-commit`
 
 ```text
-/plan-execute-verify --no-wip-commit task aggiungi l'opzione --json al comando export
+/plan-execute-verify --no-wip-commit task add a --json option to the export command
 ```
 
-- **Descrizione:** disattiva il WIP per questo task.
-- **Implicazioni:** commit di completamento solo se l'autonomia risolta è `true`
-  (esplicita o dal §3 del piano collegato). Con l'autonomia risolta a `false`
-  (default) si ferma per la tua approvazione dopo il mini-piano.
-- **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
-  `false`; livello del piano collegato, `low` in `000_adhoc`; roster del piano
-  collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; nessun piano
-  nominato: `000_adhoc`, salvo che la richiesta cambi chiaramente un piano
-  attivo.
+**What it does:** Writes a short plan of the change (mini-plan), has agent-1
+check it, waits for your approval, then implements it with tests.
+
+**What to expect:** No commits: the change stays uncommitted and the report
+suggests the commit command. To approve, reply in the same session or run the
+`resume` command the report shows. These options apply to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: off (from your command; this run only)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/tasks.md`, because the request
+  names no plan
+- Where it stops: once, after the mini-plan, for your approval; then at the end
+  of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### TA-06 · `full-autonomous:true --wip-commit`
 
 ```text
-/plan-execute-verify full-autonomous:true --wip-commit task aggiungi l'opzione --json al comando export
+/plan-execute-verify full-autonomous:true --wip-commit task add a --json option to the export command
 ```
 
-- **Descrizione:** completa e committa il task, con WIP ai checkpoint.
-- **Implicazioni:** commit di completamento più WIP a rotazione. Nessuno stop
-  per l'approvazione: agent-1 valida il mini-piano e il lavoro prosegue.
-- **Default applicati:** livello del piano collegato, `low` in `000_adhoc`;
-  roster del piano collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna
-  deadline; nessun piano nominato: `000_adhoc`, salvo che la richiesta cambi
-  chiaramente un piano attivo.
+**What it does:** Writes a short plan of the change (mini-plan), has agent-1
+check it, and implements it with tests.
+
+**What to expect:** Commits the change and a WIP commit at checkpoints. No
+approval stop, but agent-1 still checks the mini-plan first. These options apply
+to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; this run only)
+- WIP commits: on (from your command; this run only)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/tasks.md`, because the request
+  names no plan
+- Where it stops: no approval stop; at the end of the change
+- Commits made by this run: the finished task, plus a rolling WIP commit at each
+  checkpoint
 
 ### TA-07 · `full-autonomous:false --wip-commit`
 
 ```text
-/plan-execute-verify full-autonomous:false --wip-commit task aggiungi l'opzione --json al comando export
+/plan-execute-verify full-autonomous:false --wip-commit task add a --json option to the export command
 ```
 
-- **Descrizione:** completa il task con commit dovuti al WIP.
-- **Implicazioni:** commit del task completato e WIP a rotazione, come TA-06. Si
-  ferma per la tua approvazione dopo il mini-piano validato da agent-1, poi
-  prosegue.
-- **Default applicati:** livello del piano collegato, `low` in `000_adhoc`;
-  roster del piano collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna
-  deadline; nessun piano nominato: `000_adhoc`, salvo che la richiesta cambi
-  chiaramente un piano attivo.
+**What it does:** Writes a short plan of the change (mini-plan), has agent-1
+check it, waits for your approval, then implements it with tests.
+
+**What to expect:** Commits the change and a WIP commit at checkpoints, even
+without full autonomy. To approve, reply in the same session or run the `resume`
+command the report shows. These options apply to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; this run only)
+- WIP commits: on (from your command; this run only)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/tasks.md`, because the request
+  names no plan
+- Where it stops: once, after the mini-plan, for your approval; then at the end
+  of the change
+- Commits made by this run: the finished task, plus a rolling WIP commit at each
+  checkpoint
 
 ### TA-08 · `full-autonomous:true --no-wip-commit`
 
 ```text
-/plan-execute-verify full-autonomous:true --no-wip-commit task aggiungi l'opzione --json al comando export
+/plan-execute-verify full-autonomous:true --no-wip-commit task add a --json option to the export command
 ```
 
-- **Descrizione:** completa il task e lo committa solo alla fine.
-- **Implicazioni:** nessun commit WIP; il lavoro interrotto resta nel working
-  tree, con l'unità OPEN e il suo checkpoint. Nessuno stop per l'approvazione:
-  agent-1 valida il mini-piano e il lavoro prosegue.
-- **Default applicati:** livello del piano collegato, `low` in `000_adhoc`;
-  roster del piano collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna
-  deadline; nessun piano nominato: `000_adhoc`, salvo che la richiesta cambi
-  chiaramente un piano attivo.
+**What it does:** Writes a short plan of the change (mini-plan), has agent-1
+check it, and implements it with tests.
+
+**What to expect:** One local commit for the change once tests and reviews pass.
+No approval stop, but agent-1 still checks the mini-plan first. These options
+apply to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; this run only)
+- WIP commits: off (from your command; this run only)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/tasks.md`, because the request
+  names no plan
+- Where it stops: no approval stop; at the end of the change
+- Commits made by this run: the finished task
 
 ### TA-09 · `full-autonomous:false --no-wip-commit`
 
 ```text
-/plan-execute-verify full-autonomous:false --no-wip-commit task aggiungi l'opzione --json al comando export
+/plan-execute-verify full-autonomous:false --no-wip-commit task add a --json option to the export command
 ```
 
-- **Descrizione:** completa il task senza alcun commit.
-- **Implicazioni:** ignora anche un §3 con commit attivi; il report suggerisce
-  il comando di commit. Si ferma per la tua approvazione dopo il mini-piano
-  validato da agent-1, poi prosegue.
-- **Default applicati:** livello del piano collegato, `low` in `000_adhoc`;
-  roster del piano collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna
-  deadline; nessun piano nominato: `000_adhoc`, salvo che la richiesta cambi
-  chiaramente un piano attivo.
+**What it does:** Writes a short plan of the change (mini-plan), has agent-1
+check it, waits for your approval, then implements it with tests.
+
+**What to expect:** No commits: the change stays uncommitted and the report
+suggests the commit command. To approve, reply in the same session or run the
+`resume` command the report shows. These options apply to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; this run only)
+- WIP commits: off (from your command; this run only)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/tasks.md`, because the request
+  names no plan
+- Where it stops: once, after the mini-plan, for your approval; then at the end
+  of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### TA-10 · `executor-power:low`
 
 ```text
-/plan-execute-verify executor-power:low task aggiungi l'opzione --json al comando export
+/plan-execute-verify executor-power:low task add a --json option to the export command
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** nessuna modifica. Il mini-piano segue sempre il livello del
-  piano collegato, `low` in `000_adhoc`.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses the attached plan's level, `low` in 000_adhoc.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/tasks.md`, because the request
+  names no plan
+- Where it stops: once, after the mini-plan, for your approval; then at the end
+  of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### TA-11 · `executor-power:medium`
 
 ```text
-/plan-execute-verify executor-power:medium task aggiungi l'opzione --json al comando export
+/plan-execute-verify executor-power:medium task add a --json option to the export command
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** come TA-10.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses the attached plan's level, `low` in 000_adhoc.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/tasks.md`, because the request
+  names no plan
+- Where it stops: once, after the mini-plan, for your approval; then at the end
+  of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### TA-12 · `executor-power:high`
 
 ```text
-/plan-execute-verify executor-power:high task aggiungi l'opzione --json al comando export
+/plan-execute-verify executor-power:high task add a --json option to the export command
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** come TA-10.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses the attached plan's level, `low` in 000_adhoc.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/tasks.md`, because the request
+  names no plan
+- Where it stops: once, after the mini-plan, for your approval; then at the end
+  of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### TA-13 · `agent-1:opus,agent-2:sonnet,agent-3:haiku`
 
 ```text
-/plan-execute-verify agent-1:opus,agent-2:sonnet,agent-3:haiku task aggiungi l'opzione --json al comando export
+/plan-execute-verify agent-1:opus,agent-2:sonnet,agent-3:haiku task add a --json option to the export command
 ```
 
-- **Descrizione:** assegna gli agenti per questo task.
-- **Implicazioni:** il roster vale solo per l'invocazione ed è registrato nella
-  voce di ledger; il roster salvato del piano non cambia. Con l'autonomia
-  risolta a `false` (default) si ferma per la tua approvazione dopo il
-  mini-piano.
-- **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
-  `false`; WIP dal §3 del piano collegato, altrimenti off; livello del piano
-  collegato, `low` in `000_adhoc`; nessuna deadline; nessun piano nominato:
-  `000_adhoc`, salvo che la richiesta cambi chiaramente un piano attivo.
+**What it does:** Handles the change with the agents you list.
+
+**What to expect:** agent-1 (opus) checks the mini-plan and reviews the result.
+The list applies to this run only and is saved nowhere else.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 opus, agent-2 sonnet, agent-3 haiku (from your command; this
+  run only)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/tasks.md`, because the request
+  names no plan
+- Where it stops: once, after the mini-plan, for your approval; then at the end
+  of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### TA-14 · `agent:my-model`
 
 ```text
-/plan-execute-verify agent:my-model task aggiungi l'opzione --json al comando export
+/plan-execute-verify agent:my-model task add a --json option to the export command
 ```
 
-- **Descrizione:** un solo agente implementa e revisiona il task.
-- **Implicazioni:** ogni revisione è self-review; vale solo per questa
-  invocazione. Con l'autonomia risolta a `false` (default) si ferma per la tua
-  approvazione dopo il mini-piano. La validazione di agent-1 è una self-review
-  etichettata.
-- **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
-  `false`; WIP dal §3 del piano collegato, altrimenti off; livello del piano
-  collegato, `low` in `000_adhoc`; nessuna deadline; nessun piano nominato:
-  `000_adhoc`, salvo che la richiesta cambi chiaramente un piano attivo.
+**What it does:** One model, my-model, handles the change alone.
+
+**What to expect:** It writes and checks its own mini-plan and reviews its own
+work; both are marked as self-reviews. With the default autonomy it still stops
+for your approval.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: my-model in every role; it reviews its own work (self-review) (from
+  your command; this run only)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/tasks.md`, because the request
+  names no plan
+- Where it stops: once, after the mini-plan, for your approval; then at the end
+  of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### TA-15 · `--deadline=31-10-2026_17_30`
 
 ```text
-/plan-execute-verify --deadline=31-10-2026_17_30 task aggiungi l'opzione --json al comando export
+/plan-execute-verify --deadline=31-10-2026_17_30 task add a --json option to the export command
 ```
 
-- **Descrizione:** esegue il task e prepara l'handoff entro le 17:30.
-- **Implicazioni:** se il task non si chiude in tempo, alla scadenza la voce
-  resta OPEN con il suo checkpoint, viene creato il commit di handoff anche con
-  i commit disattivati e il report propone, per esempio, `/plan-execute-verify
-  resume 000_adhoc T-A004`. La deadline non viene registrata come impostazione
-  futura. Con l'autonomia risolta a `false` (default) si ferma per la tua
-  approvazione dopo il mini-piano.
-- **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
-  `false`; WIP dal §3 del piano collegato, altrimenti off; livello del piano
-  collegato, `low` in `000_adhoc`; roster del piano collegato, altrimenti legacy
-  Opus/Sonnet/Haiku; nessun piano nominato: `000_adhoc`, salvo che la richiesta
-  cambi chiaramente un piano attivo.
+**What it does:** Handles the change and stops gracefully by 17:30.
+
+**What to expect:** If it is already waiting for your approval, nothing more
+happens. If it is implementing, it pauses, commits the work in one handoff
+commit, and shows the resume command.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: 31 October 2026 at 17:30 local time, this run only (from your
+  command)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/tasks.md`, because the request
+  names no plan
+- Where it stops: once, after the mini-plan, for your approval; then at the end
+  of the change; in any case by 17:30
+- Commits made by this run: none: changes stay uncommitted; at the deadline, one
+  handoff commit for unfinished code
 
 ## Bug
 
 ```text
-/plan-execute-verify [<opzioni>] bug <descrizione>
+/plan-execute-verify [<options>] bug <description>
 ```
 
-Un singolo difetto: riproduzione con risultato atteso e reale, causa radice,
-test di regressione che prima fallisce, fix, regressione completa pertinente.
-Collegamento al piano, mini-piano e opzioni seguono le regole di Task; il
-ledger è `bugs.md` e l'identità è `B-A<NNN>`. Se la riproduzione fallisce, il
-bug registra tentativi e blocco invece di indovinare un fix.
+Bug fixes one defect: it reproduces the problem, finds the root cause, writes a
+test that fails, fixes the code, and runs the tests again. If it cannot
+reproduce the bug, it records what it tried instead of guessing a fix. With
+`full-autonomous:false` it stops for your approval after the diagnosis and the
+mini-plan, before the test and the fix. Entries go to
+`docs/plans/000_adhoc/bugs.md` unless your request names a plan.
 
-Lo stop per l'approvazione, quando c'è, arriva dopo riproduzione, causa radice e
-mini-piano, prima del test di regressione; agent-1 valida anche la causa radice.
-Prima dell'approvazione non viene modificato alcun file tracciato.
-
-### BU-01 · nessuna opzione
+### BU-01 · no option
 
 ```text
-/plan-execute-verify bug export termina con codice 0 se manca la configurazione
+/plan-execute-verify bug export exits with code 0 when the configuration is missing
 ```
 
-- **Descrizione:** riproduce il difetto, scrive il test di regressione, corregge
-  e chiude con evidenze.
-- **Implicazioni:** collegato a un piano vale il suo §3; in `000_adhoc` valgono
-  i default: nessun commit, con avviso e comando suggerito. Con l'autonomia
-  risolta a `false` (default) si ferma per la tua approvazione dopo diagnosi e
-  mini-piano.
-- **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
-  `false`; WIP dal §3 del piano collegato, altrimenti off; livello del piano
-  collegato, `low` in `000_adhoc`; roster del piano collegato, altrimenti legacy
-  Opus/Sonnet/Haiku; nessuna deadline; nessun piano nominato: `000_adhoc`, salvo
-  che la richiesta cambi chiaramente un piano attivo.
+**What it does:** Reproduces the bug, finds its cause, writes a mini-plan, has
+agent-1 check it, waits for your approval, then writes a failing test, fixes the
+code, and runs the tests again.
+
+**What to expect:** No commits: the change stays uncommitted and the report
+suggests the commit command. To approve, reply in the same session or run the
+`resume` command the report shows.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/bugs.md`, because the request
+  names no plan
+- Where it stops: once, after the diagnosis and mini-plan, for your approval;
+  then at the end of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### BU-02 · `full-autonomous:true`
 
 ```text
-/plan-execute-verify full-autonomous:true bug export termina con codice 0 se manca la configurazione
+/plan-execute-verify full-autonomous:true bug export exits with code 0 when the configuration is missing
 ```
 
-- **Descrizione:** completa il fix e lo committa.
-- **Implicazioni:** commit locale `bug(B-A<NNN>): …` solo dopo regressione e
-  revisioni obbligatorie; registrato solo nella voce di ledger. Nessuno stop per
-  l'approvazione: agent-1 valida il mini-piano e il lavoro prosegue.
-- **Default applicati:** WIP dal §3 del piano collegato, altrimenti off; livello
-  del piano collegato, `low` in `000_adhoc`; roster del piano collegato,
-  altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; nessun piano nominato:
-  `000_adhoc`, salvo che la richiesta cambi chiaramente un piano attivo.
+**What it does:** Reproduces the bug, finds its cause, writes a mini-plan, has
+agent-1 check it, and writes a failing test, fixes the code, and runs the tests
+again.
+
+**What to expect:** One local commit for the fix once tests and reviews pass. No
+approval stop, but agent-1 still checks the mini-plan first. These options apply
+to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; this run only)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/bugs.md`, because the request
+  names no plan
+- Where it stops: no approval stop; at the end of the change
+- Commits made by this run: the finished fix
 
 ### BU-03 · `full-autonomous:false`
 
 ```text
-/plan-execute-verify full-autonomous:false bug export termina con codice 0 se manca la configurazione
+/plan-execute-verify full-autonomous:false bug export exits with code 0 when the configuration is missing
 ```
 
-- **Descrizione:** completa il fix senza commit di completamento da questa
-  opzione.
-- **Implicazioni:** se il WIP risolto è on (dal §3 del piano collegato), il
-  commit avviene comunque. Si ferma per la tua approvazione dopo diagnosi e
-  mini-piano validato da agent-1, poi prosegue.
-- **Default applicati:** WIP dal §3 del piano collegato, altrimenti off; livello
-  del piano collegato, `low` in `000_adhoc`; roster del piano collegato,
-  altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; nessun piano nominato:
-  `000_adhoc`, salvo che la richiesta cambi chiaramente un piano attivo.
+**What it does:** Reproduces the bug, finds its cause, writes a mini-plan, has
+agent-1 check it, waits for your approval, then writes a failing test, fixes the
+code, and runs the tests again.
+
+**What to expect:** No commits: the change stays uncommitted and the report
+suggests the commit command. To approve, reply in the same session or run the
+`resume` command the report shows. These options apply to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; this run only)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/bugs.md`, because the request
+  names no plan
+- Where it stops: once, after the diagnosis and mini-plan, for your approval;
+  then at the end of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### BU-04 · `--wip-commit`
 
 ```text
-/plan-execute-verify --wip-commit bug export termina con codice 0 se manca la configurazione
+/plan-execute-verify --wip-commit bug export exits with code 0 when the configuration is missing
 ```
 
-- **Descrizione:** attiva il WIP per questo bug.
-- **Implicazioni:** commit del fix completato e WIP a rotazione ai checkpoint.
-  Con l'autonomia risolta a `false` (default) si ferma per la tua approvazione
-  dopo diagnosi e mini-piano.
-- **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
-  `false`; livello del piano collegato, `low` in `000_adhoc`; roster del piano
-  collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; nessun piano
-  nominato: `000_adhoc`, salvo che la richiesta cambi chiaramente un piano
-  attivo.
+**What it does:** Reproduces the bug, finds its cause, writes a mini-plan, has
+agent-1 check it, waits for your approval, then writes a failing test, fixes the
+code, and runs the tests again.
+
+**What to expect:** Commits the fix and a WIP commit at checkpoints, even
+without full autonomy. To approve, reply in the same session or run the `resume`
+command the report shows. These options apply to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: on (from your command; this run only)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/bugs.md`, because the request
+  names no plan
+- Where it stops: once, after the diagnosis and mini-plan, for your approval;
+  then at the end of the change
+- Commits made by this run: the finished fix, plus a rolling WIP commit at each
+  checkpoint
 
 ### BU-05 · `--no-wip-commit`
 
 ```text
-/plan-execute-verify --no-wip-commit bug export termina con codice 0 se manca la configurazione
+/plan-execute-verify --no-wip-commit bug export exits with code 0 when the configuration is missing
 ```
 
-- **Descrizione:** disattiva il WIP per questo bug.
-- **Implicazioni:** commit di completamento solo se l'autonomia risolta è
-  `true`. Con l'autonomia risolta a `false` (default) si ferma per la tua
-  approvazione dopo diagnosi e mini-piano.
-- **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
-  `false`; livello del piano collegato, `low` in `000_adhoc`; roster del piano
-  collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; nessun piano
-  nominato: `000_adhoc`, salvo che la richiesta cambi chiaramente un piano
-  attivo.
+**What it does:** Reproduces the bug, finds its cause, writes a mini-plan, has
+agent-1 check it, waits for your approval, then writes a failing test, fixes the
+code, and runs the tests again.
+
+**What to expect:** No commits: the change stays uncommitted and the report
+suggests the commit command. To approve, reply in the same session or run the
+`resume` command the report shows. These options apply to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: off (from your command; this run only)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/bugs.md`, because the request
+  names no plan
+- Where it stops: once, after the diagnosis and mini-plan, for your approval;
+  then at the end of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### BU-06 · `full-autonomous:true --wip-commit`
 
 ```text
-/plan-execute-verify full-autonomous:true --wip-commit bug export termina con codice 0 se manca la configurazione
+/plan-execute-verify full-autonomous:true --wip-commit bug export exits with code 0 when the configuration is missing
 ```
 
-- **Descrizione:** completa e committa il fix, con WIP ai checkpoint.
-- **Implicazioni:** commit di completamento più WIP a rotazione. Nessuno stop
-  per l'approvazione: agent-1 valida il mini-piano e il lavoro prosegue.
-- **Default applicati:** livello del piano collegato, `low` in `000_adhoc`;
-  roster del piano collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna
-  deadline; nessun piano nominato: `000_adhoc`, salvo che la richiesta cambi
-  chiaramente un piano attivo.
+**What it does:** Reproduces the bug, finds its cause, writes a mini-plan, has
+agent-1 check it, and writes a failing test, fixes the code, and runs the tests
+again.
+
+**What to expect:** Commits the fix and a WIP commit at checkpoints. No approval
+stop, but agent-1 still checks the mini-plan first. These options apply to this
+run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; this run only)
+- WIP commits: on (from your command; this run only)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/bugs.md`, because the request
+  names no plan
+- Where it stops: no approval stop; at the end of the change
+- Commits made by this run: the finished fix, plus a rolling WIP commit at each
+  checkpoint
 
 ### BU-07 · `full-autonomous:false --wip-commit`
 
 ```text
-/plan-execute-verify full-autonomous:false --wip-commit bug export termina con codice 0 se manca la configurazione
+/plan-execute-verify full-autonomous:false --wip-commit bug export exits with code 0 when the configuration is missing
 ```
 
-- **Descrizione:** completa il fix con commit dovuti al WIP.
-- **Implicazioni:** come BU-06. Si ferma per la tua approvazione dopo diagnosi e
-  mini-piano validato da agent-1, poi prosegue.
-- **Default applicati:** livello del piano collegato, `low` in `000_adhoc`;
-  roster del piano collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna
-  deadline; nessun piano nominato: `000_adhoc`, salvo che la richiesta cambi
-  chiaramente un piano attivo.
+**What it does:** Reproduces the bug, finds its cause, writes a mini-plan, has
+agent-1 check it, waits for your approval, then writes a failing test, fixes the
+code, and runs the tests again.
+
+**What to expect:** Commits the fix and a WIP commit at checkpoints, even
+without full autonomy. To approve, reply in the same session or run the `resume`
+command the report shows. These options apply to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; this run only)
+- WIP commits: on (from your command; this run only)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/bugs.md`, because the request
+  names no plan
+- Where it stops: once, after the diagnosis and mini-plan, for your approval;
+  then at the end of the change
+- Commits made by this run: the finished fix, plus a rolling WIP commit at each
+  checkpoint
 
 ### BU-08 · `full-autonomous:true --no-wip-commit`
 
 ```text
-/plan-execute-verify full-autonomous:true --no-wip-commit bug export termina con codice 0 se manca la configurazione
+/plan-execute-verify full-autonomous:true --no-wip-commit bug export exits with code 0 when the configuration is missing
 ```
 
-- **Descrizione:** completa il fix e lo committa solo alla fine.
-- **Implicazioni:** il lavoro interrotto resta nel working tree, con l'unità
-  OPEN e il suo checkpoint. Nessuno stop per l'approvazione: agent-1 valida il
-  mini-piano e il lavoro prosegue.
-- **Default applicati:** livello del piano collegato, `low` in `000_adhoc`;
-  roster del piano collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna
-  deadline; nessun piano nominato: `000_adhoc`, salvo che la richiesta cambi
-  chiaramente un piano attivo.
+**What it does:** Reproduces the bug, finds its cause, writes a mini-plan, has
+agent-1 check it, and writes a failing test, fixes the code, and runs the tests
+again.
+
+**What to expect:** One local commit for the fix once tests and reviews pass. No
+approval stop, but agent-1 still checks the mini-plan first. These options apply
+to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; this run only)
+- WIP commits: off (from your command; this run only)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/bugs.md`, because the request
+  names no plan
+- Where it stops: no approval stop; at the end of the change
+- Commits made by this run: the finished fix
 
 ### BU-09 · `full-autonomous:false --no-wip-commit`
 
 ```text
-/plan-execute-verify full-autonomous:false --no-wip-commit bug export termina con codice 0 se manca la configurazione
+/plan-execute-verify full-autonomous:false --no-wip-commit bug export exits with code 0 when the configuration is missing
 ```
 
-- **Descrizione:** completa il fix senza alcun commit.
-- **Implicazioni:** ignora anche un §3 con commit attivi; il report suggerisce
-  il comando di commit. Si ferma per la tua approvazione dopo diagnosi e
-  mini-piano validato da agent-1, poi prosegue.
-- **Default applicati:** livello del piano collegato, `low` in `000_adhoc`;
-  roster del piano collegato, altrimenti legacy Opus/Sonnet/Haiku; nessuna
-  deadline; nessun piano nominato: `000_adhoc`, salvo che la richiesta cambi
-  chiaramente un piano attivo.
+**What it does:** Reproduces the bug, finds its cause, writes a mini-plan, has
+agent-1 check it, waits for your approval, then writes a failing test, fixes the
+code, and runs the tests again.
+
+**What to expect:** No commits: the change stays uncommitted and the report
+suggests the commit command. To approve, reply in the same session or run the
+`resume` command the report shows. These options apply to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; this run only)
+- WIP commits: off (from your command; this run only)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/bugs.md`, because the request
+  names no plan
+- Where it stops: once, after the diagnosis and mini-plan, for your approval;
+  then at the end of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### BU-10 · `executor-power:low`
 
 ```text
-/plan-execute-verify executor-power:low bug export termina con codice 0 se manca la configurazione
+/plan-execute-verify executor-power:low bug export exits with code 0 when the configuration is missing
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** nessuna modifica. Il mini-piano segue il livello del piano
-  collegato, `low` in `000_adhoc`.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses the attached plan's level, `low` in 000_adhoc.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/bugs.md`, because the request
+  names no plan
+- Where it stops: once, after the diagnosis and mini-plan, for your approval;
+  then at the end of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### BU-11 · `executor-power:medium`
 
 ```text
-/plan-execute-verify executor-power:medium bug export termina con codice 0 se manca la configurazione
+/plan-execute-verify executor-power:medium bug export exits with code 0 when the configuration is missing
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** come BU-10.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses the attached plan's level, `low` in 000_adhoc.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/bugs.md`, because the request
+  names no plan
+- Where it stops: once, after the diagnosis and mini-plan, for your approval;
+  then at the end of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### BU-12 · `executor-power:high`
 
 ```text
-/plan-execute-verify executor-power:high bug export termina con codice 0 se manca la configurazione
+/plan-execute-verify executor-power:high bug export exits with code 0 when the configuration is missing
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** come BU-10.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses the attached plan's level, `low` in 000_adhoc.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/bugs.md`, because the request
+  names no plan
+- Where it stops: once, after the diagnosis and mini-plan, for your approval;
+  then at the end of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### BU-13 · `agent-1:opus,agent-2:sonnet,agent-3:haiku`
 
 ```text
-/plan-execute-verify agent-1:opus,agent-2:sonnet,agent-3:haiku bug export termina con codice 0 se manca la configurazione
+/plan-execute-verify agent-1:opus,agent-2:sonnet,agent-3:haiku bug export exits with code 0 when the configuration is missing
 ```
 
-- **Descrizione:** assegna gli agenti per questo bug.
-- **Implicazioni:** solo per l'invocazione, registrato nella voce di ledger; il
-  roster del piano non cambia. Con l'autonomia risolta a `false` (default) si
-  ferma per la tua approvazione dopo diagnosi e mini-piano.
-- **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
-  `false`; WIP dal §3 del piano collegato, altrimenti off; livello del piano
-  collegato, `low` in `000_adhoc`; nessuna deadline; nessun piano nominato:
-  `000_adhoc`, salvo che la richiesta cambi chiaramente un piano attivo.
+**What it does:** Handles the fix with the agents you list.
+
+**What to expect:** agent-1 (opus) checks the mini-plan and reviews the result.
+The list applies to this run only and is saved nowhere else.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 opus, agent-2 sonnet, agent-3 haiku (from your command; this
+  run only)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/bugs.md`, because the request
+  names no plan
+- Where it stops: once, after the diagnosis and mini-plan, for your approval;
+  then at the end of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### BU-14 · `agent:my-model`
 
 ```text
-/plan-execute-verify agent:my-model bug export termina con codice 0 se manca la configurazione
+/plan-execute-verify agent:my-model bug export exits with code 0 when the configuration is missing
 ```
 
-- **Descrizione:** un solo agente riproduce, corregge e revisiona.
-- **Implicazioni:** ogni revisione è self-review; vale solo per questa
-  invocazione. Con l'autonomia risolta a `false` (default) si ferma per la tua
-  approvazione dopo diagnosi e mini-piano. La validazione di agent-1 è una
-  self-review etichettata.
-- **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
-  `false`; WIP dal §3 del piano collegato, altrimenti off; livello del piano
-  collegato, `low` in `000_adhoc`; nessuna deadline; nessun piano nominato:
-  `000_adhoc`, salvo che la richiesta cambi chiaramente un piano attivo.
+**What it does:** One model, my-model, handles the fix alone.
+
+**What to expect:** It writes and checks its own mini-plan and reviews its own
+work; both are marked as self-reviews. With the default autonomy it still stops
+for your approval.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: my-model in every role; it reviews its own work (self-review) (from
+  your command; this run only)
+- Deadline: none (default)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/bugs.md`, because the request
+  names no plan
+- Where it stops: once, after the diagnosis and mini-plan, for your approval;
+  then at the end of the change
+- Commits made by this run: none: changes stay uncommitted
 
 ### BU-15 · `--deadline=31-10-2026_17_30`
 
 ```text
-/plan-execute-verify --deadline=31-10-2026_17_30 bug export termina con codice 0 se manca la configurazione
+/plan-execute-verify --deadline=31-10-2026_17_30 bug export exits with code 0 when the configuration is missing
 ```
 
-- **Descrizione:** corregge il bug e prepara l'handoff entro le 17:30.
-- **Implicazioni:** come TA-15; la ripresa proposta è del tipo
-  `/plan-execute-verify resume 000_adhoc B-A002`. Con l'autonomia risolta a
-  `false` (default) si ferma per la tua approvazione dopo diagnosi e mini-piano.
-- **Default applicati:** autonomia dal §3 del piano collegato, altrimenti
-  `false`; WIP dal §3 del piano collegato, altrimenti off; livello del piano
-  collegato, `low` in `000_adhoc`; roster del piano collegato, altrimenti legacy
-  Opus/Sonnet/Haiku; nessun piano nominato: `000_adhoc`, salvo che la richiesta
-  cambi chiaramente un piano attivo.
+**What it does:** Handles the fix and stops gracefully by 17:30.
+
+**What to expect:** If it is already waiting for your approval, nothing more
+happens. If it is implementing, it pauses, commits the work in one handoff
+commit, and shows the resume command.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: off (default)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: 31 October 2026 at 17:30 local time, this run only (from your
+  command)
+- Target: ad-hoc ledger `docs/plans/000_adhoc/bugs.md`, because the request
+  names no plan
+- Where it stops: once, after the diagnosis and mini-plan, for your approval;
+  then at the end of the change; in any case by 17:30
+- Commits made by this run: none: changes stay uncommitted; at the deadline, one
+  handoff commit for unfinished code
 
 ## Verify
 
 ```text
-/plan-execute-verify [<opzioni>] verify [<piano>] [<fase, sotto-fase o voce>]
+/plan-execute-verify [<options>] verify [<plan>] [<phase, sub-phase, or entry>]
 ```
 
-Audit basato su evidenze: scrive il report in `verify/`, il registro dei
-finding, le righe di correzione in STATE.md §11 e correzioni di stato
-veritiere. Non modifica mai codice di produzione e non applica fix, nemmeno in
-autonomia. Selettori: piano, `phase_02`, `1.2`, `§ 1.2`, una voce `T-A<NNN>` o
-`B-A<NNN>`, `000_adhoc` da solo o con una voce. Opzioni e prefisso valgono solo
-per questo audit e sono registrati nel report. Il verdetto è PASS, PASS WITH
-FINDINGS, FAIL o INCOMPLETE. Le correzioni sono scritte per il livello
-`executor-power` del piano; in `000_adhoc` diventano comandi Task o Bug pronti.
+Verify audits a plan, or a part of it (`verify 003 phase_02`, `verify 003 1.2`,
+`verify 000_adhoc T-A004`), against its specification: behavior, tests, reviews,
+state, and commits. It writes a dated report with findings and ready-to-run
+corrections, but never changes code. Apply corrections with `execute verify`.
 
-### VE-01 · nessuna opzione
+### VE-01 · no option
 
 ```text
 /plan-execute-verify verify 003
 ```
 
-- **Descrizione:** verifica l'intero piano 003 e salva il report.
-- **Implicazioni:** l'autonomia si risolve da §3 o dal default: con `true` in §3
-  l'audit committa i propri artefatti, altrimenti nessun commit. Il report
-  indica il comando per applicare le correzioni, che non partono mai da sole.
-- **Default applicati:** autonomia da §3, altrimenti `false`; WIP irrilevante
-  per l'audit; livello del piano per le correzioni; roster del piano, altrimenti
-  legacy Opus/Sonnet/Haiku; nessuna deadline; fase o voce omessa: intero piano.
+**What it does:** Audits the whole plan 003 against its specification.
+
+**What to expect:** It writes a dated report with findings and ready-to-run
+corrections, and changes no code. The report stays uncommitted; the end of the
+report shows the command to apply corrections, if any.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default; no effect: audits
+  never get WIP commits)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase or entry given)
+- Where it stops: when the audit is complete
+- Commits made by this run: none: the report stays uncommitted
 
 ### VE-02 · `full-autonomous:true`
 
 ```text
-/plan-execute-verify full-autonomous:true verify 003 phase_02
+/plan-execute-verify full-autonomous:true verify 003
 ```
 
-- **Descrizione:** verifica la fase logica 1 e committa l'audit.
-- **Implicazioni:** commit solo degli artefatti di audit e di stato, con il
-  verdetto nel soggetto, per esempio
-  `verify(V001): complete audit; FAIL, 1 blocker`. Anche un FAIL viene
-  committato: registra un'ispezione conclusa, non un'implementazione
-  verificata. Modifiche di produzione non committate non vengono mai incluse.
-- **Default applicati:** WIP irrilevante per l'audit; livello del piano per le
-  correzioni; roster del piano, altrimenti legacy Opus/Sonnet/Haiku; nessuna
-  deadline.
+**What it does:** Audits plan 003 and commits the report and the plan state.
+
+**What to expect:** Only audit files are committed, never code. WIP settings add
+nothing for an audit. Corrections are never applied automatically.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; this run only)
+- WIP commits: off (from plan 003, which uses the default; no effect: audits
+  never get WIP commits)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase or entry given)
+- Where it stops: when the audit is complete
+- Commits made by this run: the audit report and plan state, never code
 
 ### VE-03 · `full-autonomous:false`
 
@@ -1721,12 +2707,23 @@ FINDINGS, FAIL o INCOMPLETE. Le correzioni sono scritte per il livello
 /plan-execute-verify full-autonomous:false verify 003
 ```
 
-- **Descrizione:** audit senza commit.
-- **Implicazioni:** nessun commit anche se §3 ha `true`; report e stato restano
-  da committare a mano.
-- **Default applicati:** WIP irrilevante per l'audit; livello del piano per le
-  correzioni; roster del piano, altrimenti legacy Opus/Sonnet/Haiku; nessuna
-  deadline; fase o voce omessa: intero piano.
+**What it does:** Audits plan 003 without committing.
+
+**What to expect:** An audit is committed only with `full-autonomous:true`; WIP
+settings never commit audits.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; this run only)
+- WIP commits: off (from plan 003, which uses the default; no effect: audits
+  never get WIP commits)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase or entry given)
+- Where it stops: when the audit is complete
+- Commits made by this run: none: the report stays uncommitted
 
 ### VE-04 · `--wip-commit`
 
@@ -1734,12 +2731,22 @@ FINDINGS, FAIL o INCOMPLETE. Le correzioni sono scritte per il livello
 /plan-execute-verify --wip-commit verify 003
 ```
 
-- **Descrizione:** opzione accettata, senza effetto sui commit dell'audit.
-- **Implicazioni:** il solo WIP non committa mai un audit; i commit dipendono
-  solo dall'autonomia risolta. Il valore è registrato nel report.
-- **Default applicati:** autonomia da §3, altrimenti `false`; livello del piano
-  per le correzioni; roster del piano, altrimenti legacy Opus/Sonnet/Haiku;
-  nessuna deadline; fase o voce omessa: intero piano.
+**What it does:** Audits plan 003 without committing.
+
+**What to expect:** An audit is committed only with `full-autonomous:true`; WIP
+settings never commit audits.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: on (from your command; no effect: audits never get WIP commits)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase or entry given)
+- Where it stops: when the audit is complete
+- Commits made by this run: none: the report stays uncommitted
 
 ### VE-05 · `--no-wip-commit`
 
@@ -1747,12 +2754,22 @@ FINDINGS, FAIL o INCOMPLETE. Le correzioni sono scritte per il livello
 /plan-execute-verify --no-wip-commit verify 003
 ```
 
-- **Descrizione:** opzione accettata, senza effetto sull'audit.
-- **Implicazioni:** come VE-04; un §3 con `true` fa comunque committare
-  l'audit.
-- **Default applicati:** autonomia da §3, altrimenti `false`; livello del piano
-  per le correzioni; roster del piano, altrimenti legacy Opus/Sonnet/Haiku;
-  nessuna deadline; fase o voce omessa: intero piano.
+**What it does:** Audits plan 003 without committing.
+
+**What to expect:** An audit is committed only with `full-autonomous:true`; WIP
+settings never commit audits.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from your command; no effect: audits never get WIP commits)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase or entry given)
+- Where it stops: when the audit is complete
+- Commits made by this run: none: the report stays uncommitted
 
 ### VE-06 · `full-autonomous:true --wip-commit`
 
@@ -1760,11 +2777,22 @@ FINDINGS, FAIL o INCOMPLETE. Le correzioni sono scritte per il livello
 /plan-execute-verify full-autonomous:true --wip-commit verify 003
 ```
 
-- **Descrizione:** audit con commit degli artefatti.
-- **Implicazioni:** come VE-02; il WIP non aggiunge commit.
-- **Default applicati:** livello del piano per le correzioni; roster del piano,
-  altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; fase o voce omessa:
-  intero piano.
+**What it does:** Audits plan 003 and commits the report and the plan state.
+
+**What to expect:** Only audit files are committed, never code. WIP settings add
+nothing for an audit. Corrections are never applied automatically.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; this run only)
+- WIP commits: on (from your command; no effect: audits never get WIP commits)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase or entry given)
+- Where it stops: when the audit is complete
+- Commits made by this run: the audit report and plan state, never code
 
 ### VE-07 · `full-autonomous:false --wip-commit`
 
@@ -1772,11 +2800,22 @@ FINDINGS, FAIL o INCOMPLETE. Le correzioni sono scritte per il livello
 /plan-execute-verify full-autonomous:false --wip-commit verify 003
 ```
 
-- **Descrizione:** audit senza commit.
-- **Implicazioni:** come VE-03; il WIP non committa audit.
-- **Default applicati:** livello del piano per le correzioni; roster del piano,
-  altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; fase o voce omessa:
-  intero piano.
+**What it does:** Audits plan 003 without committing.
+
+**What to expect:** An audit is committed only with `full-autonomous:true`; WIP
+settings never commit audits.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; this run only)
+- WIP commits: on (from your command; no effect: audits never get WIP commits)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase or entry given)
+- Where it stops: when the audit is complete
+- Commits made by this run: none: the report stays uncommitted
 
 ### VE-08 · `full-autonomous:true --no-wip-commit`
 
@@ -1784,11 +2823,22 @@ FINDINGS, FAIL o INCOMPLETE. Le correzioni sono scritte per il livello
 /plan-execute-verify full-autonomous:true --no-wip-commit verify 003
 ```
 
-- **Descrizione:** audit con commit degli artefatti.
-- **Implicazioni:** come VE-02.
-- **Default applicati:** livello del piano per le correzioni; roster del piano,
-  altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; fase o voce omessa:
-  intero piano.
+**What it does:** Audits plan 003 and commits the report and the plan state.
+
+**What to expect:** Only audit files are committed, never code. WIP settings add
+nothing for an audit. Corrections are never applied automatically.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; this run only)
+- WIP commits: off (from your command; no effect: audits never get WIP commits)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase or entry given)
+- Where it stops: when the audit is complete
+- Commits made by this run: the audit report and plan state, never code
 
 ### VE-09 · `full-autonomous:false --no-wip-commit`
 
@@ -1796,11 +2846,22 @@ FINDINGS, FAIL o INCOMPLETE. Le correzioni sono scritte per il livello
 /plan-execute-verify full-autonomous:false --no-wip-commit verify 003
 ```
 
-- **Descrizione:** audit senza commit.
-- **Implicazioni:** come VE-03.
-- **Default applicati:** livello del piano per le correzioni; roster del piano,
-  altrimenti legacy Opus/Sonnet/Haiku; nessuna deadline; fase o voce omessa:
-  intero piano.
+**What it does:** Audits plan 003 without committing.
+
+**What to expect:** An audit is committed only with `full-autonomous:true`; WIP
+settings never commit audits.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; this run only)
+- WIP commits: off (from your command; no effect: audits never get WIP commits)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase or entry given)
+- Where it stops: when the audit is complete
+- Commits made by this run: none: the report stays uncommitted
 
 ### VE-10 · `executor-power:low`
 
@@ -1808,11 +2869,27 @@ FINDINGS, FAIL o INCOMPLETE. Le correzioni sono scritte per il livello
 /plan-execute-verify executor-power:low verify 003
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** nessun audit. Le correzioni seguono sempre il livello del
-  piano.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses plan 003's saved level.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default; no effect: audits
+  never get WIP commits)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase or entry given)
+- Where it stops: when the audit is complete
+- Commits made by this run: none: the report stays uncommitted
 
 ### VE-11 · `executor-power:medium`
 
@@ -1820,10 +2897,27 @@ FINDINGS, FAIL o INCOMPLETE. Le correzioni sono scritte per il livello
 /plan-execute-verify executor-power:medium verify 003
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** come VE-10.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses plan 003's saved level.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default; no effect: audits
+  never get WIP commits)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase or entry given)
+- Where it stops: when the audit is complete
+- Commits made by this run: none: the report stays uncommitted
 
 ### VE-12 · `executor-power:high`
 
@@ -1831,10 +2925,27 @@ FINDINGS, FAIL o INCOMPLETE. Le correzioni sono scritte per il livello
 /plan-execute-verify executor-power:high verify 003
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** come VE-10.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses plan 003's saved level.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default; no effect: audits
+  never get WIP commits)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase or entry given)
+- Where it stops: when the audit is complete
+- Commits made by this run: none: the report stays uncommitted
 
 ### VE-13 · `agent-1:opus,agent-2:sonnet,agent-3:haiku`
 
@@ -1842,12 +2953,23 @@ FINDINGS, FAIL o INCOMPLETE. Le correzioni sono scritte per il livello
 /plan-execute-verify agent-1:opus,agent-2:sonnet,agent-3:haiku verify 003
 ```
 
-- **Descrizione:** assegna gli agenti per questo audit.
-- **Implicazioni:** solo per questo audit, registrato nel report; il roster
-  salvato del piano non cambia.
-- **Default applicati:** autonomia da §3, altrimenti `false`; WIP irrilevante
-  per l'audit; livello del piano per le correzioni; nessuna deadline; fase o
-  voce omessa: intero piano.
+**What it does:** Audits plan 003 with the agents you list.
+
+**What to expect:** agent-1 (opus) checks the critical points. The list applies
+to this audit only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default; no effect: audits
+  never get WIP commits)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 opus, agent-2 sonnet, agent-3 haiku (from your command; this
+  run only)
+- Deadline: none (default)
+- Target: the whole plan 003 (no phase or entry given)
+- Where it stops: when the audit is complete
+- Commits made by this run: none: the report stays uncommitted
 
 ### VE-14 · `agent:my-model`
 
@@ -1855,12 +2977,23 @@ FINDINGS, FAIL o INCOMPLETE. Le correzioni sono scritte per il livello
 /plan-execute-verify agent:my-model verify 000_adhoc B-A002
 ```
 
-- **Descrizione:** un solo agente verifica la voce di ledger B-A002.
-- **Implicazioni:** ogni revisione è self-review; vale solo per questo audit.
-  Le correzioni risultanti diventano comandi Task o Bug pronti.
-- **Default applicati:** autonomia `false`, perché `000_adhoc` non ha §3; WIP
-  irrilevante per l'audit; correzioni come comandi Task o Bug a livello `low`;
-  nessuna deadline.
+**What it does:** One model audits the ad-hoc bug entry B-A002.
+
+**What to expect:** Every review is a self-review, for this audit only.
+Corrections come out as ready `task` or `bug` commands.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (default)
+- WIP commits: off (default; no effect: audits never get WIP commits)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: my-model in every role; it reviews its own work (self-review) (from
+  your command; this run only)
+- Deadline: none (default)
+- Target: ad-hoc bug entry B-A002
+- Where it stops: when the audit is complete
+- Commits made by this run: none: the report stays uncommitted
 
 ### VE-15 · `--deadline=31-10-2026_17_30`
 
@@ -1868,53 +3001,62 @@ FINDINGS, FAIL o INCOMPLETE. Le correzioni sono scritte per il livello
 /plan-execute-verify --deadline=31-10-2026_17_30 verify 003
 ```
 
-- **Descrizione:** esegue l'audit e lo sospende entro le 17:30 se non finisce
-  prima.
-- **Implicazioni:** alla scadenza l'audit resta OPEN con il suo checkpoint nel
-  report e nell'indice; nessun commit, con avviso e comando suggerito. La
-  ripresa proposta è del tipo `/plan-execute-verify resume 003 V002`.
-- **Default applicati:** autonomia da §3, altrimenti `false`; WIP irrilevante
-  per l'audit; livello del piano per le correzioni; roster del piano, altrimenti
-  legacy Opus/Sonnet/Haiku; fase o voce omessa: intero piano.
+**What it does:** Audits plan 003 and pauses by 17:30 if it is not finished.
+
+**What to expect:** At the deadline the audit stays open with a checkpoint and
+no commit; continue with the `resume` command shown, such as `resume 003 V002`.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from plan 003, which uses the default)
+- WIP commits: off (from plan 003, which uses the default; no effect: audits
+  never get WIP commits)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from plan 003, which uses
+  the default list)
+- Deadline: 31 October 2026 at 17:30 local time, this run only (from your
+  command)
+- Target: the whole plan 003 (no phase or entry given)
+- Where it stops: when the audit is complete; in any case by 17:30
+- Commits made by this run: none: the report stays uncommitted
 
 ## Resume
 
 ```text
-/plan-execute-verify [<opzioni>] resume [<piano>] [<id-unità>]
+/plan-execute-verify [<options>] resume [<plan>] [<unit>]
 ```
 
-Recupera prima il lavoro registrato, in quest'ordine: audit aperto o commit di
-audit pendente, transazione di completamento pendente, unità OPEN nella sua
-modalità, implementazione sospesa, bozza di piano DRAFT. Poi, senza ID unità,
-continua lo scope di esecuzione salvato (NOT_STARTED, RUNNING o BLOCKED) come
-farebbe Execute. Con un ID unità (`N.M`, `P<N>`, `V<NNN>`, `V<NNN>-C<n>`,
-`T-A<NNN>`, `B-A<NNN>`) si ferma dopo il recupero e la chiusura di quell'unità;
-su `000_adhoc` si ferma dopo la voce recuperata. Non avvia mai un'unità TODO,
-non allarga lo scope e non riscrive impostazioni o roster salvati. L'unità
-ripresa usa impostazioni e roster registrati su di essa; lo scope continuato usa
-i suoi override, poi §3. Opzioni e prefisso espliciti prevalgono su entrambi
-solo per questa invocazione, e i commit seguono la modalità del lavoro ripreso.
-Una voce task o bug `PROPOSED` si riprende solo nominandone l'ID, per esempio
-`resume 000_adhoc T-A004`, e così la approvi; senza ID non viene mai toccata, ma
-il report la elenca con il comando di approvazione.
+Resume continues work that was interrupted or saved. First it finishes
+recovering anything left half-done (an open unit, a pending commit, an open
+audit, a plan draft), then it continues the plan's saved execution. Name a unit
+to continue only that one (`resume 003 1.2`, `resume 000_adhoc T-A004`); naming
+a proposed task or bug approves it. Options given here apply to this run only;
+otherwise the work keeps the settings it was started with.
 
-### RE-01 · nessuna opzione
+### RE-01 · no option
 
 ```text
 /plan-execute-verify resume 003
 ```
 
-- **Descrizione:** recupera il lavoro interrotto del piano 003 e continua lo
-  scope salvato.
-- **Implicazioni:** valgono le impostazioni registrate. Un'unità BLOCKED
-  riprende solo se il blocco è risolto, altrimenti il report indica blocco,
-  responsabile e domanda. Se non resta nulla da riprendere, il report indica la
-  prossima unità eleggibile e il comando per avviarla, senza avviarla.
-- **Default applicati:** autonomia registrata sull'unità ripresa; per lo scope
-  continuato override, poi §3, poi `false`; WIP con la stessa catena, default
-  off; livello del piano; roster registrato sull'unità ripresa, altrimenti del
-  piano; nessuna deadline; ID unità omesso: recupero, poi continuazione dello
-  scope salvato.
+**What it does:** Continues the interrupted work of plan 003, then the execution
+it was running with the settings recorded on that work.
+
+**What to expect:** It stops after the first phase it closes and makes no
+commits; continue with `resume 003`.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from the resumed work, started without
+  options)
+- WIP commits: off (from the resumed work)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from the resumed work)
+- Deadline: none (default)
+- Target: plan 003: first any interrupted work, then the execution it was
+  running
+- Where it stops: after each phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### RE-02 · `full-autonomous:true`
 
@@ -1922,16 +3064,25 @@ il report la elenca con il comando di approvazione.
 /plan-execute-verify full-autonomous:true resume 003
 ```
 
-- **Descrizione:** recupera e continua lo scope in autonomia, solo per questa
-  invocazione.
-- **Implicazioni:** unità ripresa e scope continuato procedono senza stop di
-  fase e committano secondo la loro modalità (un audit ripreso committa solo i
-  propri artefatti). Gli override salvati non cambiano: un `resume` successivo
-  senza opzioni torna alle impostazioni registrate. Con `resume 003 1.2` si
-  ferma comunque dopo l'unità 1.2.
-- **Default applicati:** WIP con la stessa catena, default off; livello del
-  piano; roster registrato sull'unità ripresa, altrimenti del piano; nessuna
-  deadline; ID unità omesso: recupero, poi continuazione dello scope salvato.
+**What it does:** Continues the interrupted work of plan 003, then the execution
+it was running, without pausing between phases, and commits each finished piece,
+with no WIP commits.
+
+**What to expect:** Commits are local and never pushed. It stops early only at a
+real blocker, a stop request, or a deadline. These options apply to this run
+only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; this run only)
+- WIP commits: off (from the resumed work)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from the resumed work)
+- Deadline: none (default)
+- Target: plan 003: first any interrupted work, then the execution it was
+  running
+- Where it stops: when the whole selected work is done, or at a real blocker
+- Commits made by this run: each finished unit, as in its own mode
 
 ### RE-03 · `full-autonomous:false`
 
@@ -1939,13 +3090,24 @@ il report la elenca con il comando di approvazione.
 /plan-execute-verify full-autonomous:false resume 003
 ```
 
-- **Descrizione:** recupera e continua fermandosi dopo la prossima chiusura di
-  fase, solo per questa invocazione.
-- **Implicazioni:** nessun commit di completamento da questa opzione; il WIP
-  risolto on committa comunque. Le impostazioni salvate non cambiano.
-- **Default applicati:** WIP con la stessa catena, default off; livello del
-  piano; roster registrato sull'unità ripresa, altrimenti del piano; nessuna
-  deadline; ID unità omesso: recupero, poi continuazione dello scope salvato.
+**What it does:** Continues the interrupted work of plan 003, then the execution
+it was running, stopping after each phase, and commits nothing: you commit when
+you want.
+
+**What to expect:** Only a handoff still makes its one commit. These options
+apply to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; this run only)
+- WIP commits: off (from the resumed work)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from the resumed work)
+- Deadline: none (default)
+- Target: plan 003: first any interrupted work, then the execution it was
+  running
+- Where it stops: after each phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### RE-04 · `--wip-commit`
 
@@ -1953,14 +3115,26 @@ il report la elenca con il comando di approvazione.
 /plan-execute-verify --wip-commit resume 003
 ```
 
-- **Descrizione:** attiva il WIP solo per questa invocazione.
-- **Implicazioni:** commit delle unità completate e WIP a rotazione ai
-  checkpoint; nessun effetto su un audit ripreso. L'override salvato dello scope
-  non cambia.
-- **Default applicati:** autonomia registrata sull'unità ripresa; per lo scope
-  continuato override, poi §3, poi `false`; livello del piano; roster registrato
-  sull'unità ripresa, altrimenti del piano; nessuna deadline; ID unità omesso:
-  recupero, poi continuazione dello scope salvato.
+**What it does:** Continues the interrupted work of plan 003, then the execution
+it was running, stopping after each phase, and still commits each finished piece
+and a WIP commit at checkpoints.
+
+**What to expect:** Commits are local and never pushed. These options apply to
+this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from the resumed work, started without
+  options)
+- WIP commits: on (from your command; this run only)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from the resumed work)
+- Deadline: none (default)
+- Target: plan 003: first any interrupted work, then the execution it was
+  running
+- Where it stops: after each phase is closed
+- Commits made by this run: each finished unit, as in its own mode, plus a
+  rolling WIP commit at each checkpoint
 
 ### RE-05 · `--no-wip-commit`
 
@@ -1968,13 +3142,25 @@ il report la elenca con il comando di approvazione.
 /plan-execute-verify --no-wip-commit resume 003
 ```
 
-- **Descrizione:** disattiva il WIP solo per questa invocazione.
-- **Implicazioni:** commit di completamento solo se l'autonomia risolta per
-  questa run è `true`.
-- **Default applicati:** autonomia registrata sull'unità ripresa; per lo scope
-  continuato override, poi §3, poi `false`; livello del piano; roster registrato
-  sull'unità ripresa, altrimenti del piano; nessuna deadline; ID unità omesso:
-  recupero, poi continuazione dello scope salvato.
+**What it does:** Continues the interrupted work of plan 003, then the execution
+it was running, stopping after each phase, and commits nothing: you commit when
+you want.
+
+**What to expect:** Only a handoff still makes its one commit. These options
+apply to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from the resumed work, started without
+  options)
+- WIP commits: off (from your command; this run only)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from the resumed work)
+- Deadline: none (default)
+- Target: plan 003: first any interrupted work, then the execution it was
+  running
+- Where it stops: after each phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### RE-06 · `full-autonomous:true --wip-commit`
 
@@ -1982,13 +3168,26 @@ il report la elenca con il comando di approvazione.
 /plan-execute-verify full-autonomous:true --wip-commit resume 003
 ```
 
-- **Descrizione:** recupera e continua in autonomia con WIP, solo per questa
-  invocazione.
-- **Implicazioni:** commit di completamento più WIP a rotazione; gli override
-  salvati restano invariati.
-- **Default applicati:** livello del piano; roster registrato sull'unità
-  ripresa, altrimenti del piano; nessuna deadline; ID unità omesso: recupero,
-  poi continuazione dello scope salvato.
+**What it does:** Continues the interrupted work of plan 003, then the execution
+it was running, without pausing between phases, and commits each finished piece
+and a WIP commit at checkpoints.
+
+**What to expect:** Commits are local and never pushed. It stops early only at a
+real blocker, a stop request, or a deadline. These options apply to this run
+only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; this run only)
+- WIP commits: on (from your command; this run only)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from the resumed work)
+- Deadline: none (default)
+- Target: plan 003: first any interrupted work, then the execution it was
+  running
+- Where it stops: when the whole selected work is done, or at a real blocker
+- Commits made by this run: each finished unit, as in its own mode, plus a
+  rolling WIP commit at each checkpoint
 
 ### RE-07 · `full-autonomous:false --wip-commit`
 
@@ -1996,12 +3195,25 @@ il report la elenca con il comando di approvazione.
 /plan-execute-verify full-autonomous:false --wip-commit resume 003
 ```
 
-- **Descrizione:** recupera e continua fino alla prossima chiusura di fase, con
-  WIP, solo per questa invocazione.
-- **Implicazioni:** commit di unità e fasi completate e WIP a rotazione.
-- **Default applicati:** livello del piano; roster registrato sull'unità
-  ripresa, altrimenti del piano; nessuna deadline; ID unità omesso: recupero,
-  poi continuazione dello scope salvato.
+**What it does:** Continues the interrupted work of plan 003, then the execution
+it was running, stopping after each phase, and still commits each finished piece
+and a WIP commit at checkpoints.
+
+**What to expect:** Commits are local and never pushed. These options apply to
+this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; this run only)
+- WIP commits: on (from your command; this run only)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from the resumed work)
+- Deadline: none (default)
+- Target: plan 003: first any interrupted work, then the execution it was
+  running
+- Where it stops: after each phase is closed
+- Commits made by this run: each finished unit, as in its own mode, plus a
+  rolling WIP commit at each checkpoint
 
 ### RE-08 · `full-autonomous:true --no-wip-commit`
 
@@ -2009,13 +3221,25 @@ il report la elenca con il comando di approvazione.
 /plan-execute-verify full-autonomous:true --no-wip-commit resume 003
 ```
 
-- **Descrizione:** recupera e continua in autonomia senza WIP, solo per questa
-  invocazione.
-- **Implicazioni:** solo commit di completamento; il lavoro interrotto resta nel
-  working tree.
-- **Default applicati:** livello del piano; roster registrato sull'unità
-  ripresa, altrimenti del piano; nessuna deadline; ID unità omesso: recupero,
-  poi continuazione dello scope salvato.
+**What it does:** Continues the interrupted work of plan 003, then the execution
+it was running, without pausing between phases, and commits each finished piece,
+with no WIP commits.
+
+**What to expect:** Commits are local and never pushed. It stops early only at a
+real blocker, a stop request, or a deadline. These options apply to this run
+only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true` (from your command; this run only)
+- WIP commits: off (from your command; this run only)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from the resumed work)
+- Deadline: none (default)
+- Target: plan 003: first any interrupted work, then the execution it was
+  running
+- Where it stops: when the whole selected work is done, or at a real blocker
+- Commits made by this run: each finished unit, as in its own mode
 
 ### RE-09 · `full-autonomous:false --no-wip-commit`
 
@@ -2023,12 +3247,23 @@ il report la elenca con il comando di approvazione.
 /plan-execute-verify full-autonomous:false --no-wip-commit resume 000_adhoc B-A002
 ```
 
-- **Descrizione:** riprende la voce di ledger B-A002 senza commit e si ferma
-  dopo di essa.
-- **Implicazioni:** nessun commit, anche se la voce aveva registrato commit
-  attivi; la volta successiva valgono di nuovo le impostazioni registrate.
-- **Default applicati:** livello `low` in `000_adhoc`; roster registrato nella
-  voce di ledger B-A002; nessuna deadline.
+**What it does:** Continues only the ad-hoc bug B-A002, with no commits, and
+stops after it.
+
+**What to expect:** These options apply to this run only, even if the entry was
+recorded with commits on; next time its recorded settings apply again.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from your command; this run only)
+- WIP commits: off (from your command; this run only)
+- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
+  that plan)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Deadline: none (default)
+- Target: ad-hoc bug entry B-A002 only
+- Where it stops: after entry B-A002
+- Commits made by this run: none: changes stay uncommitted
 
 ### RE-10 · `executor-power:low`
 
@@ -2036,11 +3271,27 @@ il report la elenca con il comando di approvazione.
 /plan-execute-verify executor-power:low resume 003
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** nessun recupero. Resume non cambia mai il livello del
-  piano.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses plan 003's saved level.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (from the resumed work, started without
+  options)
+- WIP commits: off (from the resumed work)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from the resumed work)
+- Deadline: none (default)
+- Target: plan 003: first any interrupted work, then the execution it was
+  running
+- Where it stops: after each phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### RE-11 · `executor-power:medium`
 
@@ -2048,10 +3299,27 @@ il report la elenca con il comando di approvazione.
 /plan-execute-verify executor-power:medium resume 003
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** come RE-10.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses plan 003's saved level.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (from the resumed work, started without
+  options)
+- WIP commits: off (from the resumed work)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from the resumed work)
+- Deadline: none (default)
+- Target: plan 003: first any interrupted work, then the execution it was
+  running
+- Where it stops: after each phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### RE-12 · `executor-power:high`
 
@@ -2059,10 +3327,27 @@ il report la elenca con il comando di approvazione.
 /plan-execute-verify executor-power:high resume 003
 ```
 
-- **Descrizione:** rifiutato: `executor-power` è solo di Plan.
-- **Implicazioni:** come RE-10.
-- **Default applicati:** nessuno: l'invocazione viene rifiutata prima di
-  risolvere le impostazioni.
+**What it does:** Rejected: only Plan accepts `executor-power`.
+
+**What to expect:** Nothing runs. Run the same command without the option; the
+run uses plan 003's saved level.
+
+**Settings for this run:**
+
+None: the command is rejected before anything runs.
+
+Without that option, the same command uses:
+
+- Autonomy (`full-autonomous`): `false` (from the resumed work, started without
+  options)
+- WIP commits: off (from the resumed work)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from the resumed work)
+- Deadline: none (default)
+- Target: plan 003: first any interrupted work, then the execution it was
+  running
+- Where it stops: after each phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### RE-13 · `agent-1:opus,agent-2:sonnet,agent-3:haiku`
 
@@ -2070,14 +3355,25 @@ il report la elenca con il comando di approvazione.
 /plan-execute-verify agent-1:opus,agent-2:sonnet,agent-3:haiku resume 003
 ```
 
-- **Descrizione:** usa questo roster per il recupero e la continuazione, solo
-  per questa invocazione.
-- **Implicazioni:** registrato con l'invocazione; il roster salvato del piano e
-  quello registrato sull'unità ripresa non cambiano.
-- **Default applicati:** autonomia registrata sull'unità ripresa; per lo scope
-  continuato override, poi §3, poi `false`; WIP con la stessa catena, default
-  off; livello del piano; nessuna deadline; ID unità omesso: recupero, poi
-  continuazione dello scope salvato.
+**What it does:** Continues the interrupted work of plan 003, then the execution
+it was running with the agents you list.
+
+**What to expect:** agent-1 (opus) reviews and approves; the other agents
+implement the units assigned to them. The list applies to this run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from the resumed work, started without
+  options)
+- WIP commits: off (from the resumed work)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 opus, agent-2 sonnet, agent-3 haiku (from your command; this
+  run only)
+- Deadline: none (default)
+- Target: plan 003: first any interrupted work, then the execution it was
+  running
+- Where it stops: after each phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### RE-14 · `agent:my-model`
 
@@ -2085,14 +3381,25 @@ il report la elenca con il comando di approvazione.
 /plan-execute-verify agent:my-model resume 003
 ```
 
-- **Descrizione:** un solo agente recupera e continua, solo per questa
-  invocazione.
-- **Implicazioni:** ogni revisione è self-review; nessuna assegnazione salvata
-  cambia.
-- **Default applicati:** autonomia registrata sull'unità ripresa; per lo scope
-  continuato override, poi §3, poi `false`; WIP con la stessa catena, default
-  off; livello del piano; nessuna deadline; ID unità omesso: recupero, poi
-  continuazione dello scope salvato.
+**What it does:** Continues the interrupted work of plan 003, then the execution
+it was running with one model for everything.
+
+**What to expect:** my-model implements and reviews its own work; reviews are
+marked as self-reviews. This run only.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from the resumed work, started without
+  options)
+- WIP commits: off (from the resumed work)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: my-model in every role; it reviews its own work (self-review) (from
+  your command; this run only)
+- Deadline: none (default)
+- Target: plan 003: first any interrupted work, then the execution it was
+  running
+- Where it stops: after each phase is closed
+- Commits made by this run: none: changes stay uncommitted
 
 ### RE-15 · `--deadline=31-10-2026_17_30`
 
@@ -2100,67 +3407,69 @@ il report la elenca con il comando di approvazione.
 /plan-execute-verify --deadline=31-10-2026_17_30 resume 003
 ```
 
-- **Descrizione:** recupera e continua il lavoro, con handoff entro le 17:30.
-- **Implicazioni:** come EX-15 per il lavoro ripreso; la deadline vale solo per
-  questa invocazione e un `resume` successivo non la eredita.
-- **Default applicati:** autonomia registrata sull'unità ripresa; per lo scope
-  continuato override, poi §3, poi `false`; WIP con la stessa catena, default
-  off; livello del piano; roster registrato sull'unità ripresa, altrimenti del
-  piano; ID unità omesso: recupero, poi continuazione dello scope salvato.
+**What it does:** Continues the interrupted work of plan 003, then the execution
+it was running until 17:30 at the latest, then stops gracefully.
+
+**What to expect:** Before 17:30 it finishes or pauses the current unit, saves
+the state, makes one handoff commit for the code, and shows the resume command.
+If the work ends earlier, it ends normally. A later `resume` does not inherit
+the deadline.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false` (from the resumed work, started without
+  options)
+- WIP commits: off (from the resumed work)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from the resumed work)
+- Deadline: 31 October 2026 at 17:30 local time, this run only (from your
+  command)
+- Target: plan 003: first any interrupted work, then the execution it was
+  running
+- Where it stops: after each phase is closed; in any case by 17:30
+- Commits made by this run: none: changes stay uncommitted; at the deadline, one
+  handoff commit for unfinished code
 
 ## Handoff
 
 ```text
 /plan-execute-verify handoff [--deadline=dd-mm-yyyy_hh_mm]
-/plan-execute-verify --deadline=dd-mm-yyyy_hh_mm handoff
 ```
 
-Ferma il lavoro in corso il prima possibile, o entro la deadline (ora locale
-della macchina che esegue l'agente; una deadline passata vale "subito"). Di
-solito si invia durante una run. L'agente non avvia nulla di nuovo, chiude
-l'unità aperta solo se servono circa 10 minuti (controlli e revisione inclusi),
-altrimenti si ferma al prossimo confine di passo e registra i comandi non
-eseguiti. Poi salva il checkpoint con l'azione successiva esatta, segna la run
-`HANDOFF`, rilascia l'ownership, crea il commit di handoff per il lavoro sul
-codice, propone il comando di ripresa e si ferma, anche con
-`full-autonomous:true`. Il commit `handoff(request-by-user): …` contiene l'unità
-aperta e ogni unità chiusa ancora non committata, ciascuna messa in stage con
-una patch separata, così le modifiche fatte tra un'unità e l'altra restano
-fuori; non viene mai amendato e lascia attivi gli hook. Una richiesta di stop
-non viene mai rifiutata: opzioni, prefisso e selettori inutili sono ignorati e
-segnalati.
+Handoff stops the work gracefully. It starts nothing new, finishes the current
+unit only if that takes about 10 minutes, saves the state, makes one commit for
+the code work (even when commits are off), shows the command to resume, and
+stops. Send it during a run, or give a deadline. It is best effort: the agent
+reads your message only between two of its steps, so set a deadline a little
+before you really need to stop, for example 17:30 if you switch off at 18:00.
 
-È best effort: l'agente vede il messaggio solo tra una chiamata di tool e
-l'altra, non interrompe un proprio comando già in corso, e una sessione inattiva
-non si risveglia alla deadline. Imposta la deadline prima del momento reale:
-spegni il PC alle 18:00, usa `--deadline=31-10-2026_17_30`.
-
-| Lavoro interrotto | Cosa resta | Commit | Comando di ripresa proposto |
-|-------------------|------------|--------|-----------------------------|
-| Execute, Execute verify | Unità OPEN con checkpoint; scope RUNNING | Handoff | `/plan-execute-verify resume 003` |
-| Task, Bug su un piano | Unità OPEN in STATE.md, voce di ledger collegata | Handoff | `/plan-execute-verify resume 003 T-A004` |
-| Task, Bug in `000_adhoc` | Voce di ledger OPEN con checkpoint | Handoff | `/plan-execute-verify resume 000_adhoc B-A002` |
-| Verify | Audit OPEN con checkpoint | Nessuno, con avviso | `/plan-execute-verify resume 003 V002` |
-| Plan | Checkpoint della bozza DRAFT | Nessuno, con avviso | `/plan-execute-verify resume 004` |
-| Onboard | Nulla di nuovo | Nessuno | `/plan-execute-verify onboard` |
-| Resume | Come la modalità del lavoro ripreso | Come quella modalità | Come quella modalità |
-| Stile delegato | Il coordinatore smette di distribuire, attende o ferma i worker e riconcilia il loro diff | Come sopra | Come sopra |
-| Sessione inattiva | Checkpoint e commit del lavoro non committato del piano o ledger scritto per ultimo; se non c'è nulla, lo dice | Handoff, se c'è lavoro sul codice | Come sopra |
-
-### HA-01 · nessuna opzione
+### HA-01 · no option
 
 ```text
 /plan-execute-verify handoff
 ```
 
-- **Descrizione:** ferma la run in corso il prima possibile.
-- **Implicazioni:** unità aperta chiusa solo se bastano circa 10 minuti,
-  altrimenti stop al prossimo confine di passo; checkpoint, run `HANDOFF`,
-  ownership rilasciata; commit `handoff(request-by-user): …` per il lavoro sul
-  codice anche con i commit disattivati; comando di ripresa; stop. Annulla una
-  deadline data in precedenza.
-- **Default applicati:** senza deadline, handoff immediato; target: la run in
-  corso, o da sessione inattiva il piano o ledger scritto per ultimo.
+**What it does:** Stops the work now, gracefully.
+
+**What to expect:** It starts nothing new and finishes the current unit only if
+that takes about 10 minutes. It saves the state, makes one handoff commit for
+the code, shows the resume command, and stops. Sent during a run, it also
+cancels an earlier deadline. Sent to an idle session, it saves the work that
+session last changed, never work another live session owns.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): not used
+- WIP commits: not used
+- Executor power: unchanged
+- Agents: unchanged
+- Deadline: none (default)
+- Target: the run in progress; in an idle session, the plan or ledger it last
+  changed
+- Where it stops: as soon as possible
+- Commits made by this run: one handoff commit for code work, even if commits
+  are off (none when there is nothing to commit); none for Plan, Verify, or
+  Onboard
 
 ### HA-02 · `full-autonomous:true`
 
@@ -2168,11 +3477,24 @@ spegni il PC alle 18:00, usa `--deadline=31-10-2026_17_30`.
 /plan-execute-verify full-autonomous:true handoff
 ```
 
-- **Descrizione:** opzione ignorata e segnalata; l'handoff parte subito.
-- **Implicazioni:** il commit di handoff per il lavoro sul codice avviene
-  comunque, qualunque sia il valore; nessuna impostazione salvata cambia.
-- **Default applicati:** senza deadline, handoff immediato; target: la run in
-  corso, o da sessione inattiva il piano o ledger scritto per ultimo.
+**What it does:** The option is ignored and reported; the stop starts now.
+
+**What to expect:** A stop request is never refused. The handoff commit for code
+work happens whatever this option says, and no saved setting changes.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true`, ignored by Handoff, which says so
+- WIP commits: not used
+- Executor power: unchanged
+- Agents: unchanged
+- Deadline: none (default)
+- Target: the run in progress; in an idle session, the plan or ledger it last
+  changed
+- Where it stops: as soon as possible
+- Commits made by this run: one handoff commit for code work, even if commits
+  are off (none when there is nothing to commit); none for Plan, Verify, or
+  Onboard
 
 ### HA-03 · `full-autonomous:false`
 
@@ -2180,10 +3502,24 @@ spegni il PC alle 18:00, usa `--deadline=31-10-2026_17_30`.
 /plan-execute-verify full-autonomous:false handoff
 ```
 
-- **Descrizione:** opzione ignorata e segnalata; l'handoff parte subito.
-- **Implicazioni:** come HA-02.
-- **Default applicati:** senza deadline, handoff immediato; target: la run in
-  corso, o da sessione inattiva il piano o ledger scritto per ultimo.
+**What it does:** The option is ignored and reported; the stop starts now.
+
+**What to expect:** A stop request is never refused. The handoff commit for code
+work happens whatever this option says, and no saved setting changes.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false`, ignored by Handoff, which says so
+- WIP commits: not used
+- Executor power: unchanged
+- Agents: unchanged
+- Deadline: none (default)
+- Target: the run in progress; in an idle session, the plan or ledger it last
+  changed
+- Where it stops: as soon as possible
+- Commits made by this run: one handoff commit for code work, even if commits
+  are off (none when there is nothing to commit); none for Plan, Verify, or
+  Onboard
 
 ### HA-04 · `--wip-commit`
 
@@ -2191,10 +3527,24 @@ spegni il PC alle 18:00, usa `--deadline=31-10-2026_17_30`.
 /plan-execute-verify --wip-commit handoff
 ```
 
-- **Descrizione:** opzione ignorata e segnalata; l'handoff parte subito.
-- **Implicazioni:** come HA-02.
-- **Default applicati:** senza deadline, handoff immediato; target: la run in
-  corso, o da sessione inattiva il piano o ledger scritto per ultimo.
+**What it does:** The option is ignored and reported; the stop starts now.
+
+**What to expect:** A stop request is never refused. The handoff commit for code
+work happens whatever this option says, and no saved setting changes.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): not used
+- WIP commits: on, ignored by Handoff, which says so
+- Executor power: unchanged
+- Agents: unchanged
+- Deadline: none (default)
+- Target: the run in progress; in an idle session, the plan or ledger it last
+  changed
+- Where it stops: as soon as possible
+- Commits made by this run: one handoff commit for code work, even if commits
+  are off (none when there is nothing to commit); none for Plan, Verify, or
+  Onboard
 
 ### HA-05 · `--no-wip-commit`
 
@@ -2202,10 +3552,24 @@ spegni il PC alle 18:00, usa `--deadline=31-10-2026_17_30`.
 /plan-execute-verify --no-wip-commit handoff
 ```
 
-- **Descrizione:** opzione ignorata e segnalata; l'handoff parte subito.
-- **Implicazioni:** come HA-02.
-- **Default applicati:** senza deadline, handoff immediato; target: la run in
-  corso, o da sessione inattiva il piano o ledger scritto per ultimo.
+**What it does:** The option is ignored and reported; the stop starts now.
+
+**What to expect:** A stop request is never refused. The handoff commit for code
+work happens whatever this option says, and no saved setting changes.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): not used
+- WIP commits: off, ignored by Handoff, which says so
+- Executor power: unchanged
+- Agents: unchanged
+- Deadline: none (default)
+- Target: the run in progress; in an idle session, the plan or ledger it last
+  changed
+- Where it stops: as soon as possible
+- Commits made by this run: one handoff commit for code work, even if commits
+  are off (none when there is nothing to commit); none for Plan, Verify, or
+  Onboard
 
 ### HA-06 · `full-autonomous:true --wip-commit`
 
@@ -2213,11 +3577,24 @@ spegni il PC alle 18:00, usa `--deadline=31-10-2026_17_30`.
 /plan-execute-verify full-autonomous:true --wip-commit handoff
 ```
 
-- **Descrizione:** opzione ignorata e segnalata; l'handoff parte subito.
-- **Implicazioni:** come HA-02: la coppia è ignorata e il commit di handoff
-  avviene comunque.
-- **Default applicati:** senza deadline, handoff immediato; target: la run in
-  corso, o da sessione inattiva il piano o ledger scritto per ultimo.
+**What it does:** The option is ignored and reported; the stop starts now.
+
+**What to expect:** A stop request is never refused. The handoff commit for code
+work happens whatever this option says, and no saved setting changes.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true`, ignored by Handoff, which says so
+- WIP commits: on, ignored by Handoff, which says so
+- Executor power: unchanged
+- Agents: unchanged
+- Deadline: none (default)
+- Target: the run in progress; in an idle session, the plan or ledger it last
+  changed
+- Where it stops: as soon as possible
+- Commits made by this run: one handoff commit for code work, even if commits
+  are off (none when there is nothing to commit); none for Plan, Verify, or
+  Onboard
 
 ### HA-07 · `full-autonomous:false --wip-commit`
 
@@ -2225,11 +3602,24 @@ spegni il PC alle 18:00, usa `--deadline=31-10-2026_17_30`.
 /plan-execute-verify full-autonomous:false --wip-commit handoff
 ```
 
-- **Descrizione:** opzione ignorata e segnalata; l'handoff parte subito.
-- **Implicazioni:** come HA-02: la coppia è ignorata e il commit di handoff
-  avviene comunque.
-- **Default applicati:** senza deadline, handoff immediato; target: la run in
-  corso, o da sessione inattiva il piano o ledger scritto per ultimo.
+**What it does:** The option is ignored and reported; the stop starts now.
+
+**What to expect:** A stop request is never refused. The handoff commit for code
+work happens whatever this option says, and no saved setting changes.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false`, ignored by Handoff, which says so
+- WIP commits: on, ignored by Handoff, which says so
+- Executor power: unchanged
+- Agents: unchanged
+- Deadline: none (default)
+- Target: the run in progress; in an idle session, the plan or ledger it last
+  changed
+- Where it stops: as soon as possible
+- Commits made by this run: one handoff commit for code work, even if commits
+  are off (none when there is nothing to commit); none for Plan, Verify, or
+  Onboard
 
 ### HA-08 · `full-autonomous:true --no-wip-commit`
 
@@ -2237,11 +3627,24 @@ spegni il PC alle 18:00, usa `--deadline=31-10-2026_17_30`.
 /plan-execute-verify full-autonomous:true --no-wip-commit handoff
 ```
 
-- **Descrizione:** opzione ignorata e segnalata; l'handoff parte subito.
-- **Implicazioni:** come HA-02: la coppia è ignorata e il commit di handoff
-  avviene comunque.
-- **Default applicati:** senza deadline, handoff immediato; target: la run in
-  corso, o da sessione inattiva il piano o ledger scritto per ultimo.
+**What it does:** The option is ignored and reported; the stop starts now.
+
+**What to expect:** A stop request is never refused. The handoff commit for code
+work happens whatever this option says, and no saved setting changes.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `true`, ignored by Handoff, which says so
+- WIP commits: off, ignored by Handoff, which says so
+- Executor power: unchanged
+- Agents: unchanged
+- Deadline: none (default)
+- Target: the run in progress; in an idle session, the plan or ledger it last
+  changed
+- Where it stops: as soon as possible
+- Commits made by this run: one handoff commit for code work, even if commits
+  are off (none when there is nothing to commit); none for Plan, Verify, or
+  Onboard
 
 ### HA-09 · `full-autonomous:false --no-wip-commit`
 
@@ -2249,11 +3652,24 @@ spegni il PC alle 18:00, usa `--deadline=31-10-2026_17_30`.
 /plan-execute-verify full-autonomous:false --no-wip-commit handoff
 ```
 
-- **Descrizione:** opzione ignorata e segnalata; l'handoff parte subito.
-- **Implicazioni:** come HA-02: la coppia è ignorata e il commit di handoff
-  avviene comunque.
-- **Default applicati:** senza deadline, handoff immediato; target: la run in
-  corso, o da sessione inattiva il piano o ledger scritto per ultimo.
+**What it does:** The option is ignored and reported; the stop starts now.
+
+**What to expect:** A stop request is never refused. The handoff commit for code
+work happens whatever this option says, and no saved setting changes.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): `false`, ignored by Handoff, which says so
+- WIP commits: off, ignored by Handoff, which says so
+- Executor power: unchanged
+- Agents: unchanged
+- Deadline: none (default)
+- Target: the run in progress; in an idle session, the plan or ledger it last
+  changed
+- Where it stops: as soon as possible
+- Commits made by this run: one handoff commit for code work, even if commits
+  are off (none when there is nothing to commit); none for Plan, Verify, or
+  Onboard
 
 ### HA-10 · `executor-power:low`
 
@@ -2261,10 +3677,24 @@ spegni il PC alle 18:00, usa `--deadline=31-10-2026_17_30`.
 /plan-execute-verify executor-power:low handoff
 ```
 
-- **Descrizione:** opzione ignorata e segnalata; l'handoff parte subito.
-- **Implicazioni:** il livello `executor-power` del piano non cambia.
-- **Default applicati:** senza deadline, handoff immediato; target: la run in
-  corso, o da sessione inattiva il piano o ledger scritto per ultimo.
+**What it does:** The option is ignored and reported; the stop starts now.
+
+**What to expect:** A stop request is never refused. The handoff commit for code
+work happens whatever this option says, and no saved setting changes.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): not used
+- WIP commits: not used
+- Executor power: `low`, ignored by Handoff, which says so
+- Agents: unchanged
+- Deadline: none (default)
+- Target: the run in progress; in an idle session, the plan or ledger it last
+  changed
+- Where it stops: as soon as possible
+- Commits made by this run: one handoff commit for code work, even if commits
+  are off (none when there is nothing to commit); none for Plan, Verify, or
+  Onboard
 
 ### HA-11 · `executor-power:medium`
 
@@ -2272,10 +3702,24 @@ spegni il PC alle 18:00, usa `--deadline=31-10-2026_17_30`.
 /plan-execute-verify executor-power:medium handoff
 ```
 
-- **Descrizione:** opzione ignorata e segnalata; l'handoff parte subito.
-- **Implicazioni:** come HA-10.
-- **Default applicati:** senza deadline, handoff immediato; target: la run in
-  corso, o da sessione inattiva il piano o ledger scritto per ultimo.
+**What it does:** The option is ignored and reported; the stop starts now.
+
+**What to expect:** A stop request is never refused. The handoff commit for code
+work happens whatever this option says, and no saved setting changes.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): not used
+- WIP commits: not used
+- Executor power: `medium`, ignored by Handoff, which says so
+- Agents: unchanged
+- Deadline: none (default)
+- Target: the run in progress; in an idle session, the plan or ledger it last
+  changed
+- Where it stops: as soon as possible
+- Commits made by this run: one handoff commit for code work, even if commits
+  are off (none when there is nothing to commit); none for Plan, Verify, or
+  Onboard
 
 ### HA-12 · `executor-power:high`
 
@@ -2283,10 +3727,24 @@ spegni il PC alle 18:00, usa `--deadline=31-10-2026_17_30`.
 /plan-execute-verify executor-power:high handoff
 ```
 
-- **Descrizione:** opzione ignorata e segnalata; l'handoff parte subito.
-- **Implicazioni:** come HA-10.
-- **Default applicati:** senza deadline, handoff immediato; target: la run in
-  corso, o da sessione inattiva il piano o ledger scritto per ultimo.
+**What it does:** The option is ignored and reported; the stop starts now.
+
+**What to expect:** A stop request is never refused. The handoff commit for code
+work happens whatever this option says, and no saved setting changes.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): not used
+- WIP commits: not used
+- Executor power: `high`, ignored by Handoff, which says so
+- Agents: unchanged
+- Deadline: none (default)
+- Target: the run in progress; in an idle session, the plan or ledger it last
+  changed
+- Where it stops: as soon as possible
+- Commits made by this run: one handoff commit for code work, even if commits
+  are off (none when there is nothing to commit); none for Plan, Verify, or
+  Onboard
 
 ### HA-13 · `agent-1:opus,agent-2:sonnet,agent-3:haiku`
 
@@ -2294,11 +3752,24 @@ spegni il PC alle 18:00, usa `--deadline=31-10-2026_17_30`.
 /plan-execute-verify agent-1:opus,agent-2:sonnet,agent-3:haiku handoff
 ```
 
-- **Descrizione:** prefisso ignorato e segnalato; l'handoff parte subito.
-- **Implicazioni:** il roster salvato e quello registrato sull'unità non
-  cambiano; l'handoff lo esegue la sessione che sta lavorando.
-- **Default applicati:** senza deadline, handoff immediato; target: la run in
-  corso, o da sessione inattiva il piano o ledger scritto per ultimo.
+**What it does:** The option is ignored and reported; the stop starts now.
+
+**What to expect:** A stop request is never refused. The handoff commit for code
+work happens whatever this option says, and no saved setting changes.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): not used
+- WIP commits: not used
+- Executor power: unchanged
+- Agents: agent list ignored by Handoff, which says so
+- Deadline: none (default)
+- Target: the run in progress; in an idle session, the plan or ledger it last
+  changed
+- Where it stops: as soon as possible
+- Commits made by this run: one handoff commit for code work, even if commits
+  are off (none when there is nothing to commit); none for Plan, Verify, or
+  Onboard
 
 ### HA-14 · `agent:my-model`
 
@@ -2306,10 +3777,24 @@ spegni il PC alle 18:00, usa `--deadline=31-10-2026_17_30`.
 /plan-execute-verify agent:my-model handoff
 ```
 
-- **Descrizione:** prefisso ignorato e segnalato; l'handoff parte subito.
-- **Implicazioni:** come HA-13.
-- **Default applicati:** senza deadline, handoff immediato; target: la run in
-  corso, o da sessione inattiva il piano o ledger scritto per ultimo.
+**What it does:** The option is ignored and reported; the stop starts now.
+
+**What to expect:** A stop request is never refused. The handoff commit for code
+work happens whatever this option says, and no saved setting changes.
+
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): not used
+- WIP commits: not used
+- Executor power: unchanged
+- Agents: agent list ignored by Handoff, which says so
+- Deadline: none (default)
+- Target: the run in progress; in an idle session, the plan or ledger it last
+  changed
+- Where it stops: as soon as possible
+- Commits made by this run: one handoff commit for code work, even if commits
+  are off (none when there is nothing to commit); none for Plan, Verify, or
+  Onboard
 
 ### HA-15 · `--deadline=31-10-2026_17_30`
 
@@ -2318,50 +3803,64 @@ spegni il PC alle 18:00, usa `--deadline=31-10-2026_17_30`.
 /plan-execute-verify --deadline=31-10-2026_17_30 handoff
 ```
 
-- **Descrizione:** la run in corso continua e fa l'handoff entro le 17:30; le
-  due forme sono equivalenti.
-- **Implicazioni:** sostituisce una deadline precedente. Alla scadenza esegue la
-  stessa procedura di HA-01 con trigger `deadline`. Una deadline passata, non
-  valida o in conflitto con un'altra vale come handoff immediato; anche su una
-  sessione inattiva l'handoff è immediato.
-- **Default applicati:** target: la run in corso, o da sessione inattiva il
-  piano o ledger scritto per ultimo.
+**What it does:** Lets the current run continue and stops it gracefully by
+17:30. Both forms are the same.
 
-## Combinazioni
+**What to expect:** It replaces any earlier deadline. At 17:30 it does what
+plain `handoff` does. A past or invalid deadline means "stop now"; so does a
+deadline sent to an idle session.
 
-La coppia autonomia/WIP, `executor-power` e il prefisso agenti si combinano
-liberamente, nell'ordine che preferisci prima della modalità; gli effetti si
-sommano caso per caso.
+**Settings for this run:**
+
+- Autonomy (`full-autonomous`): not used
+- WIP commits: not used
+- Executor power: unchanged
+- Agents: unchanged
+- Deadline: 31 October 2026 at 17:30 local time, this run only (from your
+  command)
+- Target: the run in progress; in an idle session, the plan or ledger it last
+  changed
+- Where it stops: by 17:30
+- Commits made by this run: one handoff commit for code work, even if commits
+  are off (none when there is nothing to commit); none for Plan, Verify, or
+  Onboard
+
+## Combining options
+
+Options combine freely, in any order, before the mode; each one keeps the effect
+described in its own case. Only `executor-power` is limited: Plan alone accepts
+it.
 
 ```text
-/plan-execute-verify full-autonomous:true --wip-commit executor-power:medium agent-1:opus,agent-2:sonnet plan aggiungi esportazione CSV
+/plan-execute-verify full-autonomous:true --wip-commit executor-power:medium agent-1:opus,agent-2:sonnet plan add CSV export
 ```
 
-PL-06 + PL-11 + PL-13: §3 salva autonomia on, WIP on, livello `medium` e il
-roster.
+PL-06 + PL-11 + PL-13: the new plan saves autonomy true, WIP on, level `medium`,
+and this agent list.
 
 ```text
 /plan-execute-verify agent-1:opus,agent-2:sonnet full-autonomous:true --no-wip-commit execute 003 phase_02
 ```
 
-EX-08 + EX-13, limitati alla fase logica 1 (`phase_02.md`), inclusa la sua
-chiusura `P1`.
+EX-08 + EX-13, limited to the phase in `phase_02.md` (logical phase 1,
+sub-phases 1.1, 1.2, and its closure P1).
 
 ```text
-/plan-execute-verify agent:my-model full-autonomous:false --no-wip-commit task correggi il messaggio di errore del login
+/plan-execute-verify agent:my-model full-autonomous:false --no-wip-commit task fix the login error message
 ```
 
-TA-09 + TA-14: un solo agente, nessun commit, nulla salvato nel piano.
+TA-09 + TA-14: one model, an approval stop, no commits, nothing saved in any
+plan.
 
 ```text
 /plan-execute-verify full-autonomous:true agent-1:opus,agent-2:sonnet,agent-3:haiku resume 003
 ```
 
-RE-02 + RE-13: tutto vale solo per questa invocazione.
+RE-02 + RE-13: everything applies to this run only.
 
 ```text
 /plan-execute-verify --deadline=31-10-2026_17_30 full-autonomous:true agent-1:opus,agent-2:sonnet,agent-3:haiku execute 003
 ```
 
-EX-15 + EX-02 + EX-13: tutto lo scope in autonomia con il roster sostituito, e
-handoff entro le 17:30.
+EX-15 + EX-02 + EX-13: the whole plan, autonomously, with this agent list, and a
+graceful stop by 17:30.

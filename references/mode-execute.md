@@ -93,8 +93,9 @@ while a required gate is blocked). Run full phase gates, obtain the strong
 supervisor's review of integration/invariants/ tests/docs, and record evidence.
 Only then mark the phase DONE. With full-autonomous:true or WIP enabled, commit
 this nonempty state/review update on the current branch, distinctly identifying
-phase completion. With full-autonomous:false, stop after this closure with a
-handoff while scope work remains; `resume` continues. If a gate or the review
+phase completion. With full-autonomous:false, stop after this closure while
+scope work remains, with a checkpoint and report (not Handoff mode, so no
+handoff commit); `resume` continues. If a gate or the review
 fails, follow the P<N> failure procedure in execution-contract §3: never mark
 the phase DONE or patch code inside P<N>.
 

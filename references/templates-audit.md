@@ -66,6 +66,9 @@ records do not authorize editing overview.md or phase specifications during Veri
 Readiness: READY | BLOCKED — <supervisor validation, or unresolved questions,
 affected correction IDs, resolution owner and exact next action>.
 <No unresolved contract or acceptance choice may be labelled READY.>
+<For 000_adhoc, replace the C<n> units with one ready command per correction,
+`/plan-execute-verify task|bug <request citing V<NNN>-F<n>>`, or the blocker
+that prevents it; `execute verify` does not apply there.>
 ### C<n> — <outcome; closes finding IDs>
 - **Agent:** <roster position only, e.g. agent-2>
 - **Assignment:** <responsibility; strong reviewer and timing>

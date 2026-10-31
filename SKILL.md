@@ -56,8 +56,9 @@ runtime/recovery contract and resolved settings into generated STATE.md.
   in [execution-contract](references/execution-contract.md).
 - Every run of every mode, however it ends, closes its report with the Next
   block ([next-step](references/next-step.md)): one exact Continue command, or
-  why nothing follows, and the Stop option, `handoff` when uncommitted code work
-  or ownership remains. Both are suggestions; never run them.
+  why nothing follows, and the Stop option: `handoff` when OPEN or uncommitted
+  code work, a pending closure, or ownership this session holds remains, else
+  nothing to save. Both are suggestions; never run them.
 - The plan's immutable baseline, revision, roster, settings, stable IDs, gate
   registry, and progress live in STATE.md. Phase files specify work; STATE.md
   alone tracks live implementation status. One state writer owns shared records

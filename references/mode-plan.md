@@ -4,12 +4,13 @@ The strong supervisor authors the plan. Planning writes no production code and
 makes no commits. Runtime options, including full-autonomous, are presets for
 later execution; they do not convert a planning request into implementation.
 
-Start with this manual and the Plan section of quality-checklist.md. Read
-agent-roster.md when assigning workers, research.md at B2 only for material
+Start with this manual and the "Plan readiness" section of quality-checklist.md.
+Read agent-roster.md when assigning workers, research.md at B2 only for material
 external questions, the overview/phase sections of output-template.md while
-authoring those files, then its STATE.md section plus execution-contract.md when
-creating the runtime handoff. Read token-economy.md when deciding what to omit.
-Reuse these instructions while unchanged; do not preload or reread every reference.
+authoring those files, then its STATE.md template plus execution-contract.md
+when creating the runtime handoff. Read token-economy.md when deciding what to
+omit. Reuse these instructions while unchanged; do not preload or reread every
+reference.
 
 ## A — Scope and baseline
 

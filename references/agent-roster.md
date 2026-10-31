@@ -12,7 +12,8 @@ responsibility; it does not guarantee model availability or actual capability.
 | agent-3:<name> and later | Recon and other assigned implementation; complex work is allowed when fully specified and supervised |
 | agent:<name> | All responsibilities; review is explicitly labelled self-review |
 
-A roster with only agent-1 has the same single-agent behavior as agent:<name>.
+A roster with only agent-1 has the same single-agent behavior as agent:<name>;
+plan files write either as `agent-1` in the Agent field.
 With multiple agents, assign only positions actually present in the roster.
 
 Legacy defaults are Opus/Sonnet/Haiku in those positions. In Plan, Execute, and

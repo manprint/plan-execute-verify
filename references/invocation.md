@@ -3,7 +3,11 @@
 Read when interpreting `/plan-execute-verify` command syntax. Options and the
 agent prefix belong to the leading run of tokens, in any order. Stop parsing at
 the first token that is neither; the remainder is the mode and its arguments.
-Thus `task add a --json flag` keeps `--json` in the description.
+Thus `task add a --json flag` keeps `--json` in the description. When a
+description contains a token shaped like a leading option of this table or an
+agent prefix, such as a trailing `--deadline=…`, ask before starting whether it
+was meant as an option, which belongs before the mode. Only `handoff` accepts a
+deadline after it.
 
 | Leading option | Meaning | Default |
 |----------------|---------|---------|
@@ -72,29 +76,34 @@ otherwise the remainder is an implicit Plan description. Use `plan task queue`,
 `plan resume uploads`, or `plan handoff notes` if a feature name begins with a
 reserved word. Missing required arguments and invalid selectors are errors, not
 permission to fall back to another mode. Options alone do not select work. A
-request that only asks to continue, resume, or finish recorded work, such as
-`continue 003`, is never a new plan: treat it as `resume` with that target, or
-ask when the target is unclear.
+remainder whose first word asks to continue recorded work (`continue`,
+`finish`, or the same in the user's language) is never a new plan: followed
+only by an existing plan or unit selector, such as `continue 003`, treat it as
+`resume` with that target; otherwise ask whether a resume or a new plan is
+meant.
 
 Plan selectors are a three-digit number, feature name, or folder path. Execute
-and Verify also accept `phase_02`, `1.2`, `§ 1.2`, or `phase_02 § 1.2`. Verify
+(not Execute verify, which takes only a report ID) and Verify also accept
+`phase_02`, `1.2`, `§ 1.2`, or `phase_02 § 1.2`. Verify
 further accepts a `T-A<NNN>` or `B-A<NNN>` ledger entry, and `000_adhoc` as its
 plan, alone or with an entry ID. An entry ID without a plan resolves to the
 unique ledger that records it, including `000_adhoc`; several matches require a
-choice. Logical phase 0 is stored in `phase_01.md`; numeric sub-phase IDs refer
-to their heading, not the file suffix. Reject mismatched file/ID selectors.
+choice. Logical phase 0 is stored in `phase_01.md`, so `phase_02` selects
+logical phase 1; numeric sub-phase IDs refer to their heading, not the file
+suffix. Reject mismatched file/ID selectors.
 Onboard accepts an optional plan selector, never a phase/report selector;
 without one it inventories plans and ad-hoc ledgers rather than choosing the
 highest number.
 
 An active plan is a real plan whose STATE.md records an OPEN or pending-closure
 unit, or any sub-phase, correction, or phase that is not DONE or SKIPPED.
-For execution/audit without a selector, use the highest numbered real plan,
-ignoring `000_adhoc`; ask when multiple active plans are ambiguous. An explicit
-path wins. `execute verify [<plan>] [V<NNN>]` applies corrections from the
-selected/active plan's newest report unless an ID is given. V-prefixed report
-IDs differ from three-digit plan IDs. A plan literally named `verify` needs its
-number/path.
+Execute, Execute verify, and Verify without a plan selector use the unique
+active real plan, ignoring `000_adhoc`; with no active plan, the highest
+numbered real plan. Several active plans require a user choice, never the
+highest number. An explicit path wins. `execute verify [<plan>] [V<NNN>]`
+applies corrections from the selected/active plan's newest report unless an ID
+is given. V-prefixed report IDs differ from three-digit plan IDs. A plan
+literally named `verify` needs its number/path.
 
 Task/bug take no leading selector. They attach to a real plan only when the
 request names that plan (number, feature name, or path) or clearly changes an
@@ -117,8 +126,8 @@ that invocation only.
 given after it or as a leading option; it ignores other options, an agent
 prefix, or a selector, and says so. Sent during a run it applies to that run;
 sent to an idle session it applies to the plan or ledger that session last
-wrote, or the unique one with unfinished or uncommitted work, and several
-candidates require a choice.
+wrote, or the unique one with unfinished or uncommitted work that no other live
+session owns, and several candidates require a choice.
 
 A selector limits scope even under full autonomy. Only Execute and Execute
 verify set the saved execution scope; Task, Bug, and Verify run their own unit

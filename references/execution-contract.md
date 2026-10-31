@@ -24,20 +24,21 @@ text. An explicit value overrides the persisted value. Exception: Onboard only
 observes saved configuration. Its options and agent prefix are invocation-local
 and never persist to a plan or an ad-hoc ledger.
 
-| Mode | Scope when true | Completion commits |
+| Mode | Scope when true | Completion commits, when the table below enables them |
 |------|-----------------|--------------------|
 | Onboard | Inspect context and suggest a next action; never execute that action or alter saved settings | None, including with WIP enabled |
 | Plan | Produce the requested plan; record the setting for execution | None; planning does not start implementation |
 | Execute | Continue through eligible sub-phases and phase closures within the selected scope | Every completed sub-phase and phase closure |
 | Execute verify | Apply the selected report's corrections; revalidate affected phases | Every completed correction and reopened phase closure |
 | Task / bug | Finish the requested change, tests, documentation, and reconciliation | Every completed task / bug |
-| Verify | Complete the audit, including an honest FAIL or unverified result | Audit artifacts and state only; never automatic code corrections |
+| Verify | Complete the audit, including an honest FAIL or unverified result | Only with `true`: audit artifacts and state; never automatic code corrections |
 | Resume | Recover recorded work, then continue the saved execution scope | As for the mode of the resumed unit or scope |
 | Handoff | Not applicable: the option is ignored; bounds the work in flight, saves resumable state, and stops | One handoff commit for code work, whatever the settings; none for Plan, Verify, or Onboard |
 
 With `false`, execution continues through the eligible units of the current
 phase inside the selected scope and stops after that phase's closure P<N>, with
-a precise handoff that `resume` continues; Execute verify stops likewise after
+a precise checkpoint and report that `resume` continues (not Handoff mode, so no
+handoff commit); Execute verify stops likewise after
 each reopened phase's closure. A sub-phase boundary inside a phase is not a
 stopping point, and this option adds no commit authorization. Task and Bug stop
 once instead, for the user's approval of the validated mini-plan
@@ -87,6 +88,9 @@ and commits. A worker edits only its assigned code/test/doc files and returns
 evidence. Its assigned OPEN unit is active work, not an abandoned unit to revert.
 In handoff execution, the current session owns the state; transfer ownership only
 after the previous writer has stopped. Independent read-only probes may overlap.
+Every run that claimed ownership releases it when it ends, with time and reason:
+completion, a phase-closure or approval stop, a blocker, a rejection, or a
+handoff. Only an interrupted session leaves it active.
 
 Stale ownership: a crashed or interrupted session can leave `ownership: active`
 without a release. The user's explicit operational invocation on this plan
@@ -107,13 +111,14 @@ At startup:
    changes from this unit's edits. Never infer ownership merely from a filename.
 3. Reconcile incomplete closure transactions and any OPEN unit before selecting
    new work. An unrelated WIP commit is not this plan's work; match its plan and
-   unit identity. Do not revert, amend, or overwrite work with uncertain ownership.
-   Exception: an explicitly requested Verify may suspend implementation using
-   the snapshot protocol below; it audits pending closure without finalizing or
-   committing that implementation on its behalf.
-   If a new explicit scope excludes unfinished OPEN work, do not finish that code
-   just to clear the slot or overwrite its checkpoint. Report the conflict and
-   request direction; only Verify has the suspension exception below.
+   unit identity. Do not revert, amend, or overwrite work with uncertain
+   ownership. Exception: an explicitly requested Verify may suspend
+   implementation using the snapshot protocol below; it audits pending closure
+   without finalizing or committing that implementation on its behalf. If a new
+   explicit scope excludes unfinished OPEN work, including a Task or Bug
+   attached to a plan with an open or pending-closure unit, do not finish that
+   code just to clear the slot or overwrite its checkpoint. Report the conflict
+   and request direction; only Verify has the suspension exception below.
 4. Read the named sub-phase plus its local contracts and approved revisions.
    Check prerequisite sub-phase rows, required artifacts, and applicable gates.
    A moved line is a locator change: find the named symbol and inspect its actual
@@ -168,13 +173,14 @@ GIT_INDEX_FILE="$idx" git write-tree
 rm -f "$idx"
 ```
 
-The printed tree covers tracked and untracked files, not ignored ones; list owned
-ignored artifacts explicitly. On resume and at closure take a fresh snapshot and
-compare it with `git diff --stat <base-tree> <current-tree>`. Changes outside the
-unit's owned paths are reported, never claimed. The tree object is unreferenced,
-so `git gc` may eventually prune it; if it is missing, fall back to §5 and the
-checkpoint and record that limitation. Onboard takes no snapshot; Verify takes
-one only for the stale-ownership check (§2), never as a unit base.
+The printed tree covers tracked and untracked files, not ignored ones; list
+owned ignored artifacts explicitly. On resume and at closure take a fresh
+snapshot and compare it with `git diff --stat <base-tree> <current-tree>`.
+Changes outside the unit's owned paths are reported, never claimed. The tree
+object is unreferenced, so `git gc` may eventually prune it; if it is missing,
+fall back to STATE.md §5 (files and ownership) and the checkpoint and record
+that limitation. Onboard takes no snapshot; Verify takes one only for the
+stale-ownership check (§2), never as a unit base.
 
 Execute the numbered steps (at executor power `high`, the expanded steps
 recorded in §6) and check each expected result. A step or successful targeted
@@ -198,6 +204,10 @@ may go directly to DONE. Any edit to reviewed behavior returns the unit to
 IN_PROGRESS. An unavailable reviewer makes the unit BLOCKED with its review
 request. A phase is IN_REVIEW while its P<N> is OPEN, and BLOCKED while that
 P<N> is blocked. A reopened unit returns to IN_PROGRESS with a new attempt.
+An open unit is one opened and not yet closed: IN_PROGRESS, IN_REVIEW, or
+BLOCKED in STATE.md, where §1 marks it `OPEN`, or OPEN, IN_REVIEW, or BLOCKED in
+an ad-hoc ledger entry. Resume, Handoff, and the Next block treat every open
+unit as OPEN work.
 
 For planned phase work, a specifically named later unit or phase closure may
 fulfil its README obligation. Keep the affected sections and owner visible and
@@ -226,7 +236,9 @@ invalidated); a missing or wrong design becomes a plan revision (§4) that amend
 or adds a unit. After that work closes, run P<N> again as a new attempt. When
 commits are enabled, the failed attempt's state records enter the reopened or
 added unit's completion commit as owned plan records. Retry limits in §4 apply
-to repeated failures.
+to repeated failures. A failed attempt does not end the phase: under
+`full-autonomous:false` the run continues with the reopened or added unit and
+the next P<N> attempt, and stops after the phase closes.
 
 Stop at the selected scope's verified completion, an explicit user stop, a
 handoff request or deadline, or a documented blocker requiring unavailable
@@ -410,12 +422,14 @@ Suggested subjects (adapt to the repository's convention without losing meaning)
    literal `%(trailers`, this Git lacks the format: parse each candidate with
    `git log -1 --format=%B <sha> | git interpret-trailers --parse` instead, or
    report a blocker; never read zero matches from an unsupported format as a
-   pending closure. Use `wip` instead of `complete` to find the unit's WIP
-   commit. Zero matches means pending closure; multiple matches mean an identity
-   conflict to reconcile, not permission to choose one arbitrarily or add
-   another commit. Confirm the commit contains the intended owned diff and
-   state. Report its actual SHA; no extra bookkeeping commit is necessary. An
-   existing resolved identity means this unit was already committed.
+   pending closure. Zero `complete` matches means pending closure; multiple
+   `complete` matches mean an identity conflict to reconcile, not permission to
+   choose one arbitrarily or add another commit. Use `wip` instead of `complete`
+   to list the unit's WIP commits: several are normal, because a handoff commit
+   is never amended, and all of them are this unit's own work. Confirm the
+   commit contains the intended owned diff and state. Report its actual SHA; no
+   extra bookkeeping commit is necessary. An existing resolved identity means
+   this unit was already committed.
 
 The reference in the committed snapshot resolves to that commit; the SHA may be
 recorded by a later genuine update but is not required. If interrupted after
@@ -431,13 +445,13 @@ With WIP enabled, every recovery-boundary checkpoint of an OPEN code unit
 saves the unit's owned changes and STATE.md in one rolling `wip(<id>)` commit
 with `PEV-Result: wip`; §1 remains OPEN. Stage it by steps 2–3 with a fresh
 checkpoint snapshot as the closure tree, and record that tree in §1 as the last
-WIP snapshot. Amend only when the WIP commit is owned, local-only, at HEAD, and
-the unit's only WIP commit directly on the unit base HEAD; staging then uses the
-unit base tree and HEAD as in step 2. Otherwise append: use the last WIP
-snapshot as `<base-tree>` and current HEAD as the reset target, so already
-committed hunks are not applied twice. On recovery, commits that the step 4
-lookup with `wip` matches to this plan, unit, and attempt are this unit's own
-work, not foreign changes, and a HEAD recorded in STATE.md that an amend
+WIP snapshot. Amend only when the WIP commit is owned, local-only, at HEAD, not
+a handoff commit, and the unit's only WIP commit directly on the unit base HEAD;
+staging then uses the unit base tree and HEAD as in step 2. Otherwise append:
+use the last WIP snapshot as `<base-tree>` and current HEAD as the reset target,
+so already committed hunks are not applied twice. On recovery, commits that the
+step 4 lookup with `wip` matches to this plan, unit, and attempt are this unit's
+own work, not foreign changes, and a HEAD recorded in STATE.md that an amend
 replaced is expected. A crash loses at most the work since the last checkpoint,
 which the working-tree snapshot comparison still recovers. Finish into a
 completion commit under the same amend rule. Inspect current changes as well as
@@ -445,12 +459,25 @@ the WIP diff. Full autonomy alone never requires committing broken or unreviewed
 work.
 
 A handoff commit (mode-handoff.md H5) is a WIP commit with the subject
-`handoff(request-by-user): …` and the extra trailer
-`PEV-Handoff: user|deadline`. It may also hold closed units recorded
-`uncommitted`, listed in the trailer `PEV-Includes: <id>:<attempt>, …`; their
-ledger reference becomes `handoff:<id>:<attempt>`, resolved like step 4 to the
-unique commit in HEAD's ancestry with that `PEV-Plan` whose `PEV-Includes` lists
-that exact unit and attempt. It is never amended: later WIP and completion
+`handoff(request-by-user): …`, for a deadline too, since the user set it, and
+the extra trailer `PEV-Handoff: user|deadline`. It may also hold closed units
+recorded `uncommitted` and a unit with a pending closure, listed in the trailer
+`PEV-Includes: <id>:<attempt>, …`. Their ledger reference becomes
+`handoff:<id>:<attempt> <base-tree>..<closure-tree>`, keeping the trees, and
+resolves to the unique commit in HEAD's ancestry with that `PEV-Plan` whose
+`PEV-Includes` lists that exact entry after splitting on commas and trimming:
+
+```bash
+f='%H%x09%(trailers:key=PEV-Plan,valueonly,separator=%x2C)'
+f="$f"'%x09%(trailers:key=PEV-Includes,valueonly,separator=%x2C)'
+git log --format="$f" HEAD | awk -F'\t' -v p='<plan-id>' -v u='<id>:<attempt>' \
+  '$2 == p { n = split($3, a, ","); for (i = 1; i <= n; i++) {
+     gsub(/^[ \t]+|[ \t]+$/, "", a[i]); if (a[i] == u) print $1 } }'
+```
+
+A `handoff:` reference with zero matches (a failed or interrupted handoff
+commit) counts as `uncommitted` with its recorded trees; several matches are an
+identity conflict. The commit is never amended: later WIP and completion
 commits append after it, using its closure tree as the last WIP snapshot.
 
 ## 7. Coherence contract

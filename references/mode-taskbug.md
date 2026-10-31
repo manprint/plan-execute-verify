@@ -24,11 +24,14 @@ the requested change; unavailable required evidence blocks the dependent work.
 
 With a real plan, open the unit in STATE.md as the invocation, after any
 approval gate and without replacing the saved execution scope, and link its
-ledger entry. Without one, create the entry in docs/plans/000_adhoc/tasks.md or
-bugs.md before code edits, PROPOSED while it awaits approval and OPEN once the
-unit opens; that entry holds settings, owner, baseline (HEAD plus working-tree
-snapshot tree, execution-contract §3), mini-plan, checkpoint, and commit
-identity. Never invent STATE.md or phases for ad-hoc work.
+ledger entry. If that plan already has an open or pending-closure unit, open
+nothing: report the conflict with that unit's resume command and ask
+(execution-contract §2). Without one, create the entry in
+docs/plans/000_adhoc/tasks.md or bugs.md before code edits, PROPOSED while it
+awaits approval and OPEN once the unit opens; that entry holds settings, owner,
+baseline (HEAD plus working-tree snapshot tree, execution-contract §3),
+mini-plan, checkpoint, and commit identity. Never invent STATE.md or phases for
+ad-hoc work.
 
 If the request is materially larger than a small unit, the supervisor scopes a
 proper plan before implementation; do not silently turn one task into a project.
@@ -57,15 +60,15 @@ regression test. With true there is no stop, but the validation still applies.
   gate again; explicit options on that Resume apply as usual. Approving handles
   only that entry: other recoverable work is reported with its resume command,
   not run.
-- - On approval compare the proposal snapshot with a fresh one for the paths the
+- On approval compare the proposal snapshot with a fresh one for the paths the
   mini-plan names. If they changed, the proposal tree is missing (pruned), or
   the user edited the mini-plan, agent-1 revalidates it; when the validated
   mini-plan then differs materially from the approved one, it is a new proposal
   and stops again. Otherwise open the unit with a fresh base (execution-contract
   §3) and continue.
-- The user rejects a proposal with a reply in the same session, or by setting
-  the entry's status to `WITHDRAWN` with a reason in the ledger. A withdrawn
-  entry is never erased and never resumed.
+- The user rejects a proposal with a reply in the same session, which sets the
+  entry to `WITHDRAWN` with the user's reason, or by setting that status and a
+  reason in the ledger. A withdrawn entry is never erased and never resumed.
 - An entry BLOCKED because agent-1 was unavailable is not PROPOSED: resuming it
   by ID validates the mini-plan, and with false the gate still stops for
   approval, because the user has not seen it yet.

@@ -5,8 +5,8 @@
 Use for a first visit to an existing repository or a context refresh after an
 interruption/model change. Read template-onboarding.md and the Onboard checklist
 in quality-checklist.md. This is an informational mode, not Plan, Execute, or
-Verify. It may create/update only docs/onboarding.md (or a user-specified context
-document); all code, plan specifications, STATE.md, ledgers, and reports are read-only.
+Verify. It may create/update only docs/onboarding.md; all code, plan
+specifications, STATE.md, ledgers, and reports are read-only.
 
 ## O1 — Resolve the inspection boundary
 

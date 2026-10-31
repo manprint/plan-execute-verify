@@ -20,7 +20,8 @@ Assume recon has confirmed this Python repository:
 - The roster is agent-1:opus, agent-2:sonnet, agent-3:haiku.
 - Executor power is `low` (the default): units are elementary and fully
   specified.
-- Execution uses handoff by default; the same unit can be delegated.
+- The execution style is recorded per invocation (agent-roster.md): handoff
+  here; the same unit can be delegated when the host dispatches the roster.
 
 The approved design is a fixed-window quota counter, not an unspecified token
 bucket. A user-visible rate limit can have different semantics; the supervisor

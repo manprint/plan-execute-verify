@@ -6,8 +6,10 @@ Never erase entries; update their checkpoint/outcome, preserving changes in
 intent as revisions. In a real plan STATE.md owns live status; the ledger links
 to it and carries the durable mini-plan/evidence. In 000_adhoc the entry itself
 owns live status because there is no STATE.md. A PROPOSED or WITHDRAWN entry was
-never opened in STATE.md, so it owns its status in the ledger also in a real
-plan (mode-taskbug.md approval gate).
+never opened as a unit in STATE.md (only a PROPOSED §1 invocation record names
+it), so it owns its status in the ledger also in a real plan (mode-taskbug.md
+approval gate). OPEN means in progress; OPEN, IN_REVIEW, and BLOCKED entries
+are open units (execution-contract §3).
 
 Use execution-contract.md for ownership, settings, recovery, reviews, and commits.
 
@@ -64,8 +66,8 @@ unanswered questions, and next lookup. Persist before handoff.>
 - README: <affected sections, or no user-visible change>
 - Plan reconciliation: <decisions/contracts/tests updated, or N/A>
 - Commit: <uncommitted base-tree..closure-tree, unit:ID:attempt, or
-  handoff:ID:attempt once a handoff commit holds it; resolve with PEV identity
-  trailers>
+  handoff:ID:attempt base-tree..closure-tree once a handoff commit holds it;
+  resolve with PEV identity trailers (execution-contract §6)>
 ````
 
 For a bug, additionally require:
