@@ -233,6 +233,6 @@ Explain remaining unverified prerequisites.
 
 Return the folder path and a concise phase/assignment/configuration summary. If
 the plan folder is untracked or uncommitted, say so (`git clean` or a branch
-switch can lose it) and suggest the exact commit command, such as
-`git add docs/plans/<id> && git commit -m "plan(<id>): <feature>"`; never run
-it.
+switch can lose it) and suggest the exact commit command, such as `git add
+docs/plans/<id> && git commit -m "plan(<id>): <feature>"`; never run it. End
+with the Next block (next-step.md).

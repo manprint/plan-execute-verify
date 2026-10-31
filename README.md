@@ -462,6 +462,28 @@ calls, cannot interrupt its own running call, and an idle session does not wake
 up at a deadline. Set the deadline before the moment you really need the
 machine, for example 17:30 when you switch it off at 18:00.
 
+## After every run: Continue or Stop
+
+Every run, in every mode and however it ends, closes its report with a Next
+block, for example after a phase closure with commits disabled:
+
+```text
+Next
+- Continue: `/plan-execute-verify resume 003` — runs sub-phase 2.1, the next unit of the saved scope
+- Stop: `/plan-execute-verify handoff` — commits 1.1, 1.2, and P1, still uncommitted, in one handoff commit; then close the session
+```
+
+Continue is one exact command with real IDs and no options: recorded settings
+travel with `resume`, while a new `execute` scope starts from the plan defaults
+and is labelled as new. When a decision is missing it reads "answer …, then …";
+when nothing follows it says why. Stop suggests `handoff` only when uncommitted
+code work or ownership remains; otherwise it says there is nothing to save.
+Files a handoff never commits, such as a plan draft, an audit report, a proposed
+task, or docs/onboarding.md, are listed with a suggested commit command. Both
+lines are suggestions: the agent never runs them, even with
+`full-autonomous:true`. [next-step](references/next-step.md) lists which command
+applies in each situation.
+
 ## What makes a plan ready?
 
 Every sub-phase contains exact prerequisites, files/symbols, local design
@@ -598,7 +620,8 @@ gate staging and phase sizing, working-tree snapshot unit bases, stale-ownership
 takeover, the saved execution scope, phase-closure failure handling, agent
 substitution, audit severity definitions, the resume mode, scoped verify,
 rolling WIP commits, executor power, the handoff mode with `--deadline`, and the
-task/bug approval gate.
+task/bug approval gate,
+and the Next block.
 Those revisions have been checked statically only; they have not been
 re-exercised end to end. The Git commands for owned-hunk staging, including the
 `--3way` fallback and a multi-unit handoff commit staged one patch per unit

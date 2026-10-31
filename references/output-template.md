@@ -344,6 +344,19 @@ Last takeover: <previous writer → new writer, time, reason; or none>.
     same-session reply or by the user setting WITHDRAWN in the entry. A BLOCKED
     entry awaiting validation is not PROPOSED; once validated it still needs
     approval.
+13. End every report, however the run ends, with "Next" (labels in the user's
+    language). Continue: one exact /plan-execute-verify command with real IDs
+    and no options; first any conflict or missing decision or evidence (ask it,
+    then the command); then the corrected command after a rejection; the resume
+    command after a handoff; the approval resume for a PROPOSED entry; resume
+    <plan> <unit-id> for blocked or interrupted work; execute verify <plan>
+    V<NNN> only for ready, authorized corrections, never bypassing blocking
+    findings; resume <plan> for the saved scope; execute <plan> as a new scope;
+    verify <plan> for a finished plan; otherwise nothing, with the reason. Stop:
+    handoff when OPEN changes, a pending closure, uncommitted units, or
+    ownership this session holds remain, else nothing to save; list files a
+    handoff never commits (PROPOSED entry, plan draft, audit, onboarding map)
+    with a suggested commit command. Suggest both; never run them.
 
 Audit closure may have verdict FAIL or INCOMPLETE; this closes the inspection,
 never the failed implementation. Full autonomy commits its report/state only.

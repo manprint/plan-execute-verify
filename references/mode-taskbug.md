@@ -109,8 +109,8 @@ requirements. New scope/product choices remain user decisions.
 At handoff retain OPEN with the next unverified step. With the separate WIP
 option, each recovery-boundary checkpoint also updates one rolling WIP commit
 (execution-contract §6). Completion reporting includes stable ID, outcome,
-verification, deviations, and commit SHA/branch when committed. A user
-`handoff` request or `--deadline` follows mode-handoff.md, including its
-handoff commit.
+verification, deviations, and commit SHA/branch when committed, and ends with
+the Next block (next-step.md). A user `handoff` request or `--deadline` follows
+mode-handoff.md, including its handoff commit.
 
 Run the Coherence checklist in quality-checklist.md before the final report.

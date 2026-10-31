@@ -20,22 +20,24 @@ Reject unknown leading options, invalid boolean values (including
 `--deadline`, conflicting WIP options, and invalid agent prefixes before work
 starts. Handoff is the exception: it never rejects a stop request, reports what
 it ignores, and treats an invalid deadline as an immediate handoff
-(mode-handoff.md H1). Each setting resolves separately: explicit invocation >
-saved execution scope override (only while continuing that scope) > selected
-plan's STATE.md §3 > default. Plan stores explicit options in §3 as plan
-defaults. Execute and Execute verify store them with the saved execution scope
-they set (execution-contract §1): they last through resume and handoff of that
-scope, lapse when a different selector replaces it, and never change §3. Task,
-Bug, Verify, and Resume use explicit options for that invocation only and record
-the effective values in their ledger entry, audit report, or resumed unit, also
-when attached to a real plan; they never rewrite a plan's saved settings. A
-resumed unit keeps the effective settings and roster recorded on it (ledger
-entry, audit report, or §1 invocation record); the scope overrides and §3 apply
-when Resume continues the saved execution scope, and explicit Resume options
-override either for that invocation only. Plan options preset later execution
-but never authorize implementation or planning commits. Onboard options are
-inspection only and never persist or authorize commits. WIP and autonomy
-precedence is detailed in [execution-contract](execution-contract.md).
+(mode-handoff.md H1). A rejection still ends with the Next block (next-step.md),
+suggesting the corrected command when the fix is unambiguous. Each setting
+resolves separately: explicit invocation > saved execution scope override (only
+while continuing that scope) > selected plan's STATE.md §3 > default. Plan
+stores explicit options in §3 as plan defaults. Execute and Execute verify store
+them with the saved execution scope they set (execution-contract §1): they last
+through resume and handoff of that scope, lapse when a different selector
+replaces it, and never change §3. Task, Bug, Verify, and Resume use explicit
+options for that invocation only and record the effective values in their ledger
+entry, audit report, or resumed unit, also when attached to a real plan; they
+never rewrite a plan's saved settings. A resumed unit keeps the effective
+settings and roster recorded on it (ledger entry, audit report, or §1 invocation
+record); the scope overrides and §3 apply when Resume continues the saved
+execution scope, and explicit Resume options override either for that invocation
+only. Plan options preset later execution but never authorize implementation or
+planning commits. Onboard options are inspection only and never persist or
+authorize commits. WIP and autonomy precedence is detailed in
+[execution-contract](execution-contract.md).
 
 `executor-power:low|medium|high` describes the least capable implementer that
 will receive the plan's units (mode-plan D). Plan stores it in §3; the default

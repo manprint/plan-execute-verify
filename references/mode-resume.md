@@ -64,4 +64,4 @@ selector. With a unit ID, stop after that unit's recovery and closure.
 using the settings recorded in it. When nothing remains to resume, including a
 saved scope of `none`, report that, any PROPOSED entries with their approval
 commands, the next eligible plan unit, and the command that would start it; do
-not start it.
+not start it. Every Resume ends with the Next block (next-step.md).

@@ -47,8 +47,9 @@ only for its checkpoint fields.
   session last wrote, else the unique plan or ledger with OPEN work, a pending
   closure, or units recorded `uncommitted`; several candidates require a user
   choice. With none, report that nothing needs a handoff, release ownership the
-  session still holds, give the next command, and stop. An idle session has
-  nothing to schedule, so a deadline there means an immediate handoff.
+  session still holds, end with the Next block (next-step.md), and stop. An idle
+  session has nothing to schedule, so a deadline there means an immediate
+  handoff.
 - Record the trigger (`user` or `deadline`), the request time, and the deadline
   in the invocation record (STATE.md §1, the ledger entry, or the audit report).
   The deadline belongs to this run only; it is never a scope override, never
@@ -156,5 +157,6 @@ files, and the exact command that continues the interrupted invocation:
 | Onboard | `/plan-execute-verify onboard [<plan>]` |
 
 Recorded settings and roster resume with the work, so the command repeats no
-option; the deadline does not carry over. Then stop: no further tool calls, even
-under `full-autonomous:true`.
+option; the deadline does not carry over. This command is the Continue line of
+the Next block (next-step.md), whose Stop line says only that the session can be
+closed now. Then stop: no further tool calls, even under `full-autonomous:true`.

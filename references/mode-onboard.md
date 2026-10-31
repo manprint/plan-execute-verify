@@ -119,25 +119,11 @@ An explicit focus does not hide other OPEN work or ownership conflicts.
 
 ## O4 — Derive the next action without starting it
 
-Use the first applicable condition below. Return one recommendation, its evidence,
-and any prerequisite/choice; do not print an executable recommendation when a
-missing decision would make it unsafe. Literal syntax below uses placeholders;
-substitute actual IDs/paths in a real handoff.
-
-| Observed condition | Next action / command guidance |
-|--------------------|--------------------------------|
-| Target, ownership, branch/baseline or scope conflict; required source missing | Explain the conflict and ask the exact question or hand off to the current owner. Do not switch branches or recommend blind execution. |
-| Interrupted unit, pending completion transaction or suspended audit | Identify that identity's recovery first, in its original mode and scope: suggest `resume <plan> <unit-id>`. If readiness/design is blocked, hand it to the supervisor rather than proposing execution. An OPEN audit/pending audit commit takes precedence over its suspended implementation; never recommend a new audit or later phase to bypass recovery. |
-| Task or bug PROPOSED, awaiting approval | Show the entry path and a summary of its mini-plan; suggest `resume <plan or 000_adhoc> <entry-id>` to approve it; to reject it, the user sets its status to WITHDRAWN with a reason. Never approve or withdraw it on the user's behalf. |
-| DRAFT/BLOCKED or underspecified/legacy contract | Give a strong-supervisor handoff naming the existing folder, missing decision/evidence and affected unit. No new plan and no claim of execution readiness. |
-| Audit findings need a correction decision or ready contract | Explain the findings and request the missing approval/design. Do not bypass blocking findings by recommending ordinary implementation. |
-| Authorized, READY audit corrections with eligible remaining units | Suggest `execute verify <plan> V<NNN>` with the actual report, not an ambiguous newest-report default. An OPEN finding alone is not authorization to fix it. |
-| READY planned work remaining inside the saved execution scope | Suggest `resume <plan>`, which continues the saved scope without changing it. Explain the exact unit/step and prerequisites; retain saved settings and roster. |
-| READY plan with saved execution scope `none` | Suggest `execute <plan>` or a narrower phase/sub-phase selector as a new scope. Note that it starts from the plan defaults in §3, not from earlier scope overrides. |
-| Saved execution scope complete, but later plan work exists, including a pending P<N> after a sub-phase scope | Say the requested scope is complete. Show the later command (for P<N>, the phase selector) only as a proposed new scope requiring the user's choice, not as a resume. |
-| Recorded plan complete, no outstanding work | State the evidence/verification limits. Offer `verify <plan>` only if a fresh audit is useful; do not invent implementation work. |
-| No resumable work and no user goal | Ask the desired outcome. Explain Plan for a feature, Task for one small change, Bug for a defect; do not invent a command argument or infer a roadmap from TODOs. |
-| Concrete new goal already supplied | Suggest `plan <goal>`, `task <description>` or `bug <description>` at the actual scope, without invoking it. |
+Use the first applicable row of next-step.md N1, evaluated on the inspected
+state; rows 18 and 19 are Onboard's own. Return one recommendation, its
+evidence, and any prerequisite or choice; do not print an executable
+recommendation when a missing decision would make it unsafe. Literal syntax
+there uses placeholders; substitute actual IDs and paths in a real handoff.
 
 First distinguish an unresolved blocker from a historical BLOCKED label: if the
 user has supplied its resolution, a supervisor must validate it before execution.
@@ -183,8 +169,8 @@ STATE.md merely to record that onboarding ran. A `handoff` request or
 simply rerun (mode-handoff.md).
 
 Return a short recap: project/focus, recorded progress and evidence limits, open
-unit/blocker, next action with the exact supported command or handoff, and saved
-map path (or why not saved). If the map is untracked, say so and suggest an
-exact commit command without running it. Stop there. The user chooses whether to
-run the suggested mode; an explicit future execution still performs its own
-cold-start and source checks.
+unit/blocker, and saved map path (or why not saved), ending with the Next block
+(next-step.md), whose Continue is the next action. If the map is untracked, say
+so and suggest an exact commit command without running it. Stop there. The user
+chooses whether to run the suggested mode; an explicit future execution still
+performs its own cold-start and source checks.

@@ -178,6 +178,105 @@ prima non perde lavoro. Ignora e segnala opzioni, prefisso e selettori che non
 usa; una deadline non valida o due deadline diverse valgono come handoff
 immediato (casi HA-02…HA-15).
 
+## Prossimo passo: Continua o Fermati
+
+Ogni run, in ogni modalità e comunque finisca (completamento, stop a fine fase,
+blocco, gate di approvazione, handoff, invocazione rifiutata, anche con
+`full-autonomous:true`), chiude il report con il blocco "Prossimo passo" (nella
+lingua dell'utente): un comando esatto per continuare e l'opzione per fermarsi.
+Sono solo suggerimenti: l'agente non li esegue mai.
+
+- Continua: un solo comando, con ID reali e il piano per numero, senza opzioni
+  (le impostazioni registrate viaggiano con `resume`; la deadline non passa
+  mai). Un nuovo scope di Execute parte dai default di §3 ed è indicato come
+  nuovo. Se manca una decisione: "rispondi a …, poi …". Se non c'è seguito, lo
+  dice con il motivo. Dopo un rifiuto è il comando corretto, con le tue opzioni
+  valide.
+- Fermati: `handoff` solo se restano lavoro sul codice non committato o
+  ownership; altrimenti "niente da salvare". Bozze di piano, report di audit,
+  voci `PROPOSED` e docs/onboarding.md non vengono committati dall'handoff: sono
+  elencati con il comando di commit suggerito.
+
+### Stop dopo la chiusura di fase P1, con commit disattivati
+
+```text
+Prossimo passo
+- Continua: `/plan-execute-verify resume 003` — prosegue con 2.1, prossima unità dello scope salvato
+- Fermati: `/plan-execute-verify handoff` — committa 1.1, 1.2 e P1, ancora non committati, in un commit di handoff; poi chiudi la sessione
+```
+
+### Scope di sotto-fase completato, con altro lavoro nel piano e commit attivi
+
+```text
+Prossimo passo
+- Continua: `/plan-execute-verify execute 003 phase_03` — nuovo scope: parte dai default di §3 (`full-autonomous:false`, WIP off)
+- Fermati: niente da salvare; puoi chiudere la sessione
+```
+
+### Plan arrivato a READY
+
+```text
+Prossimo passo
+- Continua: `/plan-execute-verify execute 004` — nuovo scope sull'intero piano, con i default salvati in §3
+- Fermati: niente da salvare; i file del piano non sono committati: `git add docs/plans/004_plan-Export && git commit -m "plan(004): Export"` (suggerito, non eseguito)
+```
+
+### Task fermo al gate di approvazione (`PROPOSED`)
+
+```text
+Prossimo passo
+- Continua: `/plan-execute-verify resume 000_adhoc T-A004` — approva il mini-piano e implementa il task
+- Fermati: niente da salvare; la voce `PROPOSED` non è committata (comando di commit suggerito)
+```
+
+### Sotto-fase BLOCKED su una decisione, con modifiche parziali
+
+```text
+Prossimo passo
+- Continua: rispondi a "il limite vale per utente o per token?", poi `/plan-execute-verify resume 003 2.1`
+- Fermati: `/plan-execute-verify handoff` — committa il lavoro parziale di 2.1 in un commit di handoff, rilasciando l'ownership se ancora tenuta
+```
+
+### Verify FAIL con correzioni pronte
+
+```text
+Prossimo passo
+- Continua: `/plan-execute-verify execute verify 003 V002` — applica le correzioni del report V002
+- Fermati: niente da salvare; il report di audit non è committato (comando di commit suggerito)
+```
+
+### Verify PASS su un piano completo
+
+```text
+Prossimo passo
+- Continua: niente: il piano 003 è completo e verificato (V003 PASS)
+- Fermati: niente da salvare; puoi chiudere la sessione
+```
+
+### Task ad-hoc completato con commit disattivati
+
+```text
+Prossimo passo
+- Continua (facoltativo): `/plan-execute-verify verify 000_adhoc T-A004` — audit indipendente della modifica
+- Fermati: `/plan-execute-verify handoff` — committa T-A004 in un commit di handoff, anche con i commit disattivati
+```
+
+### Rifiuto di `executor-power:high execute 003`
+
+```text
+Prossimo passo
+- Continua: `/plan-execute-verify execute 003` — `executor-power` vale solo in Plan; il livello del piano resta quello salvato
+- Fermati: niente da salvare
+```
+
+### Dopo un handoff
+
+```text
+Prossimo passo
+- Continua: `/plan-execute-verify resume 003` — riprende dal checkpoint salvato
+- Fermati: la sessione si può chiudere ora
+```
+
 ## Onboard
 
 ```text

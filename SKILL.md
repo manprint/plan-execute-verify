@@ -33,7 +33,8 @@ does not invoke its Plan/Execute workflow.
 | `handoff` | [mode-handoff](references/mode-handoff.md) | Graceful stop: resumable state, handoff commit for code work, resume command |
 
 Read only references called for by the selected mode and the artifact being
-written. A later executor may lack this skill, so planning copies the concise
+written, plus [next-step](references/next-step.md) before every final report. A
+later executor may lack this skill, so planning copies the concise
 runtime/recovery contract and resolved settings into generated STATE.md.
 
 ## Shared boundaries
@@ -53,6 +54,10 @@ runtime/recovery contract and resolved settings into generated STATE.md.
   scope and its option overrides across resumes and Task/Bug/Verify runs;
   Execute options never become plan defaults. Exact commit and handoff rules are
   in [execution-contract](references/execution-contract.md).
+- Every run of every mode, however it ends, closes its report with the Next
+  block ([next-step](references/next-step.md)): one exact Continue command, or
+  why nothing follows, and the Stop option, `handoff` when uncommitted code work
+  or ownership remains. Both are suggestions; never run them.
 - The plan's immutable baseline, revision, roster, settings, stable IDs, gate
   registry, and progress live in STATE.md. Phase files specify work; STATE.md
   alone tracks live implementation status. One state writer owns shared records

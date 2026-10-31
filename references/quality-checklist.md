@@ -27,6 +27,9 @@ An unresolved required item prevents READY or implementation DONE.
       no code/state/roster/index changes, unit claims, commits, or automatic next command.
 - [ ] Snapshot has date/baseline, source locators, coverage limits, and a concise
       next action; it is not a second live progress board or a substitute for Verify.
+- [ ] Report ends with the Next block (next-step.md): one exact Continue
+      command, or why nothing follows, and the Stop option derived from state;
+      nothing suggested was run.
 
 ## Plan readiness — strong supervisor
 
@@ -90,6 +93,9 @@ An unresolved required item prevents READY or implementation DONE.
       every unit; no omitted detail forces the worker to design an acceptance oracle.
 - [ ] Plan files contain no unfilled placeholders or contradictory instructions.
       Readiness is READY only after these checks; otherwise report the blockers.
+- [ ] Report ends with the Next block (next-step.md): one exact Continue
+      command, or why nothing follows, and the Stop option derived from state;
+      nothing suggested was run.
 
 ## Coherence — execute, resume, task, bug, corrections
 
@@ -168,6 +174,9 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Final report distinguishes completed, skipped, blocked, and unverified
       work, and warns when changes or plan records remain uncommitted, with a
       suggested commit command.
+- [ ] Report ends with the Next block (next-step.md): one exact Continue
+      command, or why nothing follows, and the Stop option derived from state;
+      nothing suggested was run.
 
 ## Verify
 
@@ -202,3 +211,6 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] No production changes or automatic application of corrections.
 - [ ] Autonomous audit commit contains only owned audit/state artifacts; WIP alone
       does not authorize an audit commit.
+- [ ] Report ends with the Next block (next-step.md): one exact Continue
+      command, or why nothing follows, and the Stop option derived from state;
+      nothing suggested was run.

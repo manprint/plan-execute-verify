@@ -158,7 +158,8 @@ uncommitted production changes merely because the audit inspected them.
 
 No automatic correction follows verify, even in full autonomy. Report the
 verdict, counts, limitations, report path, commit when created, and the command
-to apply corrections (in `000_adhoc`, the ready Task/Bug commands). Use the
-report as the durable detailed output; avoid duplicating it in full in chat.
+to apply corrections (in `000_adhoc`, the ready Task/Bug commands), and end with
+the Next block (next-step.md). Use the report as the durable detailed output;
+avoid duplicating it in full in chat.
 
 Run the Verify checklist before the final response.

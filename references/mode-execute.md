@@ -137,7 +137,7 @@ results, gates/reviews, deviations, local completion commits/branch, and the
 next action. With commits disabled, warn that the changes and plan records
 remain uncommitted, and untracked plan files can be lost to `git clean`; suggest
 the exact commit command without running it. State failed, blocked, skipped, or
-unverified work plainly.
+unverified work plainly. End with the Next block (next-step.md).
 
 When full autonomy is true, continue until the selected scope is verified
 complete or an actual blocker/user stop/host interruption prevents further work.
