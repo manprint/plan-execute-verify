@@ -173,6 +173,9 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] STATE.md compacted (execution-contract §8): §4 unsettled rows only, §5/§6
       only the OPEN unit, §7 latest per gate, closed phases collapsed, settled
       detail appended to history.md; no protocol text beyond the §0 pointer.
+      A legacy STATE.md was compacted when ownership was claimed, before any
+      unit; a legacy plan already complete got `PLAN | DONE` (legacy), not a
+      new PLAN run.
 - [ ] In 000_adhoc, the ledger itself holds the durable mini-plan/checkpoint and
       settings; no fake STATE.md/phases created.
 - [ ] Handoff request or deadline (mode-handoff.md): stop latch set; nothing

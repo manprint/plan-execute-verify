@@ -622,8 +622,10 @@ information in the ledger entry itself. There are no fake phase or STATE files.
 
 STATE.md stays small: at each closure the agent appends the evidence to
 history.md and removes it from STATE.md; at each phase closure the phase
-collapses to one board row. Older plans are compacted the same way at their next
-closure (protocol text moves to PROTOCOL.md).
+collapses to one board row. Older plans are compacted the same way at the first
+invocation that takes ownership, before any work (protocol text moves to
+PROTOCOL.md). A plan already finished under the earlier rules counts as
+complete: it gets no new PLAN closure or commit unless you ask for one.
 
 Audit verdicts are PASS, PASS WITH FINDINGS, FAIL, or INCOMPLETE. A scoped
 audit's verdict covers only its phase, sub-phase, or entry, never the whole

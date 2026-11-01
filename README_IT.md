@@ -676,8 +676,11 @@ o di STATE fittizi.
 
 STATE.md resta piccolo: a ogni chiusura l'agente aggiunge le evidenze a
 history.md e le toglie da STATE.md; a ogni chiusura di fase la fase si riduce a
-una riga del board. I piani esistenti vengono compattati allo stesso modo alla
-chiusura successiva (il testo del protocollo passa in PROTOCOL.md).
+una riga del board. I piani esistenti vengono compattati allo stesso modo
+alla prima invocazione che ne prende la titolarità, prima di qualsiasi lavoro (il testo
+del protocollo passa in PROTOCOL.md). Un piano già concluso con le regole
+precedenti è considerato completo: non riceve una nuova chiusura PLAN né un
+commit, a meno che tu non lo chieda.
 
 I verdetti di audit sono PASS, PASS WITH FINDINGS, FAIL o INCOMPLETE. Il
 verdetto di un audit limitato copre solo la sua fase, sotto-fase o voce, mai
