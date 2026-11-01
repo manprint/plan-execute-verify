@@ -86,7 +86,10 @@ the active/named phase, relevant tasks/bugs, verify/index.md and reports as need
 to explain the current checkpoint and next action. Consult execution-contract.md
 for recovery/commit semantics, but observe only: never claim/release ownership,
 finalize a pending commit, restore a suspension, upgrade a legacy plan or repair
-statuses during onboarding.
+statuses during onboarding. Report in one line the plan's STATE.md format
+(`Format: pev-state <n>`, 1 when absent) and the migrations the next operational
+run will apply (execution-contract §8), or that its format is newer than this
+skill and needs a skill update.
 
 Read the identity/revision, repository/branch/baseline, saved execution
 scope/result, last invocation, roster and settings, readiness, owner and its

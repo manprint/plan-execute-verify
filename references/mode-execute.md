@@ -22,8 +22,8 @@ BLOCKED and different (execution-contract §1). Resume follows mode-resume.md an
 then this manual for the saved scope.
 
 Check ownership (stale ownership changes hands only under execution-contract
-§2); when claiming it, compact a legacy or oversized STATE.md and add its PLAN
-row (execution-contract §8); actual repository changes against the unit's snapshot base, checkpoint,
+§2); when claiming it, apply pending format migrations and compact an
+oversized STATE.md (execution-contract §8); actual repository changes against the unit's snapshot base, checkpoint,
 commit references, and current branch. Reconcile any OPEN/pending-commit unit
 first.
 A delegated worker follows its assignment rather than taking over this root loop.

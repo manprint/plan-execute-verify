@@ -40,7 +40,7 @@ provide <item>, then `/plan-execute-verify <command>`" or "nothing to continue โ
 
 | # | State after the run | Continue |
 |---|---------------------|----------|
-| 1 | Invocation rejected before work started | The corrected command when the fix is unambiguous; otherwise the syntax from invocation.md and the exact question |
+| 1 | Invocation rejected before work started | The corrected command when the fix is unambiguous; for a STATE.md format newer than the skill, "update the skill, then <the same command>"; otherwise the syntax from invocation.md and the exact question |
 | 2 | This run ended by a handoff (result HANDOFF) | The resume command from mode-handoff.md H6 |
 | 3 | This run stopped at the task/bug approval gate (PROPOSED) | `resume <plan or 000_adhoc> <entry-id>`, which approves it; to reject it, reply in the session or set the entry WITHDRAWN with a reason |
 | 4 | Several candidate plans or ledgers; target, ownership, branch/baseline, or scope conflict; required source missing | The exact question or choice, or the session that owns the work; never blind execution, a branch switch, or a `handoff` of another session's work |
@@ -53,7 +53,7 @@ provide <item>, then `/plan-execute-verify <command>`" or "nothing to continue โ
 | 11 | READY audit corrections | `execute verify <plan> V<NNN>` with the actual report; in `000_adhoc` the first ready Task/Bug command |
 | 12 | READY work remaining inside the saved execution scope, including a stop after a phase closure | `resume <plan>`, naming the next unit and its prerequisites |
 | 13 | READY plan with saved execution scope `none` | `execute <plan>`, or a narrower phase or sub-phase selector, as a new scope |
-| 14 | Saved scope complete while later plan work remains, including a pending P<N> after a sub-phase scope or a pending PLAN closure (never for a legacy plan completed under earlier rules, execution-contract ยง8) | Say the scope is complete; propose the later command (for P<N>, the phase selector) as a new scope, not a resume |
+| 14 | Saved scope complete while later plan work remains, including a pending P<N> after a sub-phase scope or a pending PLAN closure (never for a format-1 plan migrated as complete, execution-contract ยง8) | Say the scope is complete; propose the later command (for P<N>, the phase selector) as a new scope, not a resume |
 | 15 | Plan complete (PLAN closed) without an audit of its final state | `verify <plan>` |
 | 16 | Task or bug completed by this run | `verify <plan or 000_adhoc> <entry-id>`, labelled optional; otherwise nothing to continue |
 | 17 | Plan complete and its final state audited, or an ad-hoc audit closed, without open corrections | Nothing to continue; state the evidence and verification limits |

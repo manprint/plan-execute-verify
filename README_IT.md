@@ -676,11 +676,15 @@ o di STATE fittizi.
 
 STATE.md resta piccolo: a ogni chiusura l'agente aggiunge le evidenze a
 history.md e le toglie da STATE.md; a ogni chiusura di fase la fase si riduce a
-una riga del board. I piani esistenti vengono compattati allo stesso modo
-alla prima invocazione che ne prende la titolarità, prima di qualsiasi lavoro (il testo
-del protocollo passa in PROTOCOL.md). Un piano già concluso con le regole
-precedenti è considerato completo: non riceve una nuova chiusura PLAN né un
-commit, a meno che tu non lo chieda.
+una riga del board. STATE.md registra il suo formato (`Format: pev-state 2`).
+Un piano scritto da una versione precedente della skill viene migrato in
+automatico dalla prima run che ne prende la titolarità, prima di qualsiasi
+lavoro (formato 1: il testo del protocollo passa in PROTOCOL.md, lo storico in
+history.md). Un piano già concluso con le regole precedenti è considerato
+completo: non riceve una nuova chiusura PLAN né un commit, a meno che tu non lo
+chieda. `onboard` mostra il formato del piano e le migrazioni in sospeso senza
+modificare nulla; un piano più recente della skill installata viene rifiutato
+finché non aggiorni la skill.
 
 I verdetti di audit sono PASS, PASS WITH FINDINGS, FAIL o INCOMPLETE. Il
 verdetto di un audit limitato copre solo la sua fase, sotto-fase o voce, mai

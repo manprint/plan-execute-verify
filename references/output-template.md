@@ -201,6 +201,7 @@ history.md, the static protocol to PROTOCOL.md. Target: under about 150 lines.
 ````markdown
 # <Feature> — State
 
+Format: pev-state 2
 Plan <NNN> rev <n> · repo <absolute path> · baseline <commit> · updated <date time> by <agent-N:name>
 §0 Protocol: without this skill read PROTOCOL.md once. History: history.md (append-only, never read to resume).
 
@@ -353,10 +354,8 @@ session with the skill does not read it. Fill in the plan ID.
 9. Compaction: STATE.md holds only the present. §4 only unsettled rows; §5/§6
    only the OPEN unit; §7 latest result per gate of the open phase; §8–§10 only
    what pending work needs; §11 expands only the open phase and collapses it to
-   one row at P<N> DONE. Detail goes to history.md first. A legacy or
-   oversized STATE.md is compacted when ownership is claimed, before any unit;
-   a legacy plan with all phases DONE gets `PLAN | DONE` (legacy) and no PLAN
-   run, unless the user asks for one.
+   one row at P<N> DONE. Detail goes to history.md first. This file belongs
+   to `Format: pev-state 2`; never write a STATE.md of a newer format.
 10. Handoff (`handoff`, or a `--deadline` reached): set §1 `Stop latch: HANDOFF
     <trigger> <time>` and start nothing new; close the OPEN unit only if it takes
     about 10 minutes, else stop at a step boundary; save §6 with commands not

@@ -618,19 +618,27 @@ Gates: <gate result (count)>; review: <agent verdict>; changes: <paths>; notes: 
 `history.md` is append-only and never read to resume; Verify and the user may
 read it for evidence. A completion commit includes it beside STATE.md.
 
-Legacy and oversized state. When STATE.md exceeds about 150 lines, or a legacy
-STATE.md still carries the full protocol in §0 or settled history, the state
-writer compacts it at once, in the same state update that claims ownership and
-before any unit opens, in every operational mode, Handoff and Verify included:
-protocol text to `PROTOCOL.md`, settled detail to `history.md`. Every OPEN,
-pending-closure, uncommitted, handoff, or failed record stays in STATE.md
-unchanged. Onboard, a delegated worker, and a session that does not own the
-state never compact. The compacted files enter the next commit the run makes;
-with commits disabled they stay uncommitted like other plan records.
+### Format version and migrations
 
-A legacy plan has no PLAN row. If all its phases are DONE or SKIPPED, it
-completed under the earlier rules, which ran the final gates at the last P<N>:
-add the board row `PLAN | DONE | 1 | — | legacy: final gates at P<N>` and treat
-the plan as complete, with no PLAN run and no commit, unless the user explicitly
-asks for a PLAN closure. Otherwise add `PLAN | TODO`, and PLAN runs after the
-last P<N> as usual.
+STATE.md's header carries `Format: pev-state <n>`; a STATE.md without it is
+format 1. This skill writes format 2. `000_adhoc` ledgers carry no format
+version. The state writer applies every missing migration below in order, in
+the same state update that claims ownership and before any unit opens, in every
+operational mode, Handoff and Verify included, then sets the header to the
+latest format. Every OPEN, pending-closure, uncommitted, handoff, or failed
+record stays in STATE.md unchanged. Onboard, a delegated worker, and a session
+that does not own the state never migrate. The migrated files enter the next
+commit the run makes; with commits disabled they stay uncommitted like other
+plan records.
+
+| From → to | Migration |
+|-----------|-----------|
+| 1 → 2 | Move the §0 protocol text to `PROTOCOL.md` (output-template.md §4) and leave the §0 pointer line. Create `history.md` and move settled detail there per the rules above. Add the §1 fields `acting as`, `Stop latch: none`, and `Last closure`. Add the PLAN board row: when every phase is DONE or SKIPPED the plan completed under format 1, which ran the final gates at the last P<N>, so write `PLAN \| DONE \| 1 \| — \| legacy: final gates at P<N>` and treat the plan as complete, with no PLAN run and no commit unless the user explicitly asks for one; otherwise write `PLAN \| TODO`. |
+
+A STATE.md whose format is newer than this skill's latest is never written:
+reject the invocation before work starts and ask the user to update the skill
+(next-step.md row 1). A later skill version adds one row to this table and
+raises the latest format; it never edits an earlier row.
+
+Oversized state: when a STATE.md of the current format exceeds about 150 lines,
+the state writer compacts it by the rules above at the same moment.

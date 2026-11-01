@@ -622,10 +622,14 @@ information in the ledger entry itself. There are no fake phase or STATE files.
 
 STATE.md stays small: at each closure the agent appends the evidence to
 history.md and removes it from STATE.md; at each phase closure the phase
-collapses to one board row. Older plans are compacted the same way at the first
-invocation that takes ownership, before any work (protocol text moves to
-PROTOCOL.md). A plan already finished under the earlier rules counts as
-complete: it gets no new PLAN closure or commit unless you ask for one.
+collapses to one board row. STATE.md records its format (`Format: pev-state
+2`). A plan written by an earlier skill version is migrated automatically by
+the first run that takes ownership, before any work (format 1: protocol text
+moves to PROTOCOL.md, history to history.md). A plan already finished under the
+earlier rules counts as complete: it gets no new PLAN closure or commit unless
+you ask for one. `onboard` shows a plan's format and pending migrations without
+changing anything; a plan newer than the installed skill is refused until you
+update the skill.
 
 Audit verdicts are PASS, PASS WITH FINDINGS, FAIL, or INCOMPLETE. A scoped
 audit's verdict covers only its phase, sub-phase, or entry, never the whole

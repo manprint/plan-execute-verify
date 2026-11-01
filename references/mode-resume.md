@@ -30,8 +30,8 @@ owns the resumed work.
   unit ID resolves to the unique plan or ledger (including `000_adhoc`) that
   records it as resumable; several matches require a user choice.
 - Apply the stale-ownership rule in execution-contract §2; Resume is an explicit
-  operational invocation. When it claims ownership, compact a legacy or
-  oversized STATE.md and add its PLAN row first (execution-contract §8).
+  operational invocation. When it claims ownership, apply pending format
+  migrations and compact an oversized STATE.md first (execution-contract §8).
 
 ## R2 — Recover recorded work first
 
