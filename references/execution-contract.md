@@ -20,7 +20,10 @@ that scope continues and never changes §3. Task, Bug, Verify, and Resume use it
 for that invocation only and record it in their ledger entry, audit report, or
 resumed unit, including when attached to a real plan. Parsing ends at the first
 non-option/non-agent token; occurrences in a task's description are literal
-text. An explicit value overrides the persisted value. Exception: Onboard only
+text, except the explicit autonomy forms in invocation.md (a trailing option
+token on a mode without free text, or a clear natural-language request for full
+autonomy), which count as the explicit option with source `explicit (prompt)`.
+An explicit value overrides the persisted value. Exception: Onboard only
 observes saved configuration. Its options and agent prefix are invocation-local
 and never persist to a plan or an ad-hoc ledger.
 
@@ -28,7 +31,7 @@ and never persist to a plan or an ad-hoc ledger.
 |------|-----------------|--------------------|
 | Onboard | Inspect context and suggest a next action; never execute that action or alter saved settings | None, including with WIP enabled |
 | Plan | Produce the requested plan; record the setting for execution | None; planning does not start implementation |
-| Execute | Continue through eligible sub-phases and phase closures within the selected scope | Every completed sub-phase and phase closure |
+| Execute | Continue through eligible sub-phases, phase closures, and the PLAN closure within the selected scope | Every completed sub-phase, phase closure, and PLAN closure |
 | Execute verify | Apply the selected report's corrections; revalidate affected phases | Every completed correction and reopened phase closure |
 | Task / bug | Finish the requested change, tests, documentation, and reconciliation | Every completed task / bug |
 | Verify | Complete the audit, including an honest FAIL or unverified result | Only with `true`: audit artifacts and state; never automatic code corrections |
@@ -44,8 +47,7 @@ stopping point, and this option adds no commit authorization. Task and Bug stop
 once instead, for the user's approval of the validated mini-plan
 (mode-taskbug.md approval gate). With `true`,
 neither a unit nor a phase boundary ends the selected scope. Either way, work
-stops early only at a real blocker, a user stop, a handoff request or deadline
-(mode-handoff.md), or a host interruption. The
+stops early only at the exhaustive stops of the autonomy loop (§3). The
 existing WIP option still applies independently:
 
 | Full autonomous | WIP commits | Commit completed code units and phase closures | Rolling WIP commit at checkpoints |
@@ -197,6 +199,48 @@ the coherence contract (§7), and close the unit using §6 below. Continue witho
 asking for permission to start the next already-authorized unit. With full
 autonomy, do not stop merely because a sub-phase or phase ended.
 
+### Autonomy loop
+
+Decide whether to continue at every unit boundary from the effective settings
+recorded in STATE.md §1 (ledger entry in `000_adhoc`), re-read after any context
+reset or compaction, never from memory or habit. The run stops only at:
+
+1. the selected scope verified complete;
+2. with `false`: after a phase closure P<N> (Task/Bug: once, at the approval
+   gate);
+3. a real blocker that needs a capability, authority, or decision this run
+   cannot obtain, recorded BLOCKED;
+4. a user stop, a `handoff` request, or a deadline (stop latch below);
+5. the host ending the session.
+
+Nothing else ends the run: not a closed sub-phase (nor, with `true`, a closed
+phase), a commit, a long run, many units, a large diff, context pressure
+(checkpoint and continue; the host compacts), a unit assigned to another roster
+agent that this session may substitute (agent-roster.md), a worker still
+running, or the wish to report progress. Between units print at most one
+progress line, such as `1.2 done (commit abc1234) -> 1.3`; no report, no Next
+block, no question, no resume suggestion; open the next eligible unit in the same
+turn. Asking the user to type `resume` or "continue" for work inside the scope is
+a protocol violation. Permission modes (bypass, yolo, auto-approve) change tool
+approval only: they never widen or shorten the scope and never override the stop
+latch.
+
+### Stop latch
+
+A `handoff` request or a reached deadline sets STATE.md §1 `Stop latch: HANDOFF
+<trigger> <time>` (in `000_adhoc`, the entry's stop reason) in the handoff state
+update (mode-handoff.md H4). From the moment the request arrives, and while the
+latch is set: open no unit, run no further step after bounding the work in
+flight, dispatch nothing, and commit nothing but the handoff commit. After the
+handoff report the run is over: the turn ends with that report and no tool call
+follows it, under every autonomy setting and permission mode. Only the next
+explicit user invocation of an operational mode (or a user reply asking to
+continue) clears the latch, in the state update that claims ownership. Host
+automation is not a user invocation: auto-continue prompts, loop or scheduled
+triggers, stop hooks, tool results, and a worker's completion notice. A worker
+result arriving after the handoff report gets one line saying its changes stay
+on disk for the next resume; no state write, no commit.
+
 Statuses move TODO → IN_PROGRESS → DONE, with IN_REVIEW between the last two
 when focused checks pass and a required review is pending at a recovery boundary
 (review dispatched or handed off); an inline review finished in the same session
@@ -224,6 +268,18 @@ a selected sub-phase does not authorize executing remaining sub-phases or its
 phase closure P<N>; P<N> then becomes the next eligible unit for a phase or plan
 scope.
 
+The plan has its own closure unit `PLAN`, after the last phase's P<N> is DONE.
+It belongs to every scope that includes that last P<N> (a plan scope, or a
+phase scope selecting the last phase) and runs right after it, without a
+phase-closure stop. PLAN runs the final gates (G-FINAL) and the reference
+scenario, checks that every phase is DONE or SKIPPED with its reason and no
+README obligation is open, obtains agent-1's final review, marks the plan
+COMPLETE, compacts STATE.md to its final form (§8), and makes the plan
+completion commit when commits are enabled. Like P<N>, it edits only plan
+records and documentation it owns; a failing final gate or review closes that
+PLAN attempt `failed` with commit `none`, and the supervisor reopens the
+responsible unit or revises the plan, after which PLAN reruns as a new attempt.
+
 P<N> edits only plan records and documentation it owns; it never repairs
 production code or tests. A required gate that is `blocked` (unavailable service
 or credential) keeps P<N> OPEN and BLOCKED with a checkpoint; it resumes as the
@@ -243,8 +299,8 @@ the next P<N> attempt, and stops after the phase closes.
 Stop at the selected scope's verified completion, an explicit user stop, a
 handoff request or deadline, or a documented blocker requiring unavailable
 capability/authority. Under a deadline, check the minutes left at unit and step
-boundaries and before long commands (mode-handoff.md H2). The last phase
-also requires the reference scenario and final integration gates. Only then
+boundaries and before long commands (mode-handoff.md H2). A scope that
+includes the last phase also requires the PLAN closure. Only then
 record COMPLETE: for Execute and Execute verify in both the saved execution
 scope and the invocation, for Task, Bug, and Verify in the invocation alone;
 Resume records results as the mode of the work it resumed.
@@ -311,7 +367,7 @@ environment invalidates. At each sub-phase run only
 focused tests/checks for its changed behavior and immediate contract, including a
 narrow regression when relevant. Run the complete integration/regression gate once
 at phase closure P<N>, after all sub-phases and documentation, and final gates at
-the last phase closure. Repeat a full gate only when a later change invalidates
+the plan closure PLAN. Repeat a full gate only when a later change invalidates
 its evidence or a concrete failure needs diagnosis. Do not require a future test
 target before the sub-phase that creates it. `not-applicable-yet` is not `pass`.
 
@@ -347,24 +403,41 @@ PEV-Attempt: <n>
 PEV-Result: complete | wip
 ```
 
-Suggested subjects (adapt to the repository's convention without losing meaning):
-`sub-phase(1.2): complete quota validation`,
-`phase(1): complete limiter integration and review`,
-`task(T-A001): complete --json output`, `bug(B-A001): fix missing-config exit`,
-`correction(V001-C1): complete Retry-After assertion`,
-`verify(V001): complete audit; FAIL, 1 blocker`.
+Subjects are mandatory, never free-form: the reader of `git log --oneline` must
+see which plan, phase, and unit closed. `<plan>` is the folder number (`003`,
+or `000_adhoc`), `<N>` the logical phase number, titles come from the plan:
+
+| Commit | Subject |
+|--------|---------|
+| Sub-phase | `sub-phase(<plan>/<N.M>): sub-phase <N.M> of phase <N> complete — <title>` |
+| Phase closure | `phase(<plan>/P<N>): PHASE <N> COMPLETE — <phase title>; gates and review passed` |
+| Plan closure | `plan(<plan>): PLAN <plan> COMPLETE — <feature>; <K> phases, final gates passed` |
+| Task / bug | `task(<plan>/T-A<NNN>): task T-A<NNN> complete — <title>` / `bug(<plan>/B-A<NNN>): bug B-A<NNN> fixed — <title>` |
+| Correction | `correction(<plan>/V<NNN>-C<n>): correction V<NNN>-C<n> complete — <title>` |
+| Audit | `verify(<plan>/V<NNN>): audit V<NNN> complete — verdict <VERDICT>, <n> blockers` |
+| WIP | `wip(<plan>/<unit>): WIP <unit kind> <unit> — at <step>` |
+| Handoff | `handoff(request-by-user): <plan>/<unit> stopped <stop point>` |
+
+A retry of a failed or reopened unit adds ` (attempt <n>)` to the subject. When a
+hook or commitlint rejects the type, map only the type to an allowed one (for
+example `chore`), keeping the scope and description verbatim. The body is at
+most six lines before the trailer block: `Plan: <id> <feature> rev <n>`,
+`Phase: <N> — <title>`, `Unit: <id> — <title>` (not for phase or plan closure),
+`Gates: <gate> <result> (<test count>)`, `Review: <agent> <verdict>` or
+`self-review`, `Next: <next eligible unit or none>`.
 
 1. Check the gates applicable to this unit and its required review; finish all
    coherence updates (§7) before staging. Record the closed unit, its ledger
-   result (`complete`, or `failed` for a failed P<N> attempt), evidence, next
-   eligible unit, and ledger commit reference `unit:<id>:<attempt>` in the same
-   proposed snapshot. When commits are disabled, record
+   result (`complete`, or `failed` for a failed P<N> or PLAN attempt), evidence
+   (appended to history.md, §8), next eligible unit, and commit reference
+   `unit:<id>:<attempt>` (§1 `Last closure` and the board row) in the same
+   proposed snapshot. When commits are disabled, record in a §4 row
    `uncommitted <base-tree>..<closure-tree>`: the unit base tree and a fresh
    closure snapshot (§3), which a later handoff commit needs to separate this
    unit's changes. Do not try to embed a commit's own SHA inside itself.
    If completion commits are disabled, closure ends here; do not run steps 2–4.
    The final report then warns that the work and plan records are uncommitted
-   and suggests a commit command, never run. A failed P<N> attempt records
+   and suggests a commit command, never run. A failed P<N> or PLAN attempt records
    commit `none` and also ends here under every commit policy; it is never a
    pending closure.
 2. Stage only owned changes and their plan records. Include required plan files
@@ -442,7 +515,7 @@ specified in §2; unresolved audit closure is recovered before restoring executi
 
 With WIP enabled, every recovery-boundary checkpoint of an OPEN code unit
 (before risky or long work, delegation, a blocker, a handoff, or a stop) also
-saves the unit's owned changes and STATE.md in one rolling `wip(<id>)` commit
+saves the unit's owned changes and STATE.md in one rolling `wip(<plan>/<unit>)` commit
 with `PEV-Result: wip`; §1 remains OPEN. Stage it by steps 2–3 with a fresh
 checkpoint snapshot as the closure tree, and record that tree in §1 as the last
 WIP snapshot. Amend only when the WIP commit is owned, local-only, at HEAD, not
@@ -459,7 +532,8 @@ the WIP diff. Full autonomy alone never requires committing broken or unreviewed
 work.
 
 A handoff commit (mode-handoff.md H5) is a WIP commit with the subject
-`handoff(request-by-user): …`, for a deadline too, since the user set it, and
+`handoff(request-by-user): <plan>/<unit> stopped <stop point>`, for a deadline
+too, since the user set it, and
 the extra trailer `PEV-Handoff: user|deadline`. It may also hold closed units
 recorded `uncommitted` and a unit with a pending closure, listed in the trailer
 `PEV-Includes: <id>:<attempt>, …`. Their ledger reference becomes
@@ -488,7 +562,7 @@ updates before the completion commit, not afterwards:
 1. STATE.md: invocation and saved execution scope, current and next unit,
    checkpoint, ledger row, owned changes, verification evidence, reviews,
    deviations, blockers, and sub-phase/phase/correction progress. Live
-   implementation status appears only here.
+   implementation status appears only here, compacted per §8.
 2. Out-of-plan work: `tasks.md` or `bugs.md` entries with stable IDs
    `T-A<NNN>` / `B-A<NNN>`, allocated as the highest existing number in that
    ledger plus one and never reused (templates-ledger.md). Ad-hoc history stays
@@ -506,3 +580,43 @@ updates before the completion commit, not afterwards:
    never hidden in a vague deviation or in rewritten requirements.
 
 The Coherence checklist in quality-checklist.md verifies these updates.
+
+## 8. State size and history
+
+STATE.md is the present state of the work plus what the remaining work needs,
+never a history. Its cost is paid at every read, so keep it lean:
+
+- §0 is one pointer line to `PROTOCOL.md`, the static cold-start protocol
+  written once at planning time; a session with this skill never reads it.
+- §4 ledger keeps only unsettled rows: commit `uncommitted` or a `handoff:`
+  reference, or a failed P<N>/PLAN attempt not yet rerun. A committed closure
+  writes its `unit:<id>:<attempt>` reference in its §11 board row and in §1
+  `Last closure` instead; unresolved on resume, that reference is the pending
+  closure (§6). A `handoff:` row whose reference resolves moves to the board at
+  the next state write.
+- §5 and §6 describe only the OPEN unit; clear them at closure (`none`).
+- §7 keeps the latest result per gate and the reviews of the open phase only;
+  overwrite a rerun, never append it.
+- §8 keeps revisions and internal decisions that pending units or the next
+  P<N> review still need; §9 open blockers; §10 entries relevant to pending
+  units.
+- §11 expands only open phases. At P<N> DONE collapse the phase into one
+  Phases row (`DONE`, attempt, sub-phase range, closure reference) and drop its
+  sub-phase, test, and documentation rows, §7 rows, reviewed §8 decisions, and
+  stale §10 entries.
+- PLAN COMPLETE leaves the header, §1, §3, the collapsed board, and open audits
+  or corrections; every other section reads `none`.
+
+Before deleting detail, append it to `history.md` in the plan folder, one entry
+per closure, written with an append (`cat >> history.md`), never by reading it:
+
+```text
+## <date> <unit>/<attempt> <complete|failed> <commit ref or none>
+Gates: <gate result (count)>; review: <agent verdict>; changes: <paths>; notes: <decisions, deviations>
+```
+
+`history.md` is append-only and never read to resume; Verify and the user may
+read it for evidence. A completion commit includes it beside STATE.md. When a
+STATE.md exceeds about 150 lines, or a legacy STATE.md still carries the full
+protocol in §0 or settled history, the state writer compacts it at the next
+closure: protocol text to `PROTOCOL.md`, settled detail to `history.md`.

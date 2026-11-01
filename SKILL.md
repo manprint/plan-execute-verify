@@ -35,7 +35,8 @@ does not invoke its Plan/Execute workflow.
 Read only references called for by the selected mode and the artifact being
 written, plus [next-step](references/next-step.md) before every final report. A
 later executor may lack this skill, so planning copies the concise
-runtime/recovery contract and resolved settings into generated STATE.md.
+runtime/recovery contract into generated PROTOCOL.md and the resolved settings
+into STATE.md.
 
 ## Shared boundaries
 
@@ -48,31 +49,44 @@ runtime/recovery contract and resolved settings into generated STATE.md.
 - A selector limits scope even under `full-autonomous:true`. That setting
   commits verified operational units locally and continues within the selected
   scope; it never authorizes a push, deployment, or broader work. With `false`,
-  execution stops after each phase closure instead. A `handoff` request or a
-  `--deadline` stops any run gracefully, with one handoff commit for code work
-  ([mode-handoff](references/mode-handoff.md)). Preserve the saved execution
+  execution stops after each phase closure instead. A natural-language request
+  for full autonomy counts as the explicit option. Follow the autonomy loop
+  (execution-contract §3): its stops are exhaustive; between units print one
+  progress line and open the next unit in the same turn, never a report, a
+  question, or a `resume` suggestion. A `handoff` request or a `--deadline`
+  stops any run gracefully, with one handoff commit for code work
+  ([mode-handoff](references/mode-handoff.md)); it sets a stop latch that
+  overrides autonomy and permission modes, and no tool call follows its report.
+  Preserve the saved execution
   scope and its option overrides across resumes and Task/Bug/Verify runs;
   Execute options never become plan defaults. Exact commit and handoff rules are
   in [execution-contract](references/execution-contract.md).
 - Every run of every mode, however it ends, closes its report with the Next
-  block ([next-step](references/next-step.md)): one exact Continue command, or
+  block (only at the run's end, never between units)
+  ([next-step](references/next-step.md)): one exact Continue command, or
   why nothing follows, and the Stop option: `handoff` when OPEN or uncommitted
   code work, a pending closure, or ownership this session holds remains, else
   nothing to save. Both are suggestions; never run them.
 - The plan's immutable baseline, revision, roster, settings, stable IDs, gate
   registry, and progress live in STATE.md. Phase files specify work; STATE.md
-  alone tracks live implementation status. One state writer owns shared records
+  alone tracks live implementation status and holds only the present: compact
+  it at every closure, appending settled detail to history.md
+  (execution-contract §8); the static protocol lives in PROTOCOL.md.
+  One state writer owns shared records
   and commits; stale ownership changes hands only under the recorded takeover
   rule. An OPEN unit is reconciled against the actual diff and its snapshot base
   before new work.
 - Open a unit before editing and close it with applicable evidence, review,
   documentation, state reconciliation (coherence contract), and a completion
-  commit when configured.
+  commit when configured, with the mandatory subject naming plan, phase, and
+  unit (execution-contract §6).
   Checkpoint at recovery boundaries rather than after every step or test.
   Preserve unrelated changes and commit identity. A phase closes as a separate
-  reviewed `P<N>` unit after its sub-phases, README obligation, and full gates.
+  reviewed `P<N>` unit after its sub-phases, README obligation, and full gates;
+  the plan closes as a separate `PLAN` unit right after the last P<N>, with the
+  final gates and its own `PLAN <id> COMPLETE` commit.
 - Run focused validation for each sub-phase. Run full integration/regression gates
-  at phase closure and final gates at the last closure. Repeat a full gate only
+  at phase closure and final gates at the PLAN closure. Repeat a full gate only
   when changed evidence or a concrete failure requires it. Missing or
   zero-discovery mandatory tests are not green.
 - A plan change records the superseded decision and updates affected pending

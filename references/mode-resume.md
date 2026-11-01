@@ -18,7 +18,8 @@ owns the resumed work.
   §3), pending-closure, BLOCKED, or suspended work, or a set (not `none`) saved
   execution scope that is NOT_STARTED, RUNNING, or BLOCKED; several candidates
   require a user choice. A PROPOSED task or bug never counts here.
-- Unit ID (optional): sub-phase `N.M`, phase closure `P<N>`, correction
+- Unit ID (optional): sub-phase `N.M`, phase closure `P<N>`, plan closure
+  `PLAN`, correction
   `V<NNN>-C<n>`, audit `V<NNN>`, task `T-A<NNN>`, or bug `B-A<NNN>`. It must name
   OPEN, pending-closure, BLOCKED, or suspended work, or a PROPOSED `T-A<NNN>` or
   `B-A<NNN>`: naming it approves the proposal (mode-taskbug.md approval gate). A
@@ -49,7 +50,8 @@ A BLOCKED unit resumes only when its blocker is resolved; otherwise report the
 blocker, its owner, and the exact question instead of retrying.
 
 Work stopped by Handoff mode (invocation result `HANDOFF`) has already released
-ownership. Its handoff commit (mode-handoff.md H5) holds the OPEN unit's work
+ownership. This explicit Resume clears its stop latch in the state update that
+claims ownership (execution-contract §3). Its handoff commit (mode-handoff.md H5) holds the OPEN unit's work
 and the closed units listed in `PEV-Includes`, and is never amended: continue
 from the §6 next action, and append later WIP and completion commits after it.
 Units it holds are committed (`handoff:<id>:<attempt>`), not pending, unless
@@ -61,7 +63,9 @@ does not carry over.
 
 After recovery, without a unit ID, continue a set (not `none`) saved execution
 scope while its result is NOT_STARTED, RUNNING, or BLOCKED, exactly as Execute
-would under that selector. With a unit ID, stop after that unit's recovery and
+would under that selector, including its autonomy loop: under
+`full-autonomous:true` a resumed run does not stop at the next sub-phase or
+phase boundary. With a unit ID, stop after that unit's recovery and
 closure. `000_adhoc` has no saved execution scope or §3: stop after the
 recovered entry, using the settings recorded in it. When nothing remains to
 resume, including a saved scope of `none`, report that, any PROPOSED entries

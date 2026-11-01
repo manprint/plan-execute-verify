@@ -81,6 +81,15 @@ supervisor request, scope, current step, and evidence there. The active session
 is the sole state writer. Before model/session transfer, checkpoint and release
 ownership; the new session verifies the actual repository before resuming.
 
+At invocation start the session records in §1 the roster position it acts as:
+the lowest-numbered position whose name matches its own model. It then runs, in
+the same session and without stopping, every unit assigned to that position or
+to a higher-numbered one (a recorded substitution). A different assigned agent
+is never by itself a reason to stop, hand off, or suggest `resume`. A session
+transfer is needed only for a unit assigned to a lower-numbered position, or a
+review or revision reserved to agent-1, when this session cannot act as it;
+name those units at the start and run all work before the first of them.
+
 A weak executor requests the strong supervisor through the host when available.
 Otherwise it saves a BLOCKED handoff naming the decision/review needed. A new
 strong-model session resumes that same unit and records its review or revision.
@@ -90,7 +99,10 @@ The skill cannot create host capabilities or restart a session autonomously.
 
 The coordinator alone changes shared state, plan specifications, ledgers, and
 commits. It opens a unit, sends a bounded assignment, then verifies the worker's
-result and invokes the strong supervisor for required reviews. On a handoff
+result and invokes the strong supervisor for required reviews. Prefer
+synchronous (foreground) dispatch when the host offers it. Waiting for a worker
+is not a run end: no report, no Next block, no resume suggestion; continue the
+autonomy loop (execution-contract §3) when the worker returns. On a handoff
 request or deadline it stops dispatching and bounds running workers
 (mode-handoff.md H3).
 

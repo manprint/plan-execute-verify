@@ -177,13 +177,24 @@ baseline. G-U01: python -m pytest tests/unit/test_limits.py -v, after S3, now
 also requiring the named new tests. G-P0: python -m pytest tests/unit, at P0
 after 0.1. There is no requirement to run future HTTP tests during phase 0.
 
-Initial sub-phase rows:
-| ID | Phase file | Depends on | Status | Attempt | Evidence |
-|----|------------|------------|--------|---------|----------|
-| 0.1 | phase_01.md | none | TODO | 1 | — |
+Initial board (§11), with phase 0 expanded because it is the open phase:
+| Phase | Status | Attempt | Sub-phases | Closure ref |
+|-------|--------|---------|------------|-------------|
+| 0 | TODO | 1 | 0.1 | — |
+| PLAN | TODO | 1 | — | — |
+
+| ID | Depends | Status | Attempt | Assigned | Ref / note |
+|----|---------|--------|---------|----------|------------|
+| 0.1 | none | TODO | 1 | agent-2 | — |
 
 P0 additionally requires G-P0 and agent-1's phase review. When full autonomy or
-WIP is enabled, its phase completion is a separate commit after the 0.1 commit.
+WIP is enabled, the commits read, in order:
+`sub-phase(003/0.1): sub-phase 0.1 of phase 0 complete — quota validation`,
+`phase(003/P0): PHASE 0 COMPLETE — limiter configuration; gates and review passed`,
+and, as phase 0 is also the last phase, `plan(003): PLAN 003 COMPLETE —
+RateLimit; 1 phase, final gates passed` after the PLAN closure runs G-FINAL.
+At P0 DONE the phase collapses to one board row (`0 | DONE | 1 | 0.1 |
+unit:P0:1`) and its evidence moves to history.md.
 
 ## Example interruption and commit recovery
 
@@ -200,10 +211,11 @@ Suppose S1 and S2 were written but the process ended before S3:
 - If full autonomy is true and WIP is off, interruption requires a checkpoint,
   not a broken-code commit.
 - With WIP on, the last recovery-boundary checkpoint, if any, is in one rolling
-  `wip(0.1)` commit; the completion commit amends it while it is still owned,
+  `wip(003/0.1)` commit; the completion commit amends it while it is still owned,
   local-only, at HEAD, and the unit's only WIP commit on its base HEAD.
 
-At verified completion, the ledger uses unit:0.1:1 and the commit carries:
+At verified completion, §1 `Last closure` and the board row use unit:0.1:1 (no
+§4 row, since it is committed) and the commit carries:
 PEV-Plan: 003_plan-RateLimit; PEV-Unit: 0.1; PEV-Attempt: 1;
 PEV-Result: complete. These are separate trailer lines in the actual message.
 A crash before that commit leaves an unresolved reference to finalize; a crash

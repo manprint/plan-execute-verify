@@ -2,8 +2,11 @@
 
 Read before the final report of every mode, however the run ends: completion, a
 phase-closure stop, a BLOCKED or approval-gate stop, a handoff, a rejected
-invocation, or a run under `full-autonomous:true`. The report ends with this
-block, in the user's language including its labels, as its last element:
+invocation, or a run under `full-autonomous:true`. Only the end of the run
+counts: a closed unit or a commit inside the scope is not an end, and gets no
+report and no Next block (execution-contract ยง3, autonomy loop). The report ends
+with this block, in the user's language including its labels, as its last
+element:
 
 ```text
 Next
@@ -50,8 +53,8 @@ provide <item>, then `/plan-execute-verify <command>`" or "nothing to continue โ
 | 11 | READY audit corrections | `execute verify <plan> V<NNN>` with the actual report; in `000_adhoc` the first ready Task/Bug command |
 | 12 | READY work remaining inside the saved execution scope, including a stop after a phase closure | `resume <plan>`, naming the next unit and its prerequisites |
 | 13 | READY plan with saved execution scope `none` | `execute <plan>`, or a narrower phase or sub-phase selector, as a new scope |
-| 14 | Saved scope complete while later plan work remains, including a pending P<N> after a sub-phase scope | Say the scope is complete; propose the later command (for P<N>, the phase selector) as a new scope, not a resume |
-| 15 | Plan complete without an audit of its final state | `verify <plan>` |
+| 14 | Saved scope complete while later plan work remains, including a pending P<N> after a sub-phase scope or a pending PLAN closure | Say the scope is complete; propose the later command (for P<N>, the phase selector) as a new scope, not a resume |
+| 15 | Plan complete (PLAN closed) without an audit of its final state | `verify <plan>` |
 | 16 | Task or bug completed by this run | `verify <plan or 000_adhoc> <entry-id>`, labelled optional; otherwise nothing to continue |
 | 17 | Plan complete and its final state audited, or an ad-hoc audit closed, without open corrections | Nothing to continue; state the evidence and verification limits |
 | 18 | Onboard: no resumable work and no user goal | Ask the desired outcome and explain Plan, Task, and Bug; never invent an argument or a roadmap from TODOs |

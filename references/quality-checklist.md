@@ -73,16 +73,18 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Named tests have locations, fixtures, exact assertions, valid commands,
       setup, activation stages, and intended discovery evidence.
 - [ ] Unit, phase, baseline, and final gates are distinguished; future gates do not
-      block earlier units. Unit checks are focused; full gates run at phase/final
-      closure and prove the reference scenario.
+      block earlier units. Unit checks are focused; full gates run at phase
+      closure, final gates and the reference scenario at the PLAN closure.
 - [ ] Required strong reviews name reviewer, timing, and focus; complex work may
       go to weak workers only with those contracts/reviews. Units whose
       implementer is also the required reviewer are marked self-review.
 - [ ] Each phase has a README obligation and a separate reviewed closure P<N>;
       documentation has its own sub-phase only when substantial.
-- [ ] STATE.md is initialized with immutable baseline, revision, roster,
-      settings, saved execution scope none (NOT_STARTED), ownership, step
-      checkpoints, evidence tables, and every sub-phase.
+- [ ] STATE.md is initialized lean (output-template.md §3) with immutable
+      baseline, revision, roster, settings, saved execution scope none
+      (NOT_STARTED), ownership, gate registry, one board row per phase plus
+      PLAN, and the first phase's sub-phases; PROTOCOL.md and an empty
+      history.md exist.
 - [ ] Every dependency resolves; ordering has no cycle; next action names an
       eligible unit. SKIPPED does not silently satisfy a prerequisite.
 - [ ] Full-autonomous and WIP behavior are resolved independently and explained.
@@ -157,15 +159,26 @@ An unresolved required item prevents READY or implementation DONE.
       checkpoint of an OPEN code unit updated one rolling WIP commit.
 - [ ] Execute options were recorded as §1 scope overrides, never in §3; they
       lapsed when a different selector replaced the scope. Only Plan set §3.
-- [ ] With full autonomy, continue eligible work until scoped completion or a
-      real blocker/stop/interruption; no routine approval pause after each unit.
-      With false, the only additional stop is after each phase closure
-      (Task/Bug: once, for approval of the validated mini-plan).
+- [ ] Autonomy loop (execution-contract §3): with full autonomy, eligible work
+      continued in the same turn until scoped completion or one of the
+      exhaustive stops; between units at most a progress line, never a report,
+      Next block, question, or resume suggestion. With false, the only
+      additional stop is after each phase closure (Task/Bug: once, for approval
+      of the validated mini-plan). A natural-language autonomy request was
+      honored as explicit.
+- [ ] Commit subjects follow the mandatory table (execution-contract §6): plan,
+      phase, and unit numbers visible; one `phase(<plan>/P<N>)` commit per
+      closed phase and one `plan(<plan>): PLAN … COMPLETE` commit for the
+      finished plan when commits are enabled.
+- [ ] STATE.md compacted (execution-contract §8): §4 unsettled rows only, §5/§6
+      only the OPEN unit, §7 latest per gate, closed phases collapsed, settled
+      detail appended to history.md; no protocol text beyond the §0 pointer.
 - [ ] In 000_adhoc, the ledger itself holds the durable mini-plan/checkpoint and
       settings; no fake STATE.md/phases created.
-- [ ] Handoff request or deadline (mode-handoff.md): nothing new started; the
-      OPEN unit closed only if it fit about 10 minutes; §6 checkpoint, HANDOFF
-      result, and released ownership recorded. Code work sits in one handoff
+- [ ] Handoff request or deadline (mode-handoff.md): stop latch set; nothing
+      new started; the OPEN unit closed only if it fit about 10 minutes and no
+      unit opened after it; §6 checkpoint, HANDOFF result, and released
+      ownership recorded; no tool call after the handoff report. Code work sits in one handoff
       commit, never amended, holding the OPEN or pending-closure unit and every
       unit recorded uncommitted, staged one patch per unit without changes made
       between units; those units now reference handoff:<id>:<attempt> with their

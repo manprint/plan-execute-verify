@@ -210,6 +210,17 @@ funzionalità**, in qualsiasi ordine insieme al prefisso dell'agente:
 Default: `full-autonomous:false`, WIP disattivato. I booleani sono i valori
 letterali `true` o `false`; `full-autonomous:yes` viene rifiutato.
 
+L'autonomia completa si può chiedere anche come ultimo token di un comando
+`execute`, `execute verify`, `resume` o `verify`
+(`/plan-execute-verify execute 003 full-autonomous:true`) oppure a parole nel
+messaggio ("in piena autonomia", "full autonomous", "senza fermarti fino alla
+fine"): entrambe valgono come opzione esplicita. In autonomia completa l'agente
+chiude un'unità, stampa una riga di avanzamento e apre la successiva nello
+stesso turno. Si ferma solo quando l'ambito è completo, su un blocco reale, su
+tua richiesta o `handoff`, o quando l'host chiude la sessione; non si ferma mai
+dopo una sotto-fase per chiederti `resume`. Le modalità di permesso come bypass
+o yolo non cambiano questo comportamento.
+
 Le impostazioni si risolvono in modo indipendente:
 
 1. Un'opzione esplicita nell'invocazione corrente.
@@ -248,22 +259,30 @@ contesto o avviano l'azione successiva consigliata.
 Un'unità di codice è una sotto-fase, un task, la correzione di un bug o una
 correzione di audit. Una fase riceve un proprio commit di completamento dopo
 tutte le sotto-fasi, i controlli di integrazione, la documentazione e la
-revisione dell'agente più capace. Plan e Onboard non committano mai. Quando il
+revisione dell'agente più capace, e il piano concluso riceve un proprio commit
+di completamento dopo l'ultima fase, quando passano i gate finali (chiusura
+`PLAN`). Plan e Onboard non committano mai. Quando il
 lavoro o i file del piano restano non committati, il report finale lo dice e
 suggerisce il comando di commit esatto senza eseguirlo: i file di piano non
 tracciati possono andare persi con `git clean` o con un cambio di branch.
 
-Esempi di oggetto dei commit:
+Gli oggetti dei commit sono fissi, così `git log --oneline` mostra quale piano,
+fase e unità si è chiusa (qui il piano 003):
 
 ```text
-sub-phase(1.2): complete quota validation
-phase(1): complete limiter integration and review
-task(T-A004): complete --json output
-bug(B-A002): fix missing-config exit code
-correction(V001-C1): complete Retry-After assertion
-verify(V001): complete audit; FAIL, 1 blocker
-handoff(request-by-user): 1.2 stopped before S3
+sub-phase(003/1.2): sub-phase 1.2 of phase 1 complete — quota validation
+phase(003/P1): PHASE 1 COMPLETE — limiter integration; gates and review passed
+plan(003): PLAN 003 COMPLETE — RateLimit; 3 phases, final gates passed
+task(003/T-A004): task T-A004 complete — --json output
+bug(000_adhoc/B-A002): bug B-A002 fixed — missing-config exit code
+correction(003/V001-C1): correction V001-C1 complete — Retry-After assertion
+verify(003/V001): audit V001 complete — verdict FAIL, 1 blockers
+wip(003/1.2): WIP sub-phase 1.2 — at S3
+handoff(request-by-user): 003/1.2 stopped before S3
 ```
+
+Il corpo ha al massimo sei righe brevi (piano, fase, unità, gate, review,
+prossima unità) prima dei trailer PEV.
 
 Un handoff crea un solo commit di handoff per il lavoro sul codice, qualunque
 siano le impostazioni nella tabella sopra, ogni volta che c'è lavoro sul codice
@@ -271,7 +290,8 @@ da committare; se un hook lo rifiuta, il lavoro resta non committato e il report
 mostra il comando di commit
 ([Fermati in modo ordinato](#fermati-in-modo-ordinato-handoff)).
 
-Viene rispettata la convenzione dei messaggi di commit del repository. Tutti i
+Se un hook o commitlint rifiuta il tipo, viene mappato solo il tipo su uno
+ammesso (per esempio `chore`); scope e descrizione restano. Tutti i
 commit sono locali e usano il branch corrente, incluso `main` se è il tuo branch
 corrente. La skill non crea né cambia branch e non fa push. Preserva le
 modifiche non correlate, comprese quelle nello stesso file, e controlla il
@@ -283,7 +303,7 @@ applica mai automaticamente le correzioni al codice che propone.
 
 I commit WIP sono etichettati separatamente come incompleti: con WIP attivo,
 ogni checkpoint di recupero di un'unità aperta aggiorna un unico commit
-`wip(<id>)` a rotazione, quindi un crash perde al massimo il lavoro successivo a
+`wip(<piano>/<unità>)` a rotazione, quindi un crash perde al massimo il lavoro successivo a
 quel checkpoint. L'autonomia completa senza WIP non committa lavoro rotto o non
 rivisto quando viene interrotta. I commit includono nello staging solo gli hunk
 propri dell'unità, senza Git interattivo, lasciano attivi gli hook del
@@ -495,15 +515,16 @@ possiede; con più candidati ti chiede di scegliere.
 
 L'agente poi:
 
-1. Non avvia nulla di nuovo. Termina l'unità aperta solo se richiede circa 10
-   minuti, inclusi controlli e revisione; altrimenti si ferma al successivo
+1. Imposta uno stop latch in STATE.md e non avvia nulla di nuovo. Termina
+   l'unità aperta solo se richiede circa 10 minuti, inclusi controlli e
+   revisione, e non apre mai la successiva; altrimenti si ferma al successivo
    confine di passo e registra i comandi che non ha eseguito.
 2. Salva un checkpoint con la prossima azione esatta, marca la run come
    `HANDOFF` e rilascia la titolarità che detiene, così la sessione successiva
    continua senza subentro.
 3. Per il lavoro sul codice (Execute, Execute verify, Task, Bug e Resume di
    questi) fa un solo commit locale, anche quando i commit sono disattivati:
-   `handoff(request-by-user): <unit> <stop point>`. Contiene l'unità aperta e le
+   `handoff(request-by-user): <piano>/<unità> stopped <punto>`. Contiene l'unità aperta e le
    unità già finite ma non ancora committate, così STATE.md non dichiara mai
    lavoro che il commit non contiene. Le modifiche di ogni unità vengono messe
    in staging separatamente, quindi le modifiche che hai fatto tra un'unità e
@@ -515,8 +536,11 @@ L'agente poi:
    semplicemente rieseguito.
 4. Riporta il comando che continua esattamente dal punto in cui si è fermato,
    come `/plan-execute-verify resume 003` o
-   `/plan-execute-verify resume 003 T-A004`, e si ferma, anche con
-   `full-autonomous:true`.
+   `/plan-execute-verify resume 003 T-A004`, e si ferma: nessuna chiamata a
+   strumenti dopo il report, anche con `full-autonomous:true` e nelle modalità
+   di permesso bypass/yolo. Gli automatismi dell'host (auto-continue, loop, hook,
+   un subagente che termina) non riavviano il lavoro; solo il tuo prossimo
+   comando esplicito rimuove il latch.
 
 Con una deadline, l'agente controlla l'orologio prima di ogni unità, passo e
 comando lungo, evita di avviare lavoro che finirebbe dopo di essa e limita i
@@ -636,7 +660,9 @@ docs/plans/003_plan-RateLimit/
   overview.md       Goal, decisions, research evidence, interfaces, phase map
   phase_01.md       Detailed sub-phases for logical phase 0
   phase_02.md       Detailed sub-phases for logical phase 1
-  STATE.md          Readiness, scope, settings, checkpoints, evidence, progress
+  STATE.md          Solo stato corrente: unità, impostazioni, fase aperta, record pendenti
+  PROTOCOL.md       Protocollo statico di avvio per agenti senza questa skill
+  history.md        Storico append-only delle unità chiuse (mai letto per riprendere)
   tasks.md          Out-of-plan tasks, created when needed
   bugs.md           Defects and fixes, created when needed
   verify/
@@ -647,6 +673,11 @@ docs/plans/003_plan-RateLimit/
 Senza piano, il lavoro su task e bug usa `docs/plans/000_adhoc/` e conserva le
 informazioni di recupero nella voce del ledger stessa. Non ci sono file di fase
 o di STATE fittizi.
+
+STATE.md resta piccolo: a ogni chiusura l'agente aggiunge le evidenze a
+history.md e le toglie da STATE.md; a ogni chiusura di fase la fase si riduce a
+una riga del board. I piani esistenti vengono compattati allo stesso modo alla
+chiusura successiva (il testo del protocollo passa in PROTOCOL.md).
 
 I verdetti di audit sono PASS, PASS WITH FINDINGS, FAIL o INCOMPLETE. Il
 verdetto di un audit limitato copre solo la sua fase, sotto-fase o voce, mai

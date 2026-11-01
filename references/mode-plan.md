@@ -202,15 +202,16 @@ contract details, ordered sub-phase steps, review obligations, phase gates, and
 completion criteria. Future source paths are marked NEW with explicit
 creation/registration instructions, not treated as missing anchors.
 
-Initialize STATE.md at planning time:
-- Protocol and ownership rules sufficient for a session without this skill.
-- Plan identity/revision, immutable baseline, roster, and settings; saved
-  execution scope none (NOT_STARTED) until Execute selects one.
-- Current unit none; next action points to a real first eligible sub-phase.
-- Baseline/unit/phase/final gate applicability and setup.
-- Empty but usable ledger, checkpoints, evidence/review/deviation tables.
-- Every sub-phase, phase, named test, and phase README obligation in the progress board.
-- Deferred requirements and unavailable capabilities as scoped blockers.
+Initialize at planning time (output-template.md §3–§5):
+- PROTOCOL.md: the static cold-start protocol for a session without this skill.
+- STATE.md, lean: plan identity/revision, immutable baseline, roster, and
+  settings; saved execution scope none (NOT_STARTED) until Execute selects one;
+  current unit none; next action at a real first eligible sub-phase;
+  baseline/unit/phase/final gate registry; one board row per phase plus PLAN,
+  with the first phase expanded into its sub-phases; other sections `none`,
+  except deferred requirements and unavailable capabilities as scoped blockers.
+  Named tests and README obligations stay in the phase files.
+- history.md with its heading only.
 
 Do not duplicate implementation statuses in phase files or overview.md. Audit
 findings keep their separate register. A decision/invariant excerpt in a phase
@@ -235,5 +236,5 @@ Explain remaining unverified prerequisites.
 Return the folder path and a concise phase/assignment/configuration summary. If
 the plan folder is untracked or uncommitted, say so (`git clean` or a branch
 switch can lose it) and suggest the exact commit command, such as `git add
-docs/plans/<id> && git commit -m "plan(<id>): <feature>"`; never run it. End
+docs/plans/<id> && git commit -m "plan(<id>): add plan <id> — <feature>"`; never run it. End
 with the Next block (next-step.md).

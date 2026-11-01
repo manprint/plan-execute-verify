@@ -191,6 +191,17 @@ agent prefix:
 Default: `full-autonomous:false`, WIP off. Booleans are literal `true` or
 `false`; `full-autonomous:yes` is rejected.
 
+Full autonomy can also be requested as the last token of an `execute`,
+`execute verify`, `resume`, or `verify` command
+(`/plan-execute-verify execute 003 full-autonomous:true`) or in plain words in
+your message ("full autonomous", "in piena autonomia", "don't stop until
+done"): both count as the explicit option. Under full autonomy the agent closes
+a unit, prints one progress line, and opens the next one in the same turn. It
+stops only when the scope is complete, at a real blocker, at your stop or
+`handoff`, or when the host ends the session; it never stops after a sub-phase
+to ask you to type `resume`. Permission modes such as bypass or yolo do not
+change this.
+
 Settings resolve independently:
 
 1. An explicit option in the current invocation.
@@ -226,29 +237,37 @@ recommended next action.
 
 A code unit is a sub-phase, task, bug fix, or audit correction. A phase gets its
 own completion commit after all sub-phases, integration checks, documentation,
-and strong-agent review. Planning and Onboard never commit. When work or plan
+and strong-agent review, and the finished plan gets its own completion commit
+after the last phase, once the final gates pass (the `PLAN` closure). Planning and Onboard never commit. When work or plan
 files stay uncommitted, the final report says so and suggests the exact commit
 command without running it: untracked plan files can be lost to `git clean` or a
 branch switch.
 
-Examples of commit subjects:
+Commit subjects are fixed, so `git log --oneline` shows which plan, phase, and
+unit closed (plan 003 here):
 
 ```text
-sub-phase(1.2): complete quota validation
-phase(1): complete limiter integration and review
-task(T-A004): complete --json output
-bug(B-A002): fix missing-config exit code
-correction(V001-C1): complete Retry-After assertion
-verify(V001): complete audit; FAIL, 1 blocker
-handoff(request-by-user): 1.2 stopped before S3
+sub-phase(003/1.2): sub-phase 1.2 of phase 1 complete — quota validation
+phase(003/P1): PHASE 1 COMPLETE — limiter integration; gates and review passed
+plan(003): PLAN 003 COMPLETE — RateLimit; 3 phases, final gates passed
+task(003/T-A004): task T-A004 complete — --json output
+bug(000_adhoc/B-A002): bug B-A002 fixed — missing-config exit code
+correction(003/V001-C1): correction V001-C1 complete — Retry-After assertion
+verify(003/V001): audit V001 complete — verdict FAIL, 1 blockers
+wip(003/1.2): WIP sub-phase 1.2 — at S3
+handoff(request-by-user): 003/1.2 stopped before S3
 ```
+
+The body holds at most six short lines (plan, phase, unit, gates, review, next)
+before the PEV trailers.
 
 A handoff makes one handoff commit for code work, whatever the settings in the
 table above, whenever there is code work to commit; if a hook rejects it, the
 work stays uncommitted and the report shows the commit command
 ([Stop gracefully](#stop-gracefully-handoff)).
 
-The repository's commit-message convention is respected. All commits are local
+If a hook or commitlint rejects the type, only the type is mapped to an allowed
+one (for example `chore`); the scope and description stay. All commits are local
 and use the current branch, including `main` if that is your current branch.
 The skill does not create/switch branches or push. It preserves unrelated edits,
 including changes in the same file, and checks staged content before committing.
@@ -258,7 +277,7 @@ completed inspection, not completed or verified implementation. It never applies
 its proposed code fixes automatically.
 
 WIP commits are separately labelled incomplete: with WIP on, each recovery
-checkpoint of an open unit updates one rolling `wip(<id>)` commit, so a crash
+checkpoint of an open unit updates one rolling `wip(<plan>/<unit>)` commit, so a crash
 loses at most the work since that checkpoint. Full autonomy without WIP does not
 commit broken or unreviewed work at interruption. Commits stage only the unit's
 own hunks without interactive Git, keep repository hooks active (never
@@ -456,15 +475,16 @@ live session owns; with several candidates it asks you to choose.
 
 The agent then:
 
-1. Starts nothing new. It finishes the open unit only if that takes about 10
-   minutes, including its checks and review; otherwise it stops at the next
-   step boundary and records commands it did not run.
+1. Sets a stop latch in STATE.md and starts nothing new. It finishes the open
+   unit only if that takes about 10 minutes, including its checks and review,
+   and never opens the next one; otherwise it stops at the next step boundary
+   and records commands it did not run.
 2. Saves a checkpoint with the exact next action, marks the run `HANDOFF`, and
    releases the ownership it holds, so the next session continues without a
    takeover.
 3. For code work (Execute, Execute verify, Task, Bug, and Resume of them) it
    makes one local commit, even when commits are disabled:
-   `handoff(request-by-user): <unit> <stop point>`. It contains the open unit
+   `handoff(request-by-user): <plan>/<unit> stopped <stop point>`. It contains the open unit
    and any finished units still uncommitted, so STATE.md never claims work the
    commit lacks. Each unit's changes are staged separately, so edits you made
    between units stay out of the commit. Later commits append after it. Hooks
@@ -474,8 +494,10 @@ The agent then:
    is simply rerun.
 4. Reports the command that continues exactly where it stopped, such as
    `/plan-execute-verify resume 003` or
-   `/plan-execute-verify resume 003 T-A004`, and stops, even with
-   `full-autonomous:true`.
+   `/plan-execute-verify resume 003 T-A004`, and stops: no tool call follows
+   the report, even with `full-autonomous:true` and in bypass/yolo permission
+   modes. Host automation (auto-continue, loops, hooks, a subagent finishing)
+   does not restart work; only your next explicit command clears the latch.
 
 With a deadline, the agent checks the clock before each unit, step, and long
 command, avoids starting work that would end after it, and bounds long commands
@@ -585,7 +607,9 @@ docs/plans/003_plan-RateLimit/
   overview.md       Goal, decisions, research evidence, interfaces, phase map
   phase_01.md       Detailed sub-phases for logical phase 0
   phase_02.md       Detailed sub-phases for logical phase 1
-  STATE.md          Readiness, scope, settings, checkpoints, evidence, progress
+  STATE.md          Live state only: current unit, settings, open phase, pending records
+  PROTOCOL.md       Static cold-start protocol for agents without this skill
+  history.md        Append-only record of closed units (never read to resume)
   tasks.md          Out-of-plan tasks, created when needed
   bugs.md           Defects and fixes, created when needed
   verify/
@@ -595,6 +619,11 @@ docs/plans/003_plan-RateLimit/
 
 With no plan, task/bug work uses `docs/plans/000_adhoc/` and keeps its recovery
 information in the ledger entry itself. There are no fake phase or STATE files.
+
+STATE.md stays small: at each closure the agent appends the evidence to
+history.md and removes it from STATE.md; at each phase closure the phase
+collapses to one board row. Older plans are compacted the same way at their next
+closure (protocol text moves to PROTOCOL.md).
 
 Audit verdicts are PASS, PASS WITH FINDINGS, FAIL, or INCOMPLETE. A scoped
 audit's verdict covers only its phase, sub-phase, or entry, never the whole

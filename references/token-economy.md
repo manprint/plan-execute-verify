@@ -16,7 +16,7 @@ reviews have priority over minimizing the initial plan or supervisor context.
 - Use stable IDs and concise evidence references. Open/close writes are mandatory;
   checkpoint only when recovery needs information that the diff cannot reveal.
 - At sub-phases run focused validation. Run complete gates at phase closure and
-  final gates at final closure, repeating only after invalidating changes/failures.
+  final gates at the PLAN closure, repeating only after invalidating changes/failures.
 - Use fewer well-scoped workers when sufficient, but do not retain a confused
   context solely to save a new agent's setup cost.
 - Read the selected mode manual and only the sections of supporting references
@@ -37,6 +37,10 @@ A short instruction such as “implement a lock-free token bucket” is not a
 self-contained plan. Nor are “handle errors”, “add tests”, or an invariant ID
 without its meaning. Split work or specify the missing decisions before dispatch.
 
-Checkpoint at a recovery boundary, not for every completed step or test. Keep the
-live state easy to scan with concise evidence references. Historical ledgers can grow; do
-not delete recovery/audit evidence to satisfy an arbitrary size target.
+Checkpoint at a recovery boundary, not for every completed step or test.
+STATE.md is read at every start, so it holds only the present state and what
+remaining work needs (execution-contract §8): the protocol lives in PROTOCOL.md,
+settled evidence in history.md (appended, never read to resume) and in commit
+bodies. Move evidence there before compacting; never discard recovery data an
+open, uncommitted, or failed unit still needs. Between units, emit one progress
+line, not a report.

@@ -18,6 +18,15 @@ deadline after it.
 | `executor-power:<level>` | Plan only: `low`, `medium`, or `high` executor capability; sets plan granularity, detail, and executor latitude | `low` |
 | `--deadline=dd-mm-yyyy_hh_mm` | Every mode: hand off gracefully by this local time ([mode-handoff](mode-handoff.md)); this invocation only | none |
 
+Full autonomy may also be requested explicitly in two more forms, recorded
+with source `explicit (prompt)` and treated exactly like the leading option:
+`full-autonomous:true|false` as the last token of an `execute`, `execute
+verify`, `resume`, or `verify` command (modes without free text), or a clear
+natural-language request in the user's message to run without stopping, such
+as "full autonomous", "in piena autonomia", "senza fermarti fino alla fine".
+Text that describes product behavior inside a task or bug description stays
+literal. Never ask whether such a request was meant: asking is itself a stop.
+
 Reject unknown leading options, invalid boolean values (including
 `full-autonomous:yes`), duplicate autonomy options, an invalid or duplicate
 `executor-power` value or that option outside Plan, an invalid or duplicate
@@ -114,8 +123,8 @@ and its reason in the ledger entry.
 
 `resume [<plan>] [<unit-id>]` continues recorded work (mode-resume.md). Its plan
 selector may also be `000_adhoc`; its unit ID names OPEN, pending-closure,
-BLOCKED, or suspended work (`N.M`, `P<N>`, `V<NNN>`, `V<NNN>-C<n>`, `T-A<NNN>`,
-`B-A<NNN>`), or a PROPOSED task or bug, which only its explicit entry ID resumes
+BLOCKED, or suspended work (`N.M`, `P<N>`, `PLAN`, `V<NNN>`, `V<NNN>-C<n>`,
+`T-A<NNN>`, `B-A<NNN>`), or a PROPOSED task or bug, which only its explicit entry ID resumes
 and thereby approves; never a TODO unit. A single argument matching the unit-ID
 grammar is a unit ID; select a plan named like one by number or path. Without a
 plan, a unit ID resolves to the unique plan or ledger that records it as
@@ -139,4 +148,5 @@ saved execution scope with a different one, ask the user before replacing it.
 Completing one selected sub-phase does not start later sub-phases outside scope.
 A sub-phase scope ends at that sub-phase's closure and never includes its phase
 closure P<N>; P<N> runs under a phase or plan scope, for example
-`execute 003 phase_02` once its sub-phases are DONE.
+`execute 003 phase_02` once its sub-phases are DONE. The plan closure `PLAN`
+runs under a plan scope or the last phase's scope, right after its P<N>.

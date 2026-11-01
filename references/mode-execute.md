@@ -9,7 +9,12 @@ execution. These rules apply to both ordinary execution and
 ## E1 — Resolve and recover
 
 Resolve the plan, scope, roster, execution style (fixed rule in
-agent-roster.md), full-autonomous setting, and WIP setting per invocation.md.
+agent-roster.md), full-autonomous setting, and WIP setting per invocation.md,
+including a natural-language autonomy request. Record them once in §1 with the
+roster position this session acts as, and clear a stop latch only for an
+explicit user invocation (execution-contract §3). Name at the start any unit in
+scope that this session cannot run or review (agent-roster.md); everything
+before it runs without stopping.
 Read STATE.md first. Preserve the saved execution scope on a handoff or resume;
 a different explicit selector replaces it and its option overrides without
 abandoning OPEN work, after asking the user when the saved scope is RUNNING or
@@ -82,7 +87,9 @@ phase closure P<N>. Full autonomy does not expand that selection.
    commit according to execution-contract.md. Resolve the completion commit
    identity before advancing.
    A failure to commit leaves closure pending and recoverable, not fully complete.
-8. Continue the next eligible unit. Routine sub-phase completion is not a reason
+8. Continue with the next eligible unit in the same turn, following the
+   autonomy loop (execution-contract §3): one progress line, no report, no Next
+   block, no resume suggestion. Routine sub-phase completion is never a reason
    to ask the user to authorize work already in scope.
 
 ## E4 — Close each phase
@@ -91,15 +98,20 @@ After its sub-phases and README obligation, open P<N> as a phase-close unit
 under a phase or plan scope; the phase is IN_REVIEW while it is OPEN (BLOCKED
 while a required gate is blocked). Run full phase gates, obtain the strong
 supervisor's review of integration/invariants/ tests/docs, and record evidence.
-Only then mark the phase DONE. With full-autonomous:true or WIP enabled, commit
-this nonempty state/review update on the current branch, distinctly identifying
-phase completion. With full-autonomous:false, stop after this closure while
-scope work remains, with a checkpoint and report (not Handoff mode, so no
-handoff commit); `resume` continues. If a gate or the review
+Only then mark the phase DONE and compact its records (execution-contract §8).
+With full-autonomous:true or WIP enabled, commit this nonempty state/review
+update on the current branch with the phase-closure subject
+`phase(<plan>/P<N>): PHASE <N> COMPLETE — …` (execution-contract §6). With
+full-autonomous:false, stop after this closure while scope work remains, with a
+checkpoint and report (not Handoff mode, so no handoff commit); `resume`
+continues. If a gate or the review
 fails, follow the P<N> failure procedure in execution-contract §3: never mark
 the phase DONE or patch code inside P<N>.
 
-The final phase additionally proves the reference scenario and final gates.
+After the last phase's P<N>, the same scope runs the plan closure `PLAN`
+(execution-contract §3) without a phase-closure stop: final gates, reference
+scenario, agent-1's final review, plan COMPLETE, final STATE.md compaction, and
+the commit `plan(<plan>): PLAN <plan> COMPLETE — …` when commits are enabled.
 When a scoped sub-phase finishes, do not execute later sub-phases or its P<N>
 outside that scope. Keep the next eligible plan unit recorded for the next
 invocation.
@@ -141,8 +153,10 @@ the exact commit command without running it. State failed, blocked, skipped, or
 unverified work plainly. End with the Next block (next-step.md).
 
 When full autonomy is true, continue until the selected scope is verified
-complete or an actual blocker/user stop/host interruption prevents further work.
-With false, also stop after each phase closure, never at a sub-phase boundary.
+complete or one of the exhaustive stops of the autonomy loop (execution-contract
+§3) occurs. With false, also stop after each phase closure, never at a sub-phase
+boundary. This final report and its Next block appear once, when the run ends,
+never between units.
 Save a checkpoint and exact handoff when the session ends; never imply an
 unavailable supervisor or host automatically performed the next step. A
 `handoff` request or `--deadline` follows mode-handoff.md.

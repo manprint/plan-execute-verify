@@ -77,6 +77,12 @@ For a bug, additionally require:
   approved alternative verification.
 - Affected plan assumptions and future units requiring correction.
 
+Keep a closed entry short: once its commit reference resolves (or it is
+WITHDRAWN), its Checkpoint reads `closed` and its Outcome keeps one line each
+for changes, gates, review, and commit; the mini-plan steps may collapse to
+their titles. Subjects follow execution-contract §6, for example
+`task(000_adhoc/T-A004): task T-A004 complete — <title>`.
+
 In 000_adhoc, the completion commit contains the finished entry itself. Use the
 stable commit reference, never its own SHA. An unresolved required reference means
 the completion transaction is pending and must be recovered before another unit.

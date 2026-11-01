@@ -5,7 +5,9 @@
 Handoff mode asks the running work to stop as soon as practical, or by a
 deadline: bound the work in flight, leave state that a later session can resume,
 make one handoff commit for code work, report the exact resume command, and
-stop. The leading option `--deadline=dd-mm-yyyy_hh_mm` on any other mode
+stop. A handoff is terminal for the run: it overrides `full-autonomous:true`,
+the saved scope, and every permission mode (bypass, yolo, auto-approve), and it
+sets the stop latch (execution-contract §3). The leading option `--deadline=dd-mm-yyyy_hh_mm` on any other mode
 schedules the same procedure from the start. Do not confuse this mode with the
 handoff execution style or a BLOCKED handoff (agent-roster.md): those describe
 how sessions pass work on, not a user stop.
@@ -40,8 +42,8 @@ only for its checkpoint fields.
   already past means an immediate handoff. As a leading option of another mode,
   an invalid value is an error before work starts.
 - Sent during a run: the target is the current invocation's plan or ledger and
-  unit. `handoff` alone starts the procedure now and cancels any earlier
-  deadline. `handoff --deadline=…` lets the run continue, replacing any earlier
+  unit. `handoff` alone starts the procedure now, sets the stop latch at once,
+  and cancels any earlier deadline. `handoff --deadline=…` lets the run continue, replacing any earlier
   deadline, and starts the procedure when that deadline is reached (H2).
 - Sent to an idle session: the target is the plan or ledger whose state this
   session last wrote, else the unique plan or ledger with OPEN work, a pending
@@ -69,12 +71,13 @@ the deadline ends normally, without a handoff.
 ## H3 — Bound the work in flight
 
 - Start nothing new: no unit, phase closure, review, research lookup, or
-  delegation.
+  delegation. The scope's remaining units, and the plan's next eligible unit,
+  stay for the resume command, even under full autonomy.
 - If the OPEN unit can be closed in about 10 minutes, including its focused
   checks and required review, and before any deadline, close it normally
   (execution-contract §6), with its completion commit when the commit policy
-  enables one. Otherwise stop at the next step boundary and leave no
-  half-written file.
+  enables one; that closure is the last work of the run. Otherwise stop at the
+  next step boundary and leave no half-written file.
 - Let a running command finish when it should end within that window. Otherwise
   stop it when the agent controls its process, and record it as not run. A P<N>
   closure interrupted during its full gates stays OPEN with those gates not run.
@@ -95,7 +98,8 @@ diff:
 - The OPEN unit stays OPEN with its status and attempt; nothing is marked DONE
   that is not closed. The saved execution scope keeps its result (RUNNING or
   BLOCKED); a COMPLETE scope needs no handoff.
-- The invocation result becomes `HANDOFF` with its trigger and time.
+- The invocation result becomes `HANDOFF` with its trigger and time, and §1
+  records `Stop latch: HANDOFF <trigger> <time>`.
 - Release the ownership this session holds with time and reason `handoff`, so
   the next session needs no stale-ownership takeover.
 - In `000_adhoc` the ledger entry holds the same checkpoint, result, and
@@ -135,7 +139,8 @@ commit command without running it. Onboard commits nothing.
   in the same state update. If staging or the commit fails, restore the
   previous references before reporting.
 - Message: subject
-  `handoff(request-by-user): <unit-id or plan-id> <stop point>`, also for a
+  `handoff(request-by-user): <plan>/<unit-id> stopped <stop point>` (`<plan>`
+  alone when no unit is open), also for a
   deadline, which the user set; trailers
   `PEV-Plan`, `PEV-Unit` (the OPEN unit, or `none`), `PEV-Attempt` (its attempt,
   or `0`), `PEV-Result: wip`, `PEV-Handoff: user|deadline`, and, when closed
@@ -167,4 +172,7 @@ files, and the exact command that continues the interrupted invocation:
 Recorded settings and roster resume with the work, so the command repeats no
 option; the deadline does not carry over. This command is the Continue line of
 the Next block (next-step.md), whose Stop line says only that the session can be
-closed now. Then stop: no further tool calls, even under `full-autonomous:true`.
+closed now. Then stop: the report is the last output of the run and no tool
+call follows it, under every autonomy setting and permission mode. Later host
+automation (auto-continue, loops, hooks, a worker's completion notice) does not
+restart work; only a new explicit user invocation clears the latch.
