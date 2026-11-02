@@ -29,11 +29,15 @@ piano. Sostituisci i nomi degli agenti con gli identificativi supportati dal tuo
 host:
 
 ```text
-/plan-execute-verify full-autonomous:true agent-1:opus,agent-2:sonnet,agent-3:haiku add per-user rate limits; preserve existing behavior when disabled
+/plan-execute-verify agent-1:opus,agent-2:sonnet,agent-3:haiku add per-user rate limits; preserve existing behavior when disabled
 ```
 
 La pianificazione crea una cartella numerata come
-`docs/plans/003_plan-RateLimit/`. Non implementa né committa nulla. L'opzione e
+`docs/plans/003_plan-RateLimit/`. Non ti fa domande: con l'autonomia completa, che è il default, agent-1 valuta
+ogni decisione aperta e sceglie l'opzione che raccomanda per l'obiettivo,
+registrandone il motivo ([Decisioni autonome](#decisioni-autonome)). Si ferma al
+piano READY e non implementa né committa nulla. Le impostazioni (per default
+`full-autonomous:true` e commit WIP attivi) e
 il roster vengono salvati per l'esecuzione. Senza `executor-power`, il piano
 punta a esecutori `low`: la scomposizione più fine e più dettagliata, che è
 anche la più onerosa in fase di pianificazione. Passa `executor-power:medium` o
@@ -46,9 +50,10 @@ Poi esegui quel piano:
 /plan-execute-verify execute 003
 ```
 
-Si applica il `full-autonomous:true` salvato. L'esecutore avanza nel piano,
+Si applica il `full-autonomous:true` salvato. L'esecutore avanza nel piano senza fermarsi,
 ottiene le revisioni obbligatorie dell'agente più capace e committa in locale,
-sul branch corrente, ogni sotto-fase e fase completata.
+sul branch corrente, ogni sotto-fase e fase completata, più un commit WIP a
+rotazione a ogni checkpoint di recupero.
 
 Esegui l'audit del risultato separatamente:
 
@@ -56,7 +61,9 @@ Esegui l'audit del risultato separatamente:
 /plan-execute-verify verify 003
 ```
 
-Se l'audit trova problemi, applica esplicitamente il suo piano di correzione:
+Con autonomia completa l'audit applica poi le proprie correzioni nella stessa
+run. Con `full-autonomous:false` si limita a segnalarle, e tu applichi
+esplicitamente il suo piano di correzione:
 
 ```text
 /plan-execute-verify execute verify
@@ -71,11 +78,11 @@ stessi argomenti.
 | Comando dopo il nome della skill | Usalo per | Cosa cambia |
 |------------------------------|------------|-----------------|
 | `onboard [plan]` | Capire un repository esistente o recuperare il contesto e il passo successivo | Solo docs/onboarding.md; nessuna modifica al codice, allo stato del piano o commit |
-| `plan <feature>` o `<feature>` | Progettare una funzionalità, un refactoring o una migrazione | Solo i file del piano; le opzioni diventano default del piano, e `executor-power` ne imposta il dettaglio |
+| `plan <feature>` o `<feature>` | Progettare una funzionalità, un refactoring o una migrazione | Solo i file del piano, senza domande con autonomia completa; le opzioni diventano default del piano, e `executor-power` ne imposta il dettaglio |
 | `execute [plan] [phase or sub-phase]` | Implementare un piano esistente | Codice, test, documentazione e stato del piano |
 | `task <description>` | Una piccola modifica | La modifica richiesta e il relativo ledger |
 | `bug <description>` | Un singolo difetto | Riproduzione, test di regressione, fix e ledger |
-| `verify [plan] [phase, sub-phase, or entry]` | Fare l'audit dell'intero piano o di un ambito più ristretto, incluse le voci di `000_adhoc` | Report di audit e stato; nessuna correzione al codice |
+| `verify [plan] [phase, sub-phase, or entry]` | Fare l'audit dell'intero piano o di un ambito più ristretto, incluse le voci di `000_adhoc` | Report di audit e stato; con autonomia completa, poi le correzioni del report |
 | `execute verify [plan] [report ID]` | Applicare le correzioni dell'audit | Le correzioni selezionate e lo stato del piano interessato |
 | `resume [plan] [unit ID]` | Riprendere il lavoro interrotto o salvato esattamente dal punto in cui si è fermato | Ciò che cambia l'unità o l'ambito ripreso; mai il suo ambito né le sue impostazioni |
 | `handoff [--deadline=dd-mm-yyyy_hh_mm]` | Fermare il lavoro in corso in modo ordinato, subito o entro una deadline | Checkpoint dello stato, un solo commit di handoff per il lavoro sul codice e il comando di ripresa |
@@ -94,21 +101,28 @@ cui nome inizia con una parola di modalità, usa la forma esplicita con Plan:
 jobs`. Argomenti mancanti o selettori non validi non cambiano mai modalità in
 silenzio. Una richiesta la cui prima parola chiede di continuare un lavoro
 registrato, come `/plan-execute-verify continue 003`, non è mai un nuovo piano:
-viene eseguita come `resume 003`, oppure l'agente chiede cosa intendevi. Le
+viene eseguita come `resume 003`. Senza selettore, l'agente chiede cosa
+intendevi con `full-autonomous:false`; con autonomia completa decide: un
+`resume` quando corrisponde esattamente un target riprendibile, altrimenti un
+nuovo piano. Le
 opzioni vanno prima della modalità; se una descrizione contiene un'opzione, come
-un `--deadline=…` finale, l'agente chiede prima di iniziare. Solo `handoff`
+un `--deadline=…` finale, con `full-autonomous:false` l'agente chiede prima di
+iniziare; con autonomia completa una deadline finale valida viene applicata,
+qualunque altro token di questo tipo resta testo, e il report dice come ha
+interpretato il comando. Solo `handoff`
 accetta anche la deadline dopo la modalità.
 
 Task e Bug non accettano selettori. Si collegano a un piano solo quando la
 richiesta ne nomina uno (numero, nome della funzionalità o percorso) o cambia
 chiaramente ambito, contratti o file di un piano attivo; altrimenti usano
-`docs/plans/000_adhoc/`. Più piani candidati richiedono una tua scelta, e un
+`docs/plans/000_adhoc/`. Con `full-autonomous:false` più piani candidati richiedono una tua scelta; con
+autonomia completa agent-1 ne sceglie uno e registra il motivo. Un
 piano completato viene usato solo se nominato. Nessuna delle due modalità cambia
 l'ambito di esecuzione salvato del piano.
 
 Prima di qualsiasi modifica al codice, agent-1 scrive o convalida un breve
 mini-piano nella voce del ledger; per un bug viene dopo la riproduzione e la
-causa radice. Con `full-autonomous:false`, il default, la run si ferma con la
+causa radice. Con `full-autonomous:false` la run si ferma con la
 voce `PROPOSED` e mostra il mini-piano. Se vuoi, modificalo nel file, poi
 approvalo con una risposta nella stessa sessione oppure con
 `/plan-execute-verify resume
@@ -116,9 +130,12 @@ approvalo con una risposta nella stessa sessione oppure con
 approva mai. I file modificati o le tue modifiche vengono ricontrollati prima di
 scrivere codice, e la run approva solo quella voce. Per rifiutare una proposta,
 dillo nella stessa sessione oppure imposta il suo stato su `WITHDRAWN` con un
-motivo nel file del ledger. Con `full-autonomous:true` non c'è nessuno stop, ma
+motivo nel file del ledger. Con `full-autonomous:true`, il default anche in `000_adhoc`, non c'è nessuno
+stop, ma
 la convalida viene comunque eseguita, quindi una sessione meno capace che non
-riesce a raggiungere agent-1 si blocca prima di scrivere codice. Nessuna
+riesce a raggiungere agent-1 si blocca prima di scrivere codice. Con autonomia completa una richiesta troppo
+grande per una sola unità diventa un piano ed è eseguita nella stessa run, come
+dice il report. Nessuna
 impostazione produce un task o un bug che non abbia né uno stop di approvazione
 né commit di completamento: `false` si ferma, `true` committa.
 
@@ -201,13 +218,16 @@ funzionalità**, in qualsiasi ordine insieme al prefisso dell'agente:
 
 | Opzione | Effetto |
 |--------|--------|
-| `full-autonomous:true` | Continua finché l'ambito selezionato è completo o davvero bloccato; committa i completamenti operativi verificati |
-| `full-autonomous:false` | Prosegue per tutta la fase corrente e si ferma dopo la sua chiusura (`resume` continua); Task e Bug si fermano una volta, per l'approvazione del mini-piano; non aggiunge commit di completamento |
+| `full-autonomous:true` | Continua finché l'ambito selezionato è completo o davvero bloccato, senza mai chiederti nulla: agent-1 prende da sé ogni decisione ([Decisioni autonome](#decisioni-autonome)); committa i completamenti operativi verificati |
+| `full-autonomous:false` | Prosegue per tutta la fase corrente e si ferma dopo la sua chiusura (`resume` continua); Task e Bug si fermano una volta, per l'approvazione del mini-piano; ti chiede dove serve una decisione; non aggiunge commit di completamento |
 | `--wip-commit` | Committa i progressi: unità di codice completate, chiusure di fase e un commit WIP a rotazione a ogni checkpoint di recupero |
 | `--no-wip-commit` | Disattiva il comportamento WIP; non disattiva i commit di completamento abilitati dall'autonomia completa |
-| `--deadline=dd-mm-yyyy_hh_mm` | Ogni modalità: si ferma in modo ordinato entro quest'ora locale; vale solo per questa run ([Fermati in modo ordinato](#fermati-in-modo-ordinato-handoff)) |
+| `--deadline=dd-mm-yyyy_hh_mm` | Ogni modalità: si ferma in modo ordinato entro quest'ora locale, che è vincolante; vale solo per questa run ([Fermati in modo ordinato](#fermati-in-modo-ordinato-handoff)) |
 
-Default: `full-autonomous:false`, WIP disattivato. I booleani sono i valori
+Default: `full-autonomous:true` e WIP attivo, dove non è registrato alcun
+valore: ogni nuovo piano li salva, e task, bug ad hoc e audit li usano. Un
+valore già registrato, come `false` in un piano più vecchio, resta com'è. Passa
+`full-autonomous:false` o `--no-wip-commit` per cambiarli. I booleani sono i valori
 letterali `true` o `false`; `full-autonomous:yes` viene rifiutato.
 
 L'autonomia completa si può chiedere anche come ultimo token di un comando
@@ -218,8 +238,45 @@ fine"): entrambe valgono come opzione esplicita. In autonomia completa l'agente
 chiude un'unità, stampa una riga di avanzamento e apre la successiva nello
 stesso turno. Si ferma solo quando l'ambito è completo, su un blocco reale, su
 tua richiesta o `handoff`, o quando l'host chiude la sessione; non si ferma mai
-dopo una sotto-fase per chiederti `resume`. Le modalità di permesso come bypass
+dopo una sotto-fase per chiederti `resume` e non ti fa mai domande. Le modalità di permesso come bypass
 o yolo non cambiano questo comportamento.
+
+### Cosa fa l'autonomia completa in ogni modalità
+
+| Modalità | Con `full-autonomous:true` |
+|----------|----------------------------|
+| Plan | Non chiede nulla; le domande aperte su prodotto o compromessi diventano decisioni autonome; si ferma al piano READY e non avvia mai l'implementazione |
+| Execute, Execute verify | Esegue ogni unità ammissibile, la chiusura di fase e la chiusura `PLAN` dell'ambito selezionato, committando ciascuna |
+| Task, Bug | Nessuno stop per l'approvazione; implementa, testa, documenta e committa; una richiesta troppo grande per una sola unità viene pianificata ed eseguita nella stessa run |
+| Verify | Audita e committa il report, poi applica le sue correzioni READY come fa `execute verify`, con i relativi commit, senza un nuovo audit |
+| Resume | Recupera tutto il lavoro registrato e continua l'ambito salvato, anche dopo un'unità nominata; in `000_adhoc`, ogni voce riprendibile |
+| Onboard | Nessun effetto: solo ispezione |
+| Handoff | Ignorato: un handoff si ferma sempre |
+
+### Decisioni autonome
+
+Nei punti in cui con `full-autonomous:false` ti verrebbe chiesto qualcosa (una
+domanda su requisiti, ambito o compromessi, una scelta tra piani o obiettivi, la
+sostituzione di un ambito salvato, l'accettazione di un'ipotesi non verificata,
+una correzione in attesa di decisione), l'autonomia completa lascia decidere ad
+agent-1, che valuta a fondo le opzioni rispetto al tuo obiettivo, ai requisiti
+concordati, al rischio e alla reversibilità, sceglie quella che raccomanda e la
+registra prima di agire: nel piano come decisione marcata `autonomous`, oppure in
+history.md, nella voce del ledger o nel report di audit, con le alternative, la
+motivazione, il rischio e come annullarla. Il report finale elenca ogni decisione
+di questo tipo.
+
+Una decisione autonoma non autorizza mai un push, un deployment, un accesso alla
+rete non concesso dall'ambiente o da te, credenziali, modifiche esterne,
+upgrade di dipendenze o modifiche distruttive, e non indebolisce mai i test, non
+marca un finding di audit come ACCEPTED, né salta le revisioni di agent-1. Solo
+questi casi fermano ancora l'autonomia completa: un blocco che richiede una
+capacità o un'autorità che la run non può ottenere (un agente, un servizio o una
+credenziale non disponibili, un gate che non può essere eseguito, un HEAD
+detached, un bug che non può essere riprodotto); uno stop di sicurezza, quando
+un'altra sessione può ancora scrivere o un commit includerebbe modifiche che
+l'unità non possiede; il tuo stop, `handoff` o la deadline; la chiusura della
+sessione da parte dell'host.
 
 Le impostazioni si risolvono in modo indipendente:
 
@@ -227,7 +284,7 @@ Le impostazioni si risolvono in modo indipendente:
 2. L'opzione data con l'ambito di esecuzione salvato, finché quell'ambito
    continua.
 3. Il default del piano in STATE.md, impostato da Plan.
-4. Il default.
+4. Il default: `full-autonomous:true`, WIP attivo.
 
 `executor-power` non è un'impostazione di runtime e non segue quest'ordine: solo
 Plan lo accetta, viene salvato con il piano, e ogni altra modalità lo rifiuta
@@ -253,8 +310,8 @@ contesto o avviano l'azione successiva consigliata.
 |-----------------|-----|----------------------|------------------|------------------|-----------------|
 | false | off | No | No | No | No |
 | false | on | Sì | Sì | Sì | No |
-| true | off | Sì | Sì | No | Sì, solo gli artefatti |
-| true | on | Sì | Sì | Sì | Sì, solo gli artefatti |
+| true | off | Sì | Sì | No | Sì, artefatti, poi le sue correzioni |
+| true | on | Sì | Sì | Sì | Sì, artefatti, poi le sue correzioni |
 
 Un'unità di codice è una sotto-fase, un task, la correzione di un bug o una
 correzione di audit. Una fase riceve un proprio commit di completamento dopo
@@ -298,8 +355,12 @@ modifiche non correlate, comprese quelle nello stesso file, e controlla il
 contenuto in staging prima di committare.
 
 Un audit autonomo può committare un report con verdetto FAIL: registra
-un'ispezione completata, non un'implementazione completata o verificata. Non
-applica mai automaticamente le correzioni al codice che propone.
+un'ispezione completata, non un'implementazione completata o verificata. Con
+autonomia completa la stessa run applica poi le correzioni READY del report
+esattamente come farebbe `execute verify`, con i propri commit; non esegue un
+nuovo audit, e le correzioni ancora bloccate restano aperte nel report. Con
+`full-autonomous:false` un audit
+non applica mai le correzioni al codice che propone.
 
 I commit WIP sono etichettati separatamente come incompleti: con WIP attivo,
 ogni checkpoint di recupero di un'unità aperta aggiorna un unico commit
@@ -329,14 +390,17 @@ chiusura di fase P1; esegui P1 con un selettore di fase o di piano. Le
 dipendenze restano valide. L'ambito selezionato viene salvato: `resume` lo
 continua, e le run di task, bug o audit nel frattempo non lo sostituiscono. Un
 `execute` o `execute verify` esplicito che sostituirebbe un ambito salvato in
-esecuzione o bloccato con uno diverso ti chiede prima conferma.
+esecuzione o bloccato con uno diverso ti chiede prima conferma con
+`full-autonomous:false`; con autonomia completa lo sostituisce e registra
+l'ambito sostituito e la sua prossima unità.
 
 I file di fase sono numerati da 01; le fasi logiche partono da 0. Quindi
 `phase_02.md` contiene la fase logica 1 e sotto-fasi come 1.1 e 1.2.
 
 Senza un selettore di piano, Execute, Execute verify e Verify usano l'unico
 piano reale attivo, oppure quello con il numero più alto se nessuno è attivo;
-con più piani attivi, l'agente ti chiede. La cartella riservata `000_adhoc` non
+con più piani attivi, l'agente ti chiede oppure, con autonomia completa, sceglie
+quello con la run più recente e lo dichiara. La cartella riservata `000_adhoc` non
 viene mai scelta per default e non è mai un obiettivo di Execute o Execute
 verify (le sue correzioni di audit vengono eseguite come Task o Bug); Verify e
 Resume la accettano solo quando viene nominata. Le correzioni di audit usano il
@@ -460,7 +524,9 @@ le impostazioni salvate; un'unità ripresa mantiene le impostazioni con cui è
 stata aperta, a meno che tu non le sovrascriva per quella run. Un ID di unità
 deve indicare un lavoro aperto, in sospeso, bloccato o sospeso, oppure un task o
 un bug proposto: indicandolo lo approvi. Un'unità TODO è un lavoro nuovo per
-`execute`.
+`execute`. Con `full-autonomous:false`, un'unità o una voce ad hoc nominata è
+l'intera run; con autonomia completa la run prosegue dopo di essa nell'ambito
+salvato, e in `000_adhoc` attraverso ogni altra voce riprendibile.
 
 L'esecutore controlla il diff reale e i test prima di fidarsi di un checkpoint
 registrato. La base di ogni unità è HEAD più uno snapshot del working tree,
@@ -473,13 +539,16 @@ duplicare un commit di completamento.
 Se una sessione andata in crash detiene ancora la titolarità del piano, la tua
 invocazione esplicita su quel piano consente a una nuova sessione di subentrare,
 ma solo se il file di stato e il working tree restano invariati durante la sua
-ispezione; il subentro viene registrato. Altrimenti chiede.
+ispezione; il subentro viene registrato. Altrimenti chiede, anche con autonomia
+completa: un altro scrittore potrebbe essere ancora in esecuzione.
 
 Il supervisore più capace resta disponibile per le revisioni obbligatorie e per
 le decisioni tecniche impreviste. Può rivedere automaticamente i dettagli di
-implementazione, preservando requisiti e ambito concordati. Requisiti di
-prodotto modificati o nuove autorità esterne richiedono ancora il tuo
-intervento.
+implementazione, preservando requisiti e ambito concordati. Con `full-autonomous:false`, i
+requisiti di prodotto modificati richiedono ancora il tuo intervento; con
+autonomia completa agent-1 li decide come decisioni autonome registrate. Una
+nuova autorità esterna (un push, un deployment, accesso alla rete, credenziali)
+richiede sempre il tuo intervento.
 
 Se l'host non può invocare quel supervisore, l'esecutore salva un handoff
 preciso per una sessione con un modello più capace; non può produrre quella
@@ -509,20 +578,21 @@ stile di esecuzione a sessioni successive, che è anche registrato come
 Inviato durante una run, `handoff` la ferma subito e annulla una deadline
 precedente, mentre `handoff --deadline=…` lascia proseguire la run e sostituisce
 la deadline precedente. Inviato a una sessione inattiva, riguarda il piano o il
-ledger che quella sessione ha modificato per ultimo, oppure l'unico piano o
+ledger che quella sessione ha modificato per ultimo, oppure ogni piano o
 ledger con lavoro non concluso o non committato che nessun'altra sessione attiva
-possiede; con più candidati ti chiede di scegliere.
+possiede, consegnandoli uno dopo l'altro senza chiedere.
 
 L'agente poi:
 
 1. Imposta uno stop latch in STATE.md e non avvia nulla di nuovo. Termina
    l'unità aperta solo se richiede circa 10 minuti, inclusi controlli e
-   revisione, e non apre mai la successiva; altrimenti si ferma al successivo
+   revisione, e, con una deadline, lascia comunque tempo per l'handoff prima della deadline;
+non apre mai la successiva; altrimenti si ferma al successivo
    confine di passo e registra i comandi che non ha eseguito.
 2. Salva un checkpoint con la prossima azione esatta, marca la run come
    `HANDOFF` e rilascia la titolarità che detiene, così la sessione successiva
    continua senza subentro.
-3. Per il lavoro sul codice (Execute, Execute verify, Task, Bug e Resume di
+3. Per il lavoro sul codice (Execute, Execute verify, Task, Bug, un passaggio di correzione di Verify, e Resume di
    questi) fa un solo commit locale, anche quando i commit sono disattivati:
    `handoff(request-by-user): <piano>/<unità> stopped <punto>`. Contiene l'unità aperta e le
    unità già finite ma non ancora committate, così STATE.md non dichiara mai
@@ -531,7 +601,7 @@ L'agente poi:
    l'altra restano fuori dal commit. I commit successivi si aggiungono dopo
    questo. Gli hook vengono comunque eseguiti: se uno fallisce, il lavoro resta
    non committato e il report mostra il comando di commit. Se non c'è nulla da
-   committare, non viene creato alcun commit. Plan e Verify salvano solo il loro
+   committare, non viene creato alcun commit. Plan e un audit salvano solo il loro
    checkpoint e avvisano che i loro file non sono committati; Onboard va
    semplicemente rieseguito.
 4. Riporta il comando che continua esattamente dal punto in cui si è fermato,
@@ -542,30 +612,40 @@ L'agente poi:
    un subagente che termina) non riavviano il lavoro; solo il tuo prossimo
    comando esplicito rimuove il latch.
 
-Con una deadline, l'agente controlla l'orologio prima di ogni unità, passo e
-comando lungo, evita di avviare lavoro che finirebbe dopo di essa e limita i
-comandi lunghi con `timeout`. Il comportamento è best effort: l'agente vede un
-messaggio solo tra una chiamata di tool e l'altra, non può interrompere la
-propria chiamata in corso, e una sessione inattiva non si risveglia alla
-deadline. Imposta la deadline prima del momento in cui ti serve davvero la
-macchina, per esempio alle 17:30 se la spegni alle 18:00.
+Un handoff viene sempre onorato, qualunque sia l'impostazione di autonomia, e una
+deadline è vincolante: entro quell'ora il lavoro deve essere limitato, lo stato
+salvato, il commit di handoff creato e il report scritto. L'agente riserva il
+tempo per l'handoff stesso, almeno 10 minuti (di più quando servono per un'unità
+aperta, un worker o molte unità), e lavora solo fino al cutoff, cioè la deadline
+meno quella riserva: controlla l'orologio prima di ogni unità, passo, revisione e
+comando, non avvia nulla che attraverserebbe il cutoff, limita con `timeout` ogni
+comando che potrebbe durare più di un minuto, e dà ai worker delegati il cutoff
+come ora di ritorno. Al cutoff avvia l'handoff. Restano due limiti: un messaggio
+raggiunge l'agente solo tra una chiamata di tool e l'altra, e una sessione
+inattiva non si risveglia da sola, quindi una deadline inviata a una sessione
+inattiva significa un handoff immediato.
 
 ## Dopo ogni run: Continua o Fermati
 
 Ogni run, in ogni modalità e comunque termini, chiude il proprio report con un
 blocco "Prossimo passo" (Next), con le etichette nella lingua dell'utente, per
-esempio dopo una chiusura di fase con i commit disabilitati:
+esempio dopo una chiusura di fase di
+`/plan-execute-verify full-autonomous:false --no-wip-commit execute 003`:
 
 ```text
 Prossimo passo
-- Continua: `/plan-execute-verify resume 003` — esegue la sotto-fase 2.1, la prossima unità dell'esecuzione salvata
+- Modalità: execute 003, intero piano · full-autonomous:false (esplicito) · WIP off (esplicito) · executor-power low (piano) · deadline nessuna · roster agent-1:opus,agent-2:sonnet,agent-3:haiku (piano) · stile delegated
+- Continua: `/plan-execute-verify resume 003` — esegue la sotto-fase 2.1, la prossima unità dell'esecuzione salvata; eseguito con full-autonomous:false · WIP off (ambito)
 - Fermati: `/plan-execute-verify handoff` — committa 1.1, 1.2 e P1, ancora non committati, in un unico commit di handoff; poi chiudi la sessione
 ```
 
-Continua è un unico comando esatto, con ID reali e senza opzioni: le
+Modalità riporta sempre la modalità eseguita e ogni impostazione in vigore, con
+la sua provenienza: esplicito, esplicito (prompt), ambito, piano, ledger o
+default. Continua è un unico comando esatto, con ID reali e senza opzioni, e
+dichiara le impostazioni con cui verrà eseguito: le
 impostazioni registrate viaggiano con `resume`, mentre un nuovo ambito `execute`
-parte dai default del piano ed è indicato come nuovo, con le impostazioni che
-userà. Dopo un comando rifiutato, quello corretto mantiene le tue opzioni
+parte dai default del piano ed è indicato come nuovo.
+Dopo un comando rifiutato, quello corretto mantiene le tue opzioni
 valide. Quando manca una decisione il testo dice "rispondi a …, poi …"; quando non
 segue nulla, spiega perché. Fermati suggerisce `handoff` solo quando resta lavoro
 sul codice aperto o non committato, una chiusura in sospeso o la titolarità
@@ -591,7 +671,10 @@ documentazione può far parte di un'unità di implementazione.
 Il pianificatore più capace controlla i contratti critici del codice sorgente ed
 esegue una convalida a freddo prima di marcare il piano come READY. Un design
 non risolto, requisiti contraddittori o un test di accettazione non definito
-impediscono READY. Una bozza bloccata viene etichettata come tale e non
+impediscono READY. Con autonomia completa agent-1 risolve da sé le questioni di
+prodotto aperte come decisioni autonome, invece di lasciarle aperte; solo la
+mancanza di un'autorità o di una capacità può ancora bloccare. Una bozza
+bloccata viene etichettata come tale e non
 presentata come piano eseguibile.
 
 Durante l'esecuzione, controlli obbligatori falliti o non disponibili
@@ -631,11 +714,16 @@ concreti che ne derivano: i worker non ricevono solo link da interpretare o
 domande di design da risolvere.
 
 La ricerca si ferma quando le domande necessarie hanno risposta e le decisioni
-risultanti sono esplicite. A meno che l'ambiente non autorizzi già l'accesso
+risultanti sono esplicite. Con `full-autonomous:false`, a meno che l'ambiente non autorizzi già l'accesso
 alla rete, Plan chiede una volta prima di navigare, elencando le domande
-ripulite da dati sensibili, e registra la tua risposta. I fatti richiesti non
+ripulite da dati sensibili, e registra la tua risposta. Con autonomia completa non chiede mai e non
+considera l'autonomia un permesso di navigare: senza autorizzazione usa fonti
+locali e dichiara il limite. I fatti richiesti non
 risolti impediscono READY, a meno che tu non accetti esplicitamente uno di essi
-come rischio noto (ACCEPTED, con il relativo test di guardia); una navigazione
+come rischio noto (ACCEPTED, con il relativo test di guardia) oppure, con
+autonomia completa, agent-1 lo accetti come `ACCEPTED (autonomous)`, con il suo
+rischio e il relativo test di guardia, o scelga un design che non ne dipende;
+una navigazione
 non disponibile viene dichiarata, non trattata come una verifica riuscita. La
 documentazione o il codice sorgente primario locale applicabili possono fornire
 prove, ma non possono stabilire un'attualità che non hanno. Codice privato,
@@ -694,8 +782,11 @@ livelli di gravità BLOCKER, MAJOR e MINOR sono definiti in
 [mode-verify](references/mode-verify.md). I report mantengono il verdetto
 storico dopo le correzioni, e l'avanzamento di ciascuna correzione viene
 tracciato in STATE.md. Un audit può concludersi mentre il suo piano di
-correzione è BLOCKED per una decisione mancante; quelle correzioni non possono
-essere eseguite finché i loro contratti non vengono convalidati come READY.
+correzione è BLOCKED per una decisione o un'evidenza mancante; quelle
+correzioni non possono essere eseguite finché i loro contratti non vengono
+convalidati come READY. Con l'autonomia completa agent-1 prende da sé la
+decisione di prodotto mancante, quindi solo un'evidenza o un'autorizzazione
+mancante lascia una correzione BLOCKED.
 
 ## Installazione o aggiornamento
 
@@ -744,7 +835,9 @@ tree, subentro per titolarità obsoleta, ambito di esecuzione salvato, gestione
 dei fallimenti alla chiusura di fase, sostituzione degli agenti, definizioni di
 gravità degli audit, modalità Resume, verify con ambito limitato, commit WIP a
 rotazione, executor power, modalità handoff con `--deadline`, gate di
-approvazione di task e bug e blocco Next. Quelle revisioni sono state
+approvazione di task e bug, blocco Next, e i default di autonomia completa con
+le decisioni autonome, il passaggio di correzione di Verify, la deadline
+vincolante e la riga Mode. Quelle revisioni sono state
 controllate solo in modo statico; non sono state rieseguite end-to-end. I
 comandi Git per lo staging degli hunk propri, incluso il fallback `--3way` e un
 commit di handoff multi-unità con una patch in staging per unità che tiene fuori

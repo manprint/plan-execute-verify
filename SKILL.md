@@ -25,10 +25,10 @@ does not invoke its Plan/Execute workflow.
 | Mode | Read first | Result |
 |------|------------|--------|
 | `onboard` | [mode-onboard](references/mode-onboard.md) | Repository context only |
-| `plan` or implicit | [mode-plan](references/mode-plan.md) | Plan files; no production code |
+| `plan` or implicit | [mode-plan](references/mode-plan.md) | Plan files; no production code; under full autonomy no questions, stop at READY |
 | `execute` / `execute verify` | [mode-execute](references/mode-execute.md) | Selected implementation/corrections |
-| `task` / `bug` | [mode-taskbug](references/mode-taskbug.md) | One requested change/fix from an agent-1-validated mini-plan; approval stop unless fully autonomous |
-| `verify` | [mode-verify](references/mode-verify.md) | Audit and truthful state; no code fixes |
+| `task` / `bug` | [mode-taskbug](references/mode-taskbug.md) | One requested change/fix from an agent-1-validated mini-plan; approval stop only with `full-autonomous:false` |
+| `verify` | [mode-verify](references/mode-verify.md) | Audit and truthful state; under full autonomy its corrections are then applied |
 | `resume` | [mode-resume](references/mode-resume.md) | Recorded work continued; scope/settings unchanged |
 | `handoff` | [mode-handoff](references/mode-handoff.md) | Graceful stop: resumable state, handoff commit for code work, resume command |
 
@@ -46,24 +46,34 @@ into STATE.md.
   the plan's executor power requires: interfaces, invariants, failure behavior,
   and test oracle always, and the algorithm too except at `high`, where the
   worker decides and records it.
-- A selector limits scope even under `full-autonomous:true`. That setting
-  commits verified operational units locally and continues within the selected
-  scope; it never authorizes a push, deployment, or broader work. With `false`,
-  execution stops after each phase closure instead. A natural-language request
-  for full autonomy counts as the explicit option. Follow the autonomy loop
+- Defaults, wherever no value is recorded: `full-autonomous:true` and WIP
+  commits on; every new plan records them in STATE.md §3 unless the invocation
+  says otherwise. A selector limits scope even under `full-autonomous:true`.
+  That setting has full effect in Execute, Execute verify, Task, Bug, Verify,
+  and Resume: it commits verified operational units locally, continues within
+  the selected scope, and never asks the user; agent-1 weighs each question in
+  depth and records the option it recommends for the goal as an autonomous
+  decision (execution-contract §4). Plan likewise asks nothing and stops at
+  the READY plan. It never authorizes a push, deployment, network access not
+  already granted, or broader work. With `false`, execution stops after each
+  phase closure and questions go to the user. A natural-language request for
+  full autonomy counts as the explicit option. Follow the autonomy loop
   (execution-contract §3): its stops are exhaustive; between units print one
   progress line and open the next unit in the same turn, never a report, a
   question, or a `resume` suggestion. A `handoff` request or a `--deadline`
   stops any run gracefully, with one handoff commit for code work
-  ([mode-handoff](references/mode-handoff.md)); it sets a stop latch that
-  overrides autonomy and permission modes, and no tool call follows its report.
+  ([mode-handoff](references/mode-handoff.md)); it is always honored, a
+  deadline is binding (everything, report included, finished by that time), it
+  sets a stop latch that overrides autonomy and permission modes, and no tool
+  call follows its report.
   Preserve the saved execution
   scope and its option overrides across resumes and Task/Bug/Verify runs;
   Execute options never become plan defaults. Exact commit and handoff rules are
   in [execution-contract](references/execution-contract.md).
 - Every run of every mode, however it ends, closes its report with the Next
   block (only at the run's end, never between units)
-  ([next-step](references/next-step.md)): one exact Continue command, or
+  ([next-step](references/next-step.md)): the current mode with every
+  effective option and its source, one exact Continue command, or
   why nothing follows, and the Stop option: `handoff` when OPEN or uncommitted
   code work, a pending closure, or ownership this session holds remains, else
   nothing to save. Both are suggestions; never run them.

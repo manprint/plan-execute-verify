@@ -25,12 +25,17 @@ To start a new development, ask the strong agent to create a plan. Replace agent
 names with identifiers supported by your host:
 
 ```text
-/plan-execute-verify full-autonomous:true agent-1:opus,agent-2:sonnet,agent-3:haiku add per-user rate limits; preserve existing behavior when disabled
+/plan-execute-verify agent-1:opus,agent-2:sonnet,agent-3:haiku add per-user rate limits; preserve existing behavior when disabled
 ```
 
 Planning creates a numbered folder such as
-`docs/plans/003_plan-RateLimit/`. It does not implement or commit anything.
-The option and roster are saved for execution. Without `executor-power`, the
+`docs/plans/003_plan-RateLimit/`. It does not stop to ask you questions:
+under full autonomy, the default, agent-1 weighs each open decision and picks
+the option it recommends for the goal, recording why
+([Autonomous decisions](#autonomous-decisions)). It stops at the READY plan and
+does not implement or commit anything. The settings (by default
+`full-autonomous:true` and WIP commits on) and the roster are saved for
+execution. Without `executor-power`, the
 plan targets `low` executors: the finest, most detailed decomposition, which
 also costs the most planning effort. Pass `executor-power:medium` or
 `executor-power:high` when every implementer is more capable
@@ -43,8 +48,9 @@ Then execute that plan:
 ```
 
 The saved `full-autonomous:true` applies. The executor progresses through the
-plan, obtains required strong-agent reviews, and commits every completed
-sub-phase and phase locally on the current branch.
+plan without stopping, obtains required strong-agent reviews, and commits every
+completed sub-phase and phase locally on the current branch, plus a rolling WIP
+commit at each recovery checkpoint.
 
 Audit the result separately:
 
@@ -52,7 +58,9 @@ Audit the result separately:
 /plan-execute-verify verify 003
 ```
 
-If the audit finds problems, apply its correction plan explicitly:
+Under full autonomy the audit then applies its own corrections in the same run.
+With `full-autonomous:false` it only reports them, and you apply its correction
+plan explicitly:
 
 ```text
 /plan-execute-verify execute verify
@@ -66,11 +74,11 @@ different interface, select this skill and pass the same options and arguments.
 | Command after the skill name | Use it for | What it changes |
 |------------------------------|------------|-----------------|
 | `onboard [plan]` | Understand an existing repository or recover context and the next step | Only docs/onboarding.md; no code, plan-state changes or commits |
-| `plan <feature>` or `<feature>` | Design a feature, refactor, or migration | Plan files only; options become plan defaults, and `executor-power` sets the plan's detail |
+| `plan <feature>` or `<feature>` | Design a feature, refactor, or migration | Plan files only, without questions under full autonomy; options become plan defaults, and `executor-power` sets the plan's detail |
 | `execute [plan] [phase or sub-phase]` | Implement an existing plan | Code, tests, docs, and plan state |
 | `task <description>` | One small change | Requested change and its ledger |
 | `bug <description>` | One defect | Reproduction, regression test, fix, and ledger |
-| `verify [plan] [phase, sub-phase, or entry]` | Audit the whole plan or a narrower scope, including `000_adhoc` entries | Audit reports and state; no code fixes |
+| `verify [plan] [phase, sub-phase, or entry]` | Audit the whole plan or a narrower scope, including `000_adhoc` entries | Audit reports and state; under full autonomy, then the report's corrections |
 | `execute verify [plan] [report ID]` | Apply audit corrections | Selected corrections and affected plan state |
 | `resume [plan] [unit ID]` | Continue interrupted or saved work exactly where it stopped | Whatever the resumed unit/scope changes; never its scope or settings |
 | `handoff [--deadline=dd-mm-yyyy_hh_mm]` | Stop the running work gracefully, now or by a deadline | State checkpoint, one handoff commit for code work, and the resume command |
@@ -87,29 +95,36 @@ the explicit Plan form: `/plan-execute-verify plan task queue for background
 jobs`. Missing arguments or invalid selectors never silently switch modes.
 A request whose first word asks to continue recorded work, such as
 `/plan-execute-verify continue 003`, is never a new plan: it runs as
-`resume 003`, or the agent asks what you meant. Options go before the mode; if a
-description contains an option, such as a trailing `--deadline=…`, the agent
-asks before starting. Only `handoff` also accepts the deadline after it.
+`resume 003`. Without a selector, the agent asks what you meant with
+`full-autonomous:false`; under full autonomy it decides: a resume when exactly
+one resumable target matches, otherwise a new plan. Options go before the mode;
+if a description contains an option, such as a trailing `--deadline=…`, the
+agent asks before starting with `false`; under full autonomy a valid trailing
+deadline is applied, any other such token stays text, and the report says how
+it read the command. Only `handoff` also accepts the deadline after it.
 
 Task and bug take no selector. They attach to a plan only when the request names
 it (number, feature name, or path) or clearly changes an active plan's scope,
 contracts, or files; otherwise they use `docs/plans/000_adhoc/`. Several
-candidate plans require your choice, and a completed plan is used only when
+candidate plans require your choice with `full-autonomous:false`; under full
+autonomy agent-1 picks one and records why. A completed plan is used only when
 named. Neither mode changes the plan's saved execution scope.
 
 Before any code edit, agent-1 writes or validates a short mini-plan in the
 ledger entry; for a bug it comes after the reproduction and root cause. With
-`full-autonomous:false`, the default, the run then stops with the entry
+`full-autonomous:false` the run then stops with the entry
 `PROPOSED` and shows the mini-plan. Edit it in the file if you want, then
 approve it with a reply in the same session or with `/plan-execute-verify resume
 000_adhoc T-A004`: the entry ID is required, and a bare `resume` never approves.
 Changed files or your edits are revalidated before coding, and the run approves
 only that entry. To reject a proposal, say so in the same session or set its
 status to `WITHDRAWN` with a reason in the ledger file. With
-`full-autonomous:true` there is no stop, but the validation still runs, so a
-weak session that cannot reach agent-1 blocks before writing code. No setting
-gives a task or bug with neither an approval stop nor completion commits:
-`false` stops, `true` commits.
+`full-autonomous:true`, the default also in `000_adhoc`, there is no stop, but
+the validation still runs, so a weak session that cannot reach agent-1 blocks
+before writing code. Under full autonomy a request too large for one unit is
+turned into a plan and executed in the same run, as the report states. No
+setting gives a task or bug with neither an approval stop nor completion
+commits: `false` stops, `true` commits.
 
 ## Onboarding: first visit or returning project
 
@@ -182,14 +197,17 @@ agent prefix:
 
 | Option | Effect |
 |--------|--------|
-| `full-autonomous:true` | Continue until the selected scope is complete or genuinely blocked; commit verified operational completions |
-| `full-autonomous:false` | Continue through the current phase and stop after its closure (`resume` continues); Task and Bug stop once, for approval of the mini-plan; adds no completion commits |
+| `full-autonomous:true` | Continue until the selected scope is complete or genuinely blocked, never asking you: agent-1 takes each decision itself ([Autonomous decisions](#autonomous-decisions)); commit verified operational completions |
+| `full-autonomous:false` | Continue through the current phase and stop after its closure (`resume` continues); Task and Bug stop once, for approval of the mini-plan; ask you where a decision is needed; adds no completion commits |
 | `--wip-commit` | Commit progress: completed code units, phase closures, and a rolling WIP commit at each recovery checkpoint |
 | `--no-wip-commit` | Disable WIP behavior; does not disable completion commits enabled by full autonomy |
-| `--deadline=dd-mm-yyyy_hh_mm` | Every mode: hand off gracefully by this local time; this run only ([Stop gracefully](#stop-gracefully-handoff)) |
+| `--deadline=dd-mm-yyyy_hh_mm` | Every mode: hand off gracefully by this local time, which is binding; this run only ([Stop gracefully](#stop-gracefully-handoff)) |
 
-Default: `full-autonomous:false`, WIP off. Booleans are literal `true` or
-`false`; `full-autonomous:yes` is rejected.
+Default: `full-autonomous:true` and WIP on, wherever no value is recorded:
+every new plan saves them, and ad-hoc tasks, bugs, and audits use them. A value
+already recorded, such as `false` in an older plan, stays as it is. Pass
+`full-autonomous:false` or `--no-wip-commit` to change them. Booleans are
+literal `true` or `false`; `full-autonomous:yes` is rejected.
 
 Full autonomy can also be requested as the last token of an `execute`,
 `execute verify`, `resume`, or `verify` command
@@ -199,15 +217,49 @@ done"): both count as the explicit option. Under full autonomy the agent closes
 a unit, prints one progress line, and opens the next one in the same turn. It
 stops only when the scope is complete, at a real blocker, at your stop or
 `handoff`, or when the host ends the session; it never stops after a sub-phase
-to ask you to type `resume`. Permission modes such as bypass or yolo do not
-change this.
+to ask you to type `resume`, and it never asks you a question. Permission modes
+such as bypass or yolo do not change this.
+
+### What full autonomy does in each mode
+
+| Mode | With `full-autonomous:true` |
+|------|-----------------------------|
+| Plan | Asks nothing; open product or tradeoff questions become autonomous decisions; stops at the READY plan and never starts implementation |
+| Execute, Execute verify | Runs every eligible unit, phase closure, and the PLAN closure of the selected scope, committing each |
+| Task, Bug | No approval stop; implements, tests, documents, and commits; a request too large for one unit is planned and executed in the same run |
+| Verify | Audits and commits the report, then applies its READY corrections as `execute verify` does, with their commits, without a new audit |
+| Resume | Recovers all recorded work and continues the saved scope, also after a named unit; in `000_adhoc`, every resumable entry |
+| Onboard | No effect: inspection only |
+| Handoff | Ignored: a handoff always stops |
+
+### Autonomous decisions
+
+Where `full-autonomous:false` would ask you (a requirement, scope, or tradeoff
+question, a choice among plans or targets, replacing a saved scope, accepting
+an unverified assumption, a correction awaiting a decision), full autonomy lets
+agent-1 decide. It weighs the options in depth against your goal, the agreed
+requirements, risk, and reversibility, picks the option it recommends, and
+records it before acting: in the plan as a decision marked `autonomous`, or in
+history.md, the ledger entry, or the audit report, with the alternatives,
+rationale, risk, and how to reverse it. The final report lists every such
+decision.
+
+An autonomous decision never authorizes a push, a deployment, network access
+the environment or you have not granted, credentials, external changes,
+dependency upgrades, or destructive changes, and it never weakens tests, marks
+an audit finding ACCEPTED, or skips agent-1's reviews. Only these still stop
+full autonomy: a blocker that needs a capability or authority the run cannot
+get (an unavailable agent, service, or credential, a gate that cannot run, a
+detached HEAD, a bug that cannot be reproduced); a safety stop, when another
+session may still be writing or a commit would include changes the unit does
+not own; your stop, `handoff`, or deadline; the host ending the session.
 
 Settings resolve independently:
 
 1. An explicit option in the current invocation.
 2. The option given with the saved execution scope, while that scope continues.
 3. The plan default in STATE.md, set by Plan.
-4. The default.
+4. The default: `full-autonomous:true`, WIP on.
 
 `executor-power` is not a runtime setting and does not follow this order: only
 Plan accepts it, it is stored with the plan, and every other mode rejects it
@@ -232,8 +284,8 @@ recommended next action.
 |-----------------|-----|----------------------|------------------|------------------|-----------------|
 | false | off | No | No | No | No |
 | false | on | Yes | Yes | Yes | No |
-| true | off | Yes | Yes | No | Yes, artifacts only |
-| true | on | Yes | Yes | Yes | Yes, artifacts only |
+| true | off | Yes | Yes | No | Yes, artifacts, then its corrections |
+| true | on | Yes | Yes | Yes | Yes, artifacts, then its corrections |
 
 A code unit is a sub-phase, task, bug fix, or audit correction. A phase gets its
 own completion commit after all sub-phases, integration checks, documentation,
@@ -273,8 +325,11 @@ The skill does not create/switch branches or push. It preserves unrelated edits,
 including changes in the same file, and checks staged content before committing.
 
 An autonomous audit can commit a report with verdict FAIL: that records a
-completed inspection, not completed or verified implementation. It never applies
-its proposed code fixes automatically.
+completed inspection, not completed or verified implementation. Under full
+autonomy the same run then applies the report's READY corrections exactly as
+`execute verify` would, with their own commits; it runs no new audit, and
+corrections still blocked stay open in the report. With `full-autonomous:false`
+an audit never applies its proposed code fixes.
 
 WIP commits are separately labelled incomplete: with WIP on, each recovery
 checkpoint of an open unit updates one rolling `wip(<plan>/<unit>)` commit, so a crash
@@ -302,14 +357,17 @@ does not authorize the executor to continue into 1.3 or to run the phase closure
 P1; run P1 with a phase or plan selector. Dependencies still apply. The selected
 scope is saved: `resume` continues it, and task, bug, or audit runs in between do
 not replace it. An explicit `execute` or `execute verify` that would replace a
-running or blocked saved scope with a different one asks you first.
+running or blocked saved scope with a different one asks you first with
+`full-autonomous:false`; under full autonomy it replaces it and records the
+replaced scope and its next unit.
 
 Phase files are numbered from 01; logical phases start at 0. Thus
 `phase_02.md` contains logical phase 1 and sub-phases such as 1.1 and 1.2.
 
 Without a plan selector, Execute, Execute verify, and Verify use the only active
 real plan, or the highest numbered one when none is active; with several active
-plans, the agent asks. The reserved `000_adhoc` folder is never chosen by
+plans, the agent asks, or under full autonomy picks the one with the most
+recent run and says so. The reserved `000_adhoc` folder is never chosen by
 default and is never an Execute or Execute verify target (its audit corrections
 run as Task/Bug); Verify and Resume accept it only when named. Audit corrections
 use the selected or unambiguous active plan and the newest report unless a
@@ -426,7 +484,9 @@ execution scope. It never widens that scope or changes saved settings; a resumed
 unit keeps the settings it was opened with, unless you override them for that
 run. A unit ID must name open, pending, blocked, or suspended work, or a
 proposed task or bug, which naming it approves; a TODO unit is new work for
-`execute`.
+`execute`. With `full-autonomous:false`, a named unit or ad-hoc entry is the
+whole run; under full autonomy the run continues after it into the saved
+scope, and in `000_adhoc` through every other resumable entry.
 
 The executor checks the real diff and tests before trusting a recorded checkpoint.
 Each unit's base is HEAD plus a working-tree snapshot, so a resume can separate
@@ -438,12 +498,15 @@ duplicating a completion commit.
 If a crashed session still holds ownership of the plan, your explicit
 invocation on that plan lets a new session take over, but only when the state
 file and working tree stay unchanged during its inspection; the takeover is
-recorded. Otherwise it asks.
+recorded. Otherwise it asks, even under full autonomy: another writer may still
+be running.
 
 The strong supervisor remains available for required reviews and unexpected
 technical decisions. It may revise implementation details automatically while
-preserving agreed requirements and scope. Changed product requirements or new
-external authority still require you.
+preserving agreed requirements and scope. With `full-autonomous:false`,
+changed product requirements still require you; under full autonomy agent-1
+decides them as recorded autonomous decisions. New external authority (a push,
+a deployment, network access, credentials) always requires you.
 
 If the host cannot invoke that supervisor, the executor saves a precise handoff
 for a strong-model session; it cannot manufacture that capability. Full autonomy
@@ -470,26 +533,28 @@ successive-sessions execution style, which is also recorded as `handoff`.
 Sent during a run, `handoff` stops it now and cancels an earlier deadline, while
 `handoff --deadline=…` lets the run continue and replaces the earlier deadline.
 Sent to an idle session, it targets the plan or ledger that session last
-changed, or else the only one with unfinished or uncommitted work that no other
-live session owns; with several candidates it asks you to choose.
+changed, or else every one with unfinished or uncommitted work that no other
+live session owns, handing them off one after another without asking.
 
 The agent then:
 
 1. Sets a stop latch in STATE.md and starts nothing new. It finishes the open
    unit only if that takes about 10 minutes, including its checks and review,
-   and never opens the next one; otherwise it stops at the next step boundary
+   and, with a deadline, still leaves time for the handoff before the deadline;
+   it never opens the next one; otherwise it stops at the next step boundary
    and records commands it did not run.
 2. Saves a checkpoint with the exact next action, marks the run `HANDOFF`, and
    releases the ownership it holds, so the next session continues without a
    takeover.
-3. For code work (Execute, Execute verify, Task, Bug, and Resume of them) it
-   makes one local commit, even when commits are disabled:
+3. For code work (Execute, Execute verify, Task, Bug, a Verify correction
+   pass, and Resume of them) it makes one local commit, even when commits are
+   disabled:
    `handoff(request-by-user): <plan>/<unit> stopped <stop point>`. It contains the open unit
    and any finished units still uncommitted, so STATE.md never claims work the
    commit lacks. Each unit's changes are staged separately, so edits you made
    between units stay out of the commit. Later commits append after it. Hooks
    still run: if one fails, the work stays uncommitted and the report shows the
-   commit command. With nothing to commit, no commit is made. Plan and Verify
+   commit command. With nothing to commit, no commit is made. Plan and an audit
    only save their checkpoint and warn that their files are uncommitted; Onboard
    is simply rerun.
 4. Reports the command that continues exactly where it stopped, such as
@@ -499,27 +564,37 @@ The agent then:
    modes. Host automation (auto-continue, loops, hooks, a subagent finishing)
    does not restart work; only your next explicit command clears the latch.
 
-With a deadline, the agent checks the clock before each unit, step, and long
-command, avoids starting work that would end after it, and bounds long commands
-with `timeout`. This is best effort: the agent sees a message only between tool
-calls, cannot interrupt its own running call, and an idle session does not wake
-up at a deadline. Set the deadline before the moment you really need the
-machine, for example 17:30 when you switch it off at 18:00.
+A handoff is always honored, whatever the autonomy setting, and a deadline is
+binding: by that time the work is bounded, the state saved, the handoff commit
+made, and the report written. The agent keeps a reserve for the handoff itself,
+at least 10 minutes (more when an open unit, a worker, or many units need it),
+and works only up to the cutoff, the deadline minus that reserve: it checks the
+clock before each unit, step, review, and command, starts nothing that would
+cross the cutoff, bounds every command that may run over a minute with
+`timeout`, and gives delegated workers the cutoff as their return time. At the
+cutoff it starts the handoff. Two limits remain: a message reaches the agent
+only between tool calls, and an idle session does not wake up by itself, so a
+deadline sent to an idle session means an immediate handoff.
 
 ## After every run: Continue or Stop
 
 Every run, in every mode and however it ends, closes its report with a Next
-block, for example after a phase closure with commits disabled:
+block, for example after a phase closure of
+`/plan-execute-verify full-autonomous:false --no-wip-commit execute 003`:
 
 ```text
 Next
-- Continue: `/plan-execute-verify resume 003` — runs sub-phase 2.1, the next unit of the saved scope
+- Mode: execute 003, whole plan · full-autonomous:false (explicit) · WIP off (explicit) · executor-power low (plan) · deadline none · roster agent-1:opus,agent-2:sonnet,agent-3:haiku (plan) · style delegated
+- Continue: `/plan-execute-verify resume 003` — runs sub-phase 2.1, the next unit of the saved scope; runs with full-autonomous:false · WIP off (scope)
 - Stop: `/plan-execute-verify handoff` — commits 1.1, 1.2, and P1, still uncommitted, in one handoff commit; then close the session
 ```
 
-Continue is one exact command with real IDs and no options: recorded settings
-travel with `resume`, while a new `execute` scope starts from the plan defaults
-and is labelled as new, with the settings it will use. After a rejected command,
+Mode always shows the mode the run executed and every setting in effect, with
+where it came from: `explicit`, `explicit (prompt)`, `scope`, `plan`, `ledger`,
+or `default`. Continue is one exact command with real IDs and no options, and
+it states the settings that command will run with: recorded settings travel
+with `resume`, while a new `execute` scope starts from the plan defaults and is
+labelled as new. After a rejected command,
 the corrected command keeps your valid options. When a decision is missing it
 reads "answer …, then …"; when nothing follows it says why. Stop suggests
 `handoff` only when open or uncommitted code work, a pending closure, or
@@ -544,8 +619,11 @@ be part of an implementation unit.
 
 The strong planner checks the critical source contracts and performs a cold-read
 validation before marking the plan READY. Unresolved design, contradictory
-requirements, or an undefined acceptance test prevent READY. A blocked draft is
-labelled as such and is not presented as an executable plan.
+requirements, or an undefined acceptance test prevent READY. Under full
+autonomy agent-1 settles open product questions itself as autonomous decisions
+instead of leaving them open; only missing authority or capability can still
+block. A blocked draft is labelled as such and is not presented as an
+executable plan.
 
 During execution, failed or unavailable mandatory checks prevent completion.
 A zero-test run is not verification. Workers cannot weaken tests to get green.
@@ -581,11 +659,16 @@ The phase files contain the resulting concrete rules and tests: workers do not
 receive only links they must interpret or design questions they must settle.
 
 Research stops when the necessary questions are answered and the resulting
-decisions are explicit. Unless the environment already authorizes network
-access, Plan asks once before browsing, listing the sanitized questions, and
-records your answer. Unresolved required facts prevent READY unless you
-explicitly accept one as a known risk (ACCEPTED, with its guarding test);
-unavailable browsing is disclosed, not treated as successful verification.
+decisions are explicit. With `full-autonomous:false`, unless the environment
+already authorizes network access, Plan asks once before browsing, listing the
+sanitized questions, and records your answer. Under full autonomy it never asks
+and never treats autonomy as permission to browse: without authorization it
+uses local sources and discloses the limit. Unresolved required facts prevent
+READY unless you explicitly accept one as a known risk (ACCEPTED, with its
+guarding test), or, under full autonomy, agent-1 accepts it as `ACCEPTED
+(autonomous)` with its risk and guarding test or chooses a design that does not
+depend on it; unavailable browsing is disclosed, not treated as successful
+verification.
 Applicable local primary documentation/source can supply evidence, but cannot
 establish freshness it does not have. Private code, secrets, and identifying
 data stay out of queries.
@@ -638,8 +721,11 @@ evidence produces INCOMPLETE unless confirmed major/blocker findings already
 justify FAIL. Severity levels BLOCKER, MAJOR, and MINOR are defined in
 [mode-verify](references/mode-verify.md). Reports retain their historical
 verdict after corrections, and each correction's progress is tracked in STATE.md.
-An audit may finish while its correction plan is BLOCKED by a missing decision;
-those corrections cannot execute until their contracts are validated as READY.
+An audit may finish while its correction plan is BLOCKED by a missing decision
+or evidence; those corrections cannot execute until their contracts are
+validated as READY. Under full autonomy agent-1 takes a missing product
+decision itself, so only missing evidence or authority leaves a correction
+BLOCKED.
 
 ## Install or update
 
@@ -683,8 +769,9 @@ revisions: recovery-boundary checkpoints, gate staging and phase sizing,
 working-tree snapshot unit bases, stale-ownership takeover, the saved execution
 scope, phase-closure failure handling, agent substitution, audit severity
 definitions, the resume mode, scoped verify, rolling WIP commits, executor
-power, the handoff mode with `--deadline`, the task/bug approval gate, and the
-Next block. Those revisions have been checked statically only; they have not
+power, the handoff mode with `--deadline`, the task/bug approval gate, the
+Next block, and the full-autonomy defaults with autonomous decisions, the
+Verify correction pass, the binding deadline, and the Mode line. Those revisions have been checked statically only; they have not
 been re-exercised end to end. The Git commands for owned-hunk staging, including
 the `--3way` fallback and a multi-unit handoff commit staged one patch per unit
 that keeps user edits made between units out, and the deadline parsing were

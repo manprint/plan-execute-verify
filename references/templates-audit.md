@@ -11,9 +11,12 @@ phase sub-phase in output-template.md.
 # <Feature> — Audit V<NNN>
 
 Date: <date>. Auditor: <actual agent as position:name>.
-Settings for this audit: full-autonomous:<true|false>; WIP:<on|off>; roster:
-<saved, or invocation-only prefix>; deadline: <dd-mm-yyyy_hh_mm, or none>. Not
-written to STATE.md §3. Handoff: <trigger and time when Handoff mode stopped
+Settings for this audit: full-autonomous:<true|false> (<source>); WIP:<on|off>
+(<source>); roster: <saved, or invocation-only prefix>; deadline:
+<dd-mm-yyyy_hh_mm, or none>. Not written to STATE.md §3.
+Correction pass (mode-verify.md V6): <run under full-autonomous:true — C<n>
+results and commits | not run: full-autonomous:false>. Autonomous decisions:
+<none | question, options, chosen option, rationale, risk, reversal>. Handoff: <trigger and time when Handoff mode stopped
 this audit, leaving it OPEN; or none>.
 Plan: <path/ID/revision, or 000_adhoc>. Audit scope: <whole plan | phase |
 sub-phase | ledger entry> — <selected units>; the verdict covers only this scope.

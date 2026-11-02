@@ -18,7 +18,8 @@ before it runs without stopping.
 Read STATE.md first. Preserve the saved execution scope on a handoff or resume;
 a different explicit selector replaces it and its option overrides without
 abandoning OPEN work, after asking the user when the saved scope is RUNNING or
-BLOCKED and different (execution-contract §1). Resume follows mode-resume.md and
+BLOCKED and different, or under full autonomy as an autonomous decision
+(execution-contract §1, §4). Resume follows mode-resume.md and
 then this manual for the saved scope.
 
 Check ownership (stale ownership changes hands only under execution-contract
@@ -127,7 +128,8 @@ Corrections; for a report without those rows, add them before dispatch. Check
 correction-plan readiness as well as the main plan. BLOCKED or legacy
 underspecified corrections require supervisor refinement and evidence before
 dispatch; an audit's completed status is not proof its corrections are
-executable.
+executable. Under full autonomy, a correction awaiting a user decision gets an
+autonomous decision from agent-1 (execution-contract §4) instead.
 
 Each correction is a unit V<NNN>-C<n>, with the same detailed contract as a
 sub-phase and focused validation. Recheck its finding against the current tree before editing. If it is
@@ -147,8 +149,8 @@ the historical audit verdict. Update pending plan contracts invalidated by fixes
 ## E6 — Finish or hand off
 
 Run the Coherence checklist before reporting completion. Summarize scope
-results, gates/reviews, deviations, local completion commits/branch, and the
-next action. With commits disabled, warn that the changes and plan records
+results, gates/reviews, deviations, autonomous decisions, local completion
+commits/branch, and the next action. With commits disabled, warn that the changes and plan records
 remain uncommitted, and untracked plan files can be lost to `git clean`; suggest
 the exact commit command without running it. State failed, blocked, skipped, or
 unverified work plainly. End with the Next block (next-step.md).

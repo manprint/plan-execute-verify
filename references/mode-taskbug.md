@@ -25,8 +25,9 @@ the requested change; unavailable required evidence blocks the dependent work.
 With a real plan, open the unit in STATE.md as the invocation, after any
 approval gate and without replacing the saved execution scope, and link its
 ledger entry. If that plan already has an open or pending-closure unit, open
-nothing: report the conflict with that unit's resume command and ask
-(execution-contract §2). Without one, create the entry in
+nothing: with `full-autonomous:false` report the conflict with that unit's
+resume command and ask; with `true`, recover and close that unit first when no
+live session owns it (execution-contract §2). Without one, create the entry in
 docs/plans/000_adhoc/tasks.md or bugs.md before code edits, PROPOSED while it
 awaits approval and OPEN once the unit opens; that entry holds settings, owner,
 baseline (HEAD plus working-tree snapshot tree, execution-contract §3),
@@ -36,13 +37,18 @@ ad-hoc work.
 If the request is materially larger than a small unit, the supervisor scopes a
 proper plan before implementation; do not silently turn one task into a project.
 Existing user authorization to complete a larger task may already cover planning.
+With `full-autonomous:true` the supervisor writes that plan (mode-plan.md,
+autonomous decisions) and executes it in the same run as an Execute plan
+scope, limited to the requested change; the report states the conversion. With
+`false` the run stops at the READY plan.
 
 ## Approval gate
 
 With full-autonomous:false, resolved as in invocation.md, the run stops once for
 the user's approval after agent-1 has validated the mini-plan: a Task right
 after it, a Bug after reproduction, root cause, and mini-plan, before the
-regression test. With true there is no stop, but the validation still applies.
+regression test. With true, the default where no value is recorded (also in
+`000_adhoc`), there is no stop, but the validation still applies.
 
 - Before approval edit nothing besides the ledger entry and, with a real plan,
   the §1 invocation record with result `PROPOSED`. Ignored build or test
@@ -107,7 +113,9 @@ regression test. With true there is no stop, but the validation still applies.
 
 For either mode, a weak worker escalates missing design or two unsuccessful fixes
 of the same issue; the supervisor may correct the approach within the approved
-requirements. New scope/product choices remain user decisions.
+requirements. New scope/product choices remain user decisions with `false`;
+with `true` agent-1 makes them as autonomous decisions within the request
+(execution-contract §4), and the report lists them.
 
 At handoff retain OPEN with the next unverified step. With the separate WIP
 option, each recovery-boundary checkpoint also updates one rolling WIP commit

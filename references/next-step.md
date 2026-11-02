@@ -10,13 +10,29 @@ element:
 
 ```text
 Next
-- Continue: `/plan-execute-verify <command>` — <what it will do>
+- Mode: <mode> <plan/unit or scope> · full-autonomous:<true|false> (<source>) · WIP <on|off> (<source>) · executor-power <low|medium|high> · deadline <dd-mm-yyyy_hh_mm|none> · roster <agent-1:<name>,…> · style <delegated|handoff>
+- Continue: `/plan-execute-verify <command>` — <what it will do>; runs with full-autonomous:<true|false> · WIP <on|off> <and any other setting that differs from Mode>
 - Stop: `/plan-execute-verify handoff` — <what it saves>; then close the session
 ```
 
-Each line takes the form N1 and N2 select. Continue may instead read "answer or
-provide <item>, then `/plan-execute-verify <command>`" or "nothing to continue —
-<reason>". Stop may instead read "nothing to save; close the session now".
+Each line takes the form N0, N1, and N2 select. Continue may instead read
+"answer or provide <item>, then `/plan-execute-verify <command>`" or "nothing
+to continue — <reason>". Stop may instead read "nothing to save; close the
+session now".
+
+## N0 — Mode
+
+Always present, also after a rejection or a handoff: the mode this run
+executed (Onboard, Plan, Execute, Execute verify, Task, Bug, Verify with or
+without its correction pass, Resume of which mode, Handoff) and its target,
+then every effective setting with its source: `explicit`, `explicit (prompt)`,
+`scope` (saved scope override), `plan` (§3), `ledger` (a resumed entry's
+record), or `default`; a setting the mode does not use reads `n/a`. A run
+rejected before work lists what it parsed.
+Onboard shows the inspected plan's settings and marks its own options
+invocation-local. The Continue line then states the settings its command will
+run with, resolved by invocation.md precedence, so that a change (a new scope
+falling back to §3, a deadline that does not carry over) is visible.
 
 ## N1 — Continue
 
@@ -30,8 +46,8 @@ provide <item>, then `/plan-execute-verify <command>`" or "nothing to continue �
 - No options, except that a corrected command after a rejection keeps the
   user's valid options: recorded settings and roster travel with `resume`, and a
   `--deadline` never carries over. A new Execute scope starts from the plan
-  defaults in §3, not from earlier scope overrides: label it a new scope and
-  state its effective autonomy and WIP behavior.
+  defaults in §3, not from earlier scope overrides: label it a new scope; its
+  effective settings go on the Continue line (N0).
 - A missing decision or evidence: write "answer or provide <exact item>, then
   `<command>`", never a command that would be unsafe without it.
 - A suggestion only: never run it, even under `full-autonomous:true`; the run
@@ -43,7 +59,7 @@ provide <item>, then `/plan-execute-verify <command>`" or "nothing to continue �
 | 1 | Invocation rejected before work started | The corrected command when the fix is unambiguous; for a STATE.md format newer than the skill, "update the skill, then <the same command>"; otherwise the syntax from invocation.md and the exact question |
 | 2 | This run ended by a handoff (result HANDOFF) | The resume command from mode-handoff.md H6 |
 | 3 | This run stopped at the task/bug approval gate (PROPOSED) | `resume <plan or 000_adhoc> <entry-id>`, which approves it; to reject it, reply in the session or set the entry WITHDRAWN with a reason |
-| 4 | Several candidate plans or ledgers; target, ownership, branch/baseline, or scope conflict; required source missing | The exact question or choice, or the session that owns the work; never blind execution, a branch switch, or a `handoff` of another session's work |
+| 4 | Several candidate plans or ledgers; target, ownership, branch/baseline, or scope conflict; required source missing (with `full-autonomous:true` a choice among candidates is decided instead, execution-contract §4, so only conflicts and missing sources reach this row) | The exact question or choice, or the session that owns the work; never blind execution, a branch switch, or a `handoff` of another session's work |
 | 5 | BLOCKED unit, audit, or scope | The unblocking decision, owner, or capability, then `resume <plan> <unit-id>`; a historical BLOCKED label whose resolution the user supplied needs supervisor validation first |
 | 6 | Interrupted unit, pending completion transaction, or suspended audit | `resume <plan> <unit-id>`, recovering in its original mode and scope; an OPEN audit or pending audit commit precedes its suspended implementation; blocked readiness or design goes to the supervisor first; never a new audit or later phase that bypasses recovery |
 | 7 | Task or bug PROPOSED by an earlier run, awaiting approval | `resume <plan or 000_adhoc> <entry-id>`, which approves it, with the entry path and a summary of its mini-plan; to reject it, the user sets its status to WITHDRAWN with a reason; never approve or withdraw it on the user's behalf |

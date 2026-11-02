@@ -12,9 +12,12 @@ state-changing recovery or completion steps; mode-onboard.md governs that mode.
 `full-autonomous:true|false` is a leading option, accepted by every mode;
 Handoff ignores it.
 Precedence: explicit invocation > saved execution scope override (only while
-continuing that scope) > selected plan's STATE.md §3 > `false`. Reject other
-values and duplicate occurrences before making changes. Plan persists an
-explicit value in §3 as the plan default. Execute and Execute verify record it
+continuing that scope) > selected plan's STATE.md §3 > `true`. The WIP setting
+resolves the same way, with default `on`. The defaults apply wherever no value
+is recorded: a new plan, a `000_adhoc` entry, a legacy plan without the field.
+A recorded value, including `false` or `off`, stays as recorded. Reject other
+values and duplicate occurrences before making changes. Plan persists the
+resolved values in §3 as the plan defaults, explicit or default. Execute and Execute verify record it
 with the saved execution scope they set, as a scope override that lasts while
 that scope continues and never changes §3. Task, Bug, Verify, and Resume use it
 for that invocation only and record it in their ledger entry, audit report, or
@@ -30,13 +33,13 @@ and never persist to a plan or an ad-hoc ledger.
 | Mode | Scope when true | Completion commits, when the table below enables them |
 |------|-----------------|--------------------|
 | Onboard | Inspect context and suggest a next action; never execute that action or alter saved settings | None, including with WIP enabled |
-| Plan | Produce the requested plan; record the setting for execution | None; planning does not start implementation |
+| Plan | Produce the requested plan without asking: user decisions become autonomous decisions (§4); stop at the READY plan; record the setting for execution | None; planning does not start implementation |
 | Execute | Continue through eligible sub-phases, phase closures, and the PLAN closure within the selected scope | Every completed sub-phase, phase closure, and PLAN closure |
 | Execute verify | Apply the selected report's corrections; revalidate affected phases | Every completed correction and reopened phase closure |
-| Task / bug | Finish the requested change, tests, documentation, and reconciliation | Every completed task / bug |
-| Verify | Complete the audit, including an honest FAIL or unverified result | Only with `true`: audit artifacts and state; never automatic code corrections |
-| Resume | Recover recorded work, then continue the saved execution scope | As for the mode of the resumed unit or scope |
-| Handoff | Not applicable: the option is ignored; bounds the work in flight, saves resumable state, and stops | One handoff commit for code work, whatever the settings; none for Plan, Verify, or Onboard |
+| Task / bug | Finish the requested change, tests, documentation, and reconciliation, with no approval stop; a request larger than one unit is planned and executed in the same run (mode-taskbug.md) | Every completed task / bug |
+| Verify | Complete the audit, including an honest FAIL or unverified result, then apply its corrections as Execute verify does, without a new audit (mode-verify.md V5) | Only with `true`: audit artifacts and state, then every completed correction and reopened phase closure |
+| Resume | Recover all recorded work, then continue the saved execution scope, also after a named unit (mode-resume.md R3) | As for the mode of the resumed unit or scope |
+| Handoff | Not applicable: the option is ignored; bounds the work in flight, saves resumable state, and stops | One handoff commit for code work (including a Verify correction pass), whatever the settings; none for Plan, an audit, or Onboard |
 
 With `false`, execution continues through the eligible units of the current
 phase inside the selected scope and stops after that phase's closure P<N>, with
@@ -46,7 +49,8 @@ each reopened phase's closure. A sub-phase boundary inside a phase is not a
 stopping point, and this option adds no commit authorization. Task and Bug stop
 once instead, for the user's approval of the validated mini-plan
 (mode-taskbug.md approval gate). With `true`,
-neither a unit nor a phase boundary ends the selected scope. Either way, work
+neither a unit nor a phase boundary ends the selected scope, and no mode asks
+the user anything: each question becomes an autonomous decision (§4). Either way, work
 stops early only at the exhaustive stops of the autonomy loop (§3). The
 existing WIP option still applies independently:
 
@@ -80,7 +84,9 @@ any OPEN or pending-closure unit in its own mode with its recorded settings,
 then continues a set (not `none`) saved execution scope while its result is
 NOT_STARTED, RUNNING, or BLOCKED. An explicit Execute or Execute verify selector
 that would replace a RUNNING or BLOCKED saved execution scope with a different
-one asks the user first.
+one asks the user first with `false`; with `true` it replaces it as an
+autonomous decision (§4), noting the replaced scope and its next unit in
+history.md.
 
 ## 2. Ownership and cold starts
 
@@ -99,7 +105,8 @@ without a release. The user's explicit operational invocation on this plan
 counts as a resume request. Take over only when STATE.md and a fresh working-tree
 snapshot (§3) are unchanged between the first read and the takeover write;
 otherwise, or when the user indicates that the other writer may still run,
-report the conflict and ask. Record previous writer, new writer, time, and reason
+report the conflict and ask, also under `full-autonomous:true`: a writer that
+may still be live is a safety stop (§4). Record previous writer, new writer, time, and reason
 in the same state update that claims ownership, then recover the OPEN unit as
 interrupted work, never by reverting it. Onboard never takes over ownership, and
 a delegated worker never claims it.
@@ -119,8 +126,11 @@ At startup:
    without finalizing or committing that implementation on its behalf. If a new
    explicit scope excludes unfinished OPEN work, including a Task or Bug
    attached to a plan with an open or pending-closure unit, do not finish that
-   code just to clear the slot or overwrite its checkpoint. Report the conflict
-   and request direction; only Verify has the suspension exception below.
+   code just to clear the slot or overwrite its checkpoint. With `false`,
+   report the conflict and request direction; only Verify has the suspension
+   exception below. With `true`, when no live session owns that unit, recover
+   and close it first in its own mode with its recorded settings, as an
+   autonomous decision (§4), then start the requested work.
 4. Read the named sub-phase plus its local contracts and approved revisions.
    Check prerequisite sub-phase rows, required artifacts, and applicable gates.
    A moved line is a locator change: find the named symbol and inspect its actual
@@ -208,13 +218,14 @@ reset or compaction, never from memory or habit. The run stops only at:
 1. the selected scope verified complete;
 2. with `false`: after a phase closure P<N> (Task/Bug: once, at the approval
    gate);
-3. a real blocker that needs a capability, authority, or decision this run
-   cannot obtain, recorded BLOCKED;
+3. a real blocker that needs a capability or authority this run cannot obtain,
+   or a safety stop (§4); with `false` also a user decision; recorded BLOCKED;
 4. a user stop, a `handoff` request, or a deadline (stop latch below);
 5. the host ending the session.
 
 Nothing else ends the run: not a closed sub-phase (nor, with `true`, a closed
-phase), a commit, a long run, many units, a large diff, context pressure
+phase or a question for the user, which becomes an autonomous decision, §4), a
+commit, a long run, many units, a large diff, context pressure
 (checkpoint and continue; the host compacts), a unit assigned to another roster
 agent that this session may substitute (agent-roster.md), a worker still
 running, or the wish to report progress. Between units print at most one
@@ -298,8 +309,9 @@ the next P<N> attempt, and stops after the phase closes.
 
 Stop at the selected scope's verified completion, an explicit user stop, a
 handoff request or deadline, or a documented blocker requiring unavailable
-capability/authority. Under a deadline, check the minutes left at unit and step
-boundaries and before long commands (mode-handoff.md H2). A scope that
+capability/authority. A deadline is binding under every autonomy setting and
+permission mode: the handoff, report included, is finished by that time; plan
+backwards from it at unit, step, and command boundaries (mode-handoff.md H2). A scope that
 includes the last phase also requires the PLAN closure. Only then
 record COMPLETE: for Execute and Execute verify in both the saved execution
 scope and the invocation, for Task, Bug, and Verify in the invocation alone;
@@ -342,7 +354,8 @@ revalidation; update their local contract excerpts. Locator drift and routine
 progress belong in STATE.md, not a plan revision. It cannot weaken acceptance
 criteria or retroactively rewrite an executed specification to excuse a failure.
 User decisions are needed only for a changed product requirement, scope, or
-external authority. Existing authorization remains valid across sessions.
+external authority, and only with `full-autonomous:false`. Existing
+authorization remains valid across sessions.
 
 After two unsuccessful fixes for the same failure, escalate with the evidence;
 do not repeat the same attempt or loosen tests. The supervisor can specify a new
@@ -356,6 +369,35 @@ Review evidence includes reviewer identity, unit/plan revision, reviewed change
 identity (commit or base plus owned diff/checkpoint), inspected invariants, result,
 and any follow-up. Label it `self-review` when the reviewer is also the unit's
 actual implementer. Edits affecting reviewed behavior invalidate that review.
+
+### Autonomous decisions
+
+With `full-autonomous:true` no mode asks the user anything. Every point where a
+manual says to ask, request direction, or await a user choice or decision (a
+requirement, scope, or tradeoff question; a choice among candidate plans,
+ledgers, targets, or readings of a command; replacing a saved scope; accepting
+a required unverified assumption; a correction awaiting a decision) is decided
+by agent-1 instead. agent-1 weighs the options in depth against the user's
+goal, the approved requirements, correctness, risk, and reversibility, picks
+the option it recommends for reaching the goal, and records it before acting:
+a decision `D<n>` marked `autonomous` in the plan (a plan revision when it
+changes an approved plan), otherwise in history.md notes, the ledger entry, or
+the audit report, with the options weighed, rationale, risk, and how to reverse
+it. A choice among candidates with no better criterion takes the plan or ledger
+with the most recent invocation record. The final report lists every
+autonomous decision.
+
+An autonomous decision never grants what full autonomy excludes: pushes,
+deployments, network access neither the environment nor the user authorized,
+credentials, external mutations, dependency upgrades, or destructive changes.
+It never weakens acceptance criteria, tests, or gates, never marks an audit
+finding ACCEPTED (a user decision; the finding stays OPEN), and never replaces
+a required agent-1 review. Under `true` only these still stop work: every
+option needs such authority or an unavailable capability (agent, service,
+credential, runnable gate, attached branch, a reproducible bug), recorded
+BLOCKED; a safety stop, when another session may still be writing (§2) or a
+commit would capture changes the unit does not own (§6); the stop latch; the
+host ending the session. With `false`, ask as each manual says.
 
 ## 5. Verification appropriate to the current stage
 

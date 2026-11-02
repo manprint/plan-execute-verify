@@ -12,11 +12,14 @@ schedules the same procedure from the start. Do not confuse this mode with the
 handoff execution style or a BLOCKED handoff (agent-roster.md): those describe
 how sessions pass work on, not a user stop.
 
-The stop is best effort, not a hard real-time guarantee. A handoff sent during a
-run reaches the agent only between tool calls; the agent cannot interrupt its
-own running tool call except by stopping a process it started, and an idle
-session never wakes up by itself at a deadline. Users set the deadline earlier
-than the moment they really need the machine.
+A handoff is always honored, under every autonomy setting, saved scope, and
+permission mode, and a deadline is binding: by the deadline time the work in
+flight is bounded, state saved, the handoff commit made, and the report
+written (H2). Because a request reaches the agent only between tool calls and
+the agent cannot interrupt its own running tool call except by stopping a
+process it started, it keeps every call short enough to meet the deadline. An
+idle session never wakes up by itself, so a deadline sent to an idle session
+means an immediate handoff.
 
 Read execution-contract.md §3 and §6, then the manual of the interrupted mode
 only for its checkpoint fields.
@@ -44,11 +47,13 @@ only for its checkpoint fields.
 - Sent during a run: the target is the current invocation's plan or ledger and
   unit. `handoff` alone starts the procedure now, sets the stop latch at once,
   and cancels any earlier deadline. `handoff --deadline=…` lets the run continue, replacing any earlier
-  deadline, and starts the procedure when that deadline is reached (H2).
+  deadline, and starts the procedure at the cutoff before that deadline, so it
+  ends by the deadline (H2).
 - Sent to an idle session: the target is the plan or ledger whose state this
-  session last wrote, else the unique plan or ledger with OPEN work, a pending
-  closure, or units recorded `uncommitted`; several candidates require a user
-  choice. Work owned by another live session is never a target: report it as an
+  session last wrote, else every plan or ledger with OPEN work, a pending
+  closure, or units recorded `uncommitted`, handed off one after another, each
+  with its own state update and commit; never a question, since stopping never
+  loses work. Work owned by another live session is never a target: report it as an
   ownership conflict (execution-contract §2) and leave it to that session. With
   no target, report that nothing needs a handoff, release ownership this session
   still holds, end with the Next block (next-step.md), and stop. An idle session
@@ -60,13 +65,26 @@ only for its checkpoint fields.
 
 ## H2 — Work under a deadline
 
-Check the minutes left before opening a unit, before each step, review, gate
-run, or long command, and after any long command. Do not start work expected to
-finish after the deadline minus the time the handoff itself needs (a few
-minutes). Bound a long command with `timeout <N>m`, N being the minutes left,
-when the shell provides it. When the next action no longer fits, start H3 with
-trigger `deadline`. Small overruns are acceptable; a scope that completes before
-the deadline ends normally, without a handoff.
+The deadline is a hard limit for the end of H6, not for the start of the
+handoff. Plan backwards from it:
+
+- Reserve: the minutes H3–H6 need, at least 10, more when closing the OPEN
+  unit, awaiting a worker, or staging many units needs it. The cutoff is the
+  deadline minus the reserve; recompute both at every check.
+- Check the clock before opening a unit, before each step, review, gate run,
+  dispatch, or command, after each command, and at every progress line.
+- Start only work expected to finish before the cutoff: no unit, review, gate,
+  research lookup, or delegation that would cross it. Prefer stopping early to
+  overrunning.
+- Bound every command that may run over a minute with `timeout <N>m`, N being
+  the minutes left before the cutoff; without `timeout`, do not start a command
+  that might cross it. Give a delegated worker the cutoff as its return time,
+  and stop it through the host when it passes.
+- At the cutoff, or when the next action no longer fits, start H3 with trigger
+  `deadline`. A deadline received when its cutoff has already passed means an
+  immediate handoff with the shortest H3: stop at the current step boundary.
+
+A scope that completes before the cutoff ends normally, without a handoff.
 
 ## H3 — Bound the work in flight
 
@@ -74,10 +92,11 @@ the deadline ends normally, without a handoff.
   delegation. The scope's remaining units, and the plan's next eligible unit,
   stay for the resume command, even under full autonomy.
 - If the OPEN unit can be closed in about 10 minutes, including its focused
-  checks and required review, and before any deadline, close it normally
-  (execution-contract §6), with its completion commit when the commit policy
-  enables one; that closure is the last work of the run. Otherwise stop at the
-  next step boundary and leave no half-written file.
+  checks and required review, and, under a deadline, within the reserve with
+  time left for H4–H6 before the deadline, close it normally (execution-contract §6), with its
+  completion commit when the commit policy enables one; that closure is the
+  last work of the run. Otherwise stop at the next step boundary and leave no
+  half-written file.
 - Let a running command finish when it should end within that window. Otherwise
   stop it when the agent controls its process, and record it as not run. A P<N>
   closure interrupted during its full gates stays OPEN with those gates not run.
@@ -111,9 +130,10 @@ diff:
 
 ## H5 — Handoff commit
 
-Execute, Execute verify, Task, Bug, and Resume of one of them always end with
-one local handoff commit, even when completion and WIP commits are disabled: the
-user's explicit handoff authorizes it. Plan and Verify never commit here; their
+Execute, Execute verify, Task, Bug, a Verify correction pass (mode-verify.md
+V6), and Resume of one of them always end with one local handoff commit, even
+when completion and WIP commits are disabled: the user's explicit handoff
+authorizes it. Plan and an audit never commit here; their
 report warns that the draft or audit files are uncommitted and suggests the
 commit command without running it. Onboard commits nothing.
 

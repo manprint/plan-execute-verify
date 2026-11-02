@@ -2,10 +2,11 @@
 
 Read execution-contract.md, templates-audit.md, and the Verify checklist.
 Verify writes reports, the finding register, correction rows, and truthful
-STATE.md corrections. It never changes production code, rewrites phase
-specifications, or applies fixes.
-With full-autonomous:true it commits completed audit artifacts/state locally;
-otherwise it does not commit, regardless of the WIP setting. Explicit options and
+STATE.md corrections. The audit itself never changes production code, rewrites
+phase specifications, or applies fixes.
+With full-autonomous:true it commits completed audit artifacts/state locally,
+then applies the report's corrections in a separate pass (V6); otherwise it
+does not commit, regardless of the WIP setting, and no correction follows. Explicit options and
 roster apply to this audit only and are recorded in the report; they never change
 §3 or the saved execution scope.
 
@@ -135,7 +136,9 @@ the correction executor.
 Apply the same readiness rule to correction plans: READY only after their
 contracts and prerequisites are validated. If a correction depends on an
 unresolved product decision or unavailable evidence, label it BLOCKED with the
-question, owner, and next action. The audit may still close truthfully; it must
+question, owner, and next action; under full autonomy agent-1 decides a
+product question as an autonomous decision (execution-contract §4), recorded in
+the report, and the correction is READY once its contract is validated. The audit may still close truthfully; it must
 not present that correction as executable or invent an answer to finish the
 report. Add one STATE.md §11 Corrections row per correction: TODO, or BLOCKED
 with its question (none in `000_adhoc`).
@@ -158,10 +161,32 @@ branch using the completion transaction. The subject states the audit verdict.
 This commits a finished inspection, not unverified implementation. Never stage
 uncommitted production changes merely because the audit inspected them.
 
-No automatic correction follows verify, even in full autonomy. Report the
-verdict, counts, limitations, report path, commit when created, and the command
-to apply corrections (in `000_adhoc`, the ready Task/Bug commands), and end with
-the Next block (next-step.md). Use the report as the durable detailed output;
-avoid duplicating it in full in chat.
+With full-autonomous:false no correction follows. Report the verdict, counts,
+limitations, report path, commit when created, and the command to apply
+corrections (in `000_adhoc`, the ready Task/Bug commands), and end with the
+Next block (next-step.md). Use the report as the durable detailed output;
+avoid duplicating it in full in chat. With true, continue with V6 first and
+report once at its end.
 
 Run the Verify checklist before the final response.
+
+## V6 — Autonomous correction pass
+
+With full-autonomous:true, once the audit is closed and its commit resolved,
+the same run applies the report's READY corrections without a new audit:
+
+- Real plan: exactly as `execute verify <plan> V<NNN>` (mode-execute.md E5):
+  correction units with focused validation, reopened phases closed again with
+  full gates and review, completion commits. The saved execution scope stays
+  unchanged; the corrections run under this Verify invocation, recorded in §1.
+  A suspended implementation restored at V5 is recovered and closed first, in
+  its own mode (execution-contract §2).
+- `000_adhoc`: each ready Task/Bug request runs as a Task or Bug entry
+  (mode-taskbug.md), in dependency and severity order.
+- Follow the autonomy loop (execution-contract §3). A correction still BLOCKED
+  and a finding that only the user may mark ACCEPTED stay OPEN and are
+  reported, never bypassed. A `handoff` or deadline stops the pass as it stops
+  Execute verify (mode-handoff.md).
+
+The final report covers the audit and the corrections: verdict, fixed and
+still-open findings, gates, commits, autonomous decisions, and the Next block.

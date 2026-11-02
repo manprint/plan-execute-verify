@@ -27,11 +27,12 @@ Execution starts at [STATE.md](STATE.md); all live readiness and progress are th
 ## Decisions
 | ID | Decision and consequence | Authority/source | Supersedes |
 |----|--------------------------|------------------|------------|
-| D1 | <precise technical decision> | <user Q / supervisor, date> | — |
+| D1 | <precise technical decision> | <user Q / supervisor / autonomous (agent-1, date: options weighed, rationale, risk, guard, reversal)> | — |
 
 ## Open questions
 <None for a READY plan. Otherwise questions, affected units, and who can resolve
-them; STATE.md must mark readiness BLOCKED. Do not apply unapproved defaults.>
+them; STATE.md must mark readiness BLOCKED. Do not apply unapproved defaults.
+Under full autonomy questions become `autonomous` decisions above, never open.>
 
 ## Architecture
 <Data flow, ownership, key types, mechanisms; enough to route to detailed phases.>
@@ -77,7 +78,8 @@ entirely internal, established work. Follow the skill's research.md protocol.>
 
 <Network authorization: <environment or user answer, date, scope; or none>.
 Required UNVERIFIED claims prevent READY and dependent dispatch unless the user
-accepted them (ACCEPTED: who, when, risk, guarding test). Optional open
+accepted them (ACCEPTED: who, when, risk, guarding test), or under full
+autonomy agent-1 did (`ACCEPTED (autonomous)`, same fields). Optional open
 questions may be excluded only when no requirement/chosen design depends on them.
 Retain superseded evidence; update local phase conclusions when decisions change.>
 
@@ -207,7 +209,7 @@ Plan <NNN> rev <n> · repo <absolute path> · baseline <commit> · updated <date
 
 ## 1. Now
 - Run: <mode, unit or scope> · result <RUNNING|BLOCKED|COMPLETE|HANDOFF|PROPOSED> · style <delegated|handoff> · acting as <agent-N:name>
-- Settings: autonomy <true|false> (<explicit|explicit (prompt)|scope|plan>) · WIP <on|off> (<source>) · deadline <dd-mm-yyyy_hh_mm|none>
+- Settings: autonomy <true|false> (<explicit|explicit (prompt)|scope|plan|default>) · WIP <on|off> (<source>) · deadline <dd-mm-yyyy_hh_mm|none>
 - Stop latch: <none | HANDOFF user|deadline <time>>
 - Scope: <plan|phase|sub-phase|report selector, or none> · <NOT_STARTED|RUNNING|BLOCKED|COMPLETE> · overrides <values|none>
 - Unit: <sub-phase|phase-close|plan-close|task|bug|verify|correction> <ID>/<attempt> · <OPEN|none> · step <S<n>|review|commit> · assigned <agent-N> → actual <agent-N:name>
@@ -221,7 +223,7 @@ Plan <NNN> rev <n> · repo <absolute path> · baseline <commit> · updated <date
 
 ## 3. Settings, roster, gates
 - Roster: agent-1:<name> (supervisor), agent-2:<name>, …
-- Plan defaults: autonomy <false|true> · WIP <off|on> · executor power <low|medium|high> — set by Plan <date>
+- Plan defaults: autonomy <true|false> · WIP <on|off> · executor power <low|medium|high> — set by Plan <date> (unless explicit: autonomy true, WIP on, power low)
 - Setup: <versions, services, credentials, cwd, ports, cleanup>
 - Supervisor access: <dispatch method or session-handoff procedure>
 
@@ -317,11 +319,18 @@ session with the skill does not read it. Fill in the plan ID.
    implementer.
 5. Autonomy loop: continue to the next eligible unit in the same turn. Stop
    only at: scope complete; with autonomy false, after a phase closure P<N>
-   (Task/Bug: at the approval gate); a real blocker (BLOCKED, with question and
-   owner); a user stop, handoff, or deadline; the host ending the session.
-   Never stop for a closed sub-phase, a commit, context size, a substitutable
-   agent, or to report progress; never ask the user to type resume inside the
-   scope. Permission modes never change the scope or the stop latch.
+   (Task/Bug: at the approval gate); a real blocker needing unavailable
+   capability or authority (BLOCKED, with question and owner); a safety stop
+   (a possibly live writer, unowned changes a commit would capture); a user
+   stop, handoff, or deadline; the host ending the session. Never stop for a
+   closed sub-phase, a commit, context size, a substitutable agent, or to
+   report progress; never ask the user to type resume inside the scope.
+   With autonomy true never ask the user anything: agent-1 weighs the options
+   against the goal, picks the one it recommends, and records it (`D<n>`
+   `autonomous`, or history.md notes) with alternatives, rationale, risk, and
+   reversal; never as a way to push, deploy, use unauthorized network,
+   credentials, upgrade dependencies, destroy data, or weaken tests. Permission
+   modes never change the scope or the stop latch.
 6. Roster: run units assigned to your position or a higher-numbered one;
    record substitutions. Reviews and plan revisions are agent-1's; a model
    outside the roster coordinates but implements nothing.
@@ -356,9 +365,14 @@ session with the skill does not read it. Fill in the plan ID.
    what pending work needs; §11 expands only the open phase and collapses it to
    one row at P<N> DONE. Detail goes to history.md first. This file belongs
    to `Format: pev-state 2`; never write a STATE.md of a newer format.
-10. Handoff (`handoff`, or a `--deadline` reached): set §1 `Stop latch: HANDOFF
+10. Handoff (`handoff`, or a `--deadline`): always honored, whatever the
+    autonomy. A deadline is binding: the report is written by that time; keep
+    a reserve of at least 10 minutes, start nothing that would cross the cutoff
+    (deadline minus reserve), bound long commands with `timeout`. At the cutoff
+    or on `handoff`, set §1 `Stop latch: HANDOFF
     <trigger> <time>` and start nothing new; close the OPEN unit only if it takes
-    about 10 minutes, else stop at a step boundary; save §6 with commands not
+    about 10 minutes and still leaves time for the handoff before the
+    deadline, else stop at a step boundary; save §6 with commands not
     run; result HANDOFF; release ownership. Code work: one local handoff commit
     even with commits disabled — owned changes of the OPEN or pending unit and
     every §4 `uncommitted` unit (one patch per unit), STATE.md, history.md;
@@ -372,7 +386,9 @@ session with the skill does not read it. Fill in the plan ID.
     cause) before code. With autonomy false stop once, entry PROPOSED, until a
     user reply or `resume <plan> <entry-id>` approves it.
 12. Run end only: release ownership, then end the report with
-    `Next` — Continue: one exact `/plan-execute-verify` command; Stop:
+    `Next` — Mode: the run's mode and every effective setting with its source
+    (autonomy, WIP, executor power, deadline, roster, style); Continue: one
+    exact `/plan-execute-verify` command and the settings it runs with; Stop:
     `/plan-execute-verify handoff` when uncommitted work or held ownership
     remain, else nothing to save. Suggest both; never run them.
 ````

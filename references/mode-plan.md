@@ -3,6 +3,12 @@
 The strong supervisor authors the plan. Planning writes no production code and
 makes no commits. Runtime options, including full-autonomous, are presets for
 later execution; they do not convert a planning request into implementation.
+With the resolved autonomy `true` (explicit, a natural-language request such as
+"hai piena autonomia", or the default), planning never stops to ask: each
+question the user would otherwise answer is weighed in depth by agent-1 and
+decided with the option it recommends for reaching the goal, recorded as an
+autonomous decision (execution-contract §4). The run stops at the READY plan.
+With `false`, ask as this manual says.
 
 Start with this manual and the "Plan readiness" section of quality-checklist.md.
 Read agent-roster.md when assigning workers, research.md at B2 only for material
@@ -27,7 +33,8 @@ cannot supply it, preserve that limitation rather than promising automatic
 review.
 
 Separate questions requiring the user's product decision from technical choices
-the strong supervisor is authorized to make.
+the strong supervisor is authorized to make. With autonomy `true`, agent-1
+decides the former as well (step C).
 
 ## B1 — Repository recon
 
@@ -58,11 +65,14 @@ pass.
 Record R<n> evidence in overview.md: question, source/version/dates, supported
 fact, separately labelled inference/local result, and decision impact. The
 strong planner checks critical passages directly. Ask before using the network
-unless the environment already authorizes it (research.md). Preserve unresolved
-required questions as UNVERIFIED with scoped blockers; no executable READY plan
-depends on them unless the user accepts the assumption as a recorded risk
-(ACCEPTED). For entirely internal work with no external unknown, record
-justified N/A.
+unless the environment already authorizes it (research.md); with autonomy
+`true`, never ask: use only authorized access, else local primary sources, and
+disclose the limitation. Preserve unresolved required questions as UNVERIFIED
+with scoped blockers; no executable READY plan depends on them unless the user
+accepts the assumption as a recorded risk (ACCEPTED), or, with autonomy `true`,
+agent-1 accepts it (`ACCEPTED (autonomous)`) or chooses a design that does not
+depend on it (research.md). For entirely internal work with no external
+unknown, record justified N/A.
 
 When researching, use its stopping and privacy rules. Initialize the minimal DRAFT state
 described there before research starts. Batch settled evidence into one update;
@@ -83,15 +93,27 @@ the later local phase contracts/tests. Record relevant alternatives rejected and
 why; do not hand a worker only links or an unresolved instruction to choose the
 best approach.
 
-Ask the user only about unresolved requirements, externally visible tradeoffs,
-scope, or authority that existing instructions do not settle. Present relevant
-options together with a recommendation and affected phases. Existing user
-answers and delegated technical judgment remain valid; do not re-ask them.
+With autonomy `false`, ask the user only about unresolved requirements,
+externally visible tradeoffs, scope, or authority that existing instructions do
+not settle. Present relevant options together with a recommendation and
+affected phases. Existing user answers and delegated technical judgment remain
+valid; do not re-ask them.
+
+With autonomy `true`, ask nothing. For each such question agent-1 lists the
+real options, works out each one's consequences for the goal, the reference
+scenario, the requirements, compatibility, risk, cost, and reversibility,
+checks the repository and research evidence they depend on, and picks the
+option it recommends for reaching the goal correctly. It records a decision
+`D<n>` marked `autonomous` with the alternatives, rationale, risk, guard (the
+test or check that would expose a wrong choice), and how to reverse it, and
+designs the dependent units on it. Authority that full autonomy excludes
+(execution-contract §4) is never assumed: choose an option that does not need
+it, or keep its units BLOCKED.
 
 For technical choices within that authority, choose and record a decision.
-If no material question remains, proceed directly. Deferred product questions
-have explicit dependent units marked BLOCKED; never both assume an answer and
-claim those units executable. A material question blocks dependent design,
+If no material question remains, proceed directly. With `false`, deferred
+product questions have explicit dependent units marked BLOCKED; never both
+assume an answer and claim those units executable. A material question blocks dependent design,
 not independent evidence gathering or already settled portions of the draft.
 Do not deliver that draft as an executable plan: READY requires every planned
 unit's design and acceptance questions resolved and its contract validated.
@@ -205,7 +227,8 @@ creation/registration instructions, not treated as missing anchors.
 Initialize at planning time (output-template.md §3–§5):
 - PROTOCOL.md: the static cold-start protocol for a session without this skill.
 - STATE.md, lean: plan identity/revision, immutable baseline, roster, and
-  settings; saved execution scope none (NOT_STARTED) until Execute selects one;
+  settings (§3 plan defaults: the explicit values, else `full-autonomous:true`
+  and WIP on, invocation.md); saved execution scope none (NOT_STARTED) until Execute selects one;
   current unit none; next action at a real first eligible sub-phase;
   baseline/unit/phase/final gate registry; one board row per phase plus PLAN,
   with the first phase expanded into its sub-phases; other sections `none`,
@@ -233,7 +256,8 @@ Validate existing gate commands where practical. Gates that depend on future
 artifacts specify activation units; they cannot be reported as already passing.
 Explain remaining unverified prerequisites.
 
-Return the folder path and a concise phase/assignment/configuration summary. If
+Return the folder path and a concise phase/assignment/configuration summary,
+listing every autonomous decision with its chosen option and risk. If
 the plan folder is untracked or uncommitted, say so (`git clean` or a branch
 switch can lose it) and suggest the exact commit command, such as `git add
 docs/plans/<id> && git commit -m "plan(<id>): add plan <id> — <feature>"`; never run it. End

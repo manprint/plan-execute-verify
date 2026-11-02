@@ -25,7 +25,8 @@ Use execution-contract.md for ownership, settings, recovery, reviews, and commit
   with reason; or 000_adhoc>
 - Plan impact: <affected decisions/units, or n/a — no plan>
 - Related findings: <IDs or none>
-- Settings: full-autonomous:<true|false>; WIP commits:<on|off>; roster: <saved
+- Settings: full-autonomous:<true|false> (<explicit|explicit (prompt)|plan|default>);
+  WIP commits:<on|off> (<source>); roster: <saved
   or invocation prefix>; executor power: <attached plan's level, or low>;
   deadline: <dd-mm-yyyy_hh_mm, or none> — this
   invocation only; never written to a plan's §3
@@ -33,6 +34,8 @@ Use execution-contract.md for ownership, settings, recovery, reviews, and commit
 - Approval: mini-plan <written|validated> by agent-1:<name>, or self-review;
   user <approved at time | not required: full-autonomous:true | pending:
   PROPOSED | rejected: WITHDRAWN, reason>; proposal snapshot tree <tree ID>
+- Autonomous decisions: <none | per decision: question, options weighed,
+  chosen option, rationale, risk, reversal (execution-contract §4)>
 - Baseline / branch: <starting HEAD, working-tree snapshot tree, branch,
   pre-existing changes to preserve>
 - Assignment/reviewer: <assigned → actual worker, required supervisor;
@@ -43,7 +46,8 @@ Use execution-contract.md for ownership, settings, recovery, reviews, and commit
 - Research: <applicable plan R IDs, or in 000_adhoc the question, source/version/
   dates, supported fact, labelled inference/local result and decision impact;
   justified N/A when not needed. Required UNVERIFIED claims block implementation
-  unless the user ACCEPTED them with risk and guard.>
+  unless the user ACCEPTED them with risk and guard, or, under full autonomy,
+  agent-1 did (`ACCEPTED (autonomous)`).>
 - Steps:
   1. S1 — <action>; expected <postcondition>.
   2. S2 — <action>; expected <postcondition>.

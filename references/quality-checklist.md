@@ -27,15 +27,20 @@ An unresolved required item prevents READY or implementation DONE.
       no code/state/roster/index changes, unit claims, commits, or automatic next command.
 - [ ] Snapshot has date/baseline, source locators, coverage limits, and a concise
       next action; it is not a second live progress board or a substitute for Verify.
-- [ ] Report ends with the Next block (next-step.md): one exact Continue
-      command, or why nothing follows, and the Stop option derived from state;
+- [ ] Report ends with the Next block (next-step.md): the Mode line with the
+      run's mode and every effective setting with its source, one exact
+      Continue command with the settings it runs with, or why nothing follows,
+      and the Stop option derived from state;
       nothing suggested was run.
 
 ## Plan readiness — strong supervisor
 
 - [ ] Goal, exclusions, requirements, and reference scenario are concrete.
-- [ ] Product ambiguities are resolved using user decisions; authorized technical
-      choices are decided by the supervisor, with no unresolved alternatives.
+- [ ] Product ambiguities are resolved using user decisions, or with autonomy
+      true by agent-1's autonomous decisions recorded as D<n> `autonomous`
+      (options weighed, rationale, risk, guard, reversal) without asking;
+      authorized technical choices are decided by the supervisor, with no
+      unresolved alternatives.
 - [ ] Every phase/sub-phase has stable IDs, exact dependencies, and artifacts.
 - [ ] Phases have observable integration outcomes; adjacent work sharing a
       contract/checks is grouped. Each split has a dependency, review, or
@@ -64,9 +69,11 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Research records include question, source/provenance, version/environment,
       dates, decision impact, and separately labelled facts/inferences/local
       results. Critical sources were checked by the supervisor; network use was
-      authorized by the environment or a recorded user answer; required
-      UNVERIFIED claims block readiness unless the user ACCEPTED them with risk
-      and guard. Browsing limitations are not disguised as confirmation.
+      authorized by the environment or a recorded user answer (never asked, nor
+      assumed, under autonomy true); required UNVERIFIED claims block readiness
+      unless the user ACCEPTED them with risk and guard, or under autonomy true
+      agent-1 recorded `ACCEPTED (autonomous)` with risk and guard. Browsing
+      limitations are not disguised as confirmation.
 - [ ] Research conclusions are translated into local contracts, steps and test
       oracles; no worker must infer the design from a reading list. Material
       alternatives/contradictions are resolved; no aimless source accumulation.
@@ -87,7 +94,8 @@ An unresolved required item prevents READY or implementation DONE.
       history.md exist.
 - [ ] Every dependency resolves; ordering has no cycle; next action names an
       eligible unit. SKIPPED does not silently satisfy a prerequisite.
-- [ ] Full-autonomous and WIP behavior are resolved independently and explained.
+- [ ] Full-autonomous and WIP behavior are resolved independently and explained;
+      §3 records the explicit values, else `full-autonomous:true` and WIP on.
 - [ ] Both handoff and delegated workers can determine who owns state/commits.
 - [ ] Cold-reading validation of the most complex unit found no missing decision.
       If evaluated by another agent, retain its actual result, not assumed success.
@@ -95,8 +103,10 @@ An unresolved required item prevents READY or implementation DONE.
       every unit; no omitted detail forces the worker to design an acceptance oracle.
 - [ ] Plan files contain no unfilled placeholders or contradictory instructions.
       Readiness is READY only after these checks; otherwise report the blockers.
-- [ ] Report ends with the Next block (next-step.md): one exact Continue
-      command, or why nothing follows, and the Stop option derived from state;
+- [ ] Report ends with the Next block (next-step.md): the Mode line with the
+      run's mode and every effective setting with its source, one exact
+      Continue command with the settings it runs with, or why nothing follows,
+      and the Stop option derived from state;
       nothing suggested was run.
 
 ## Coherence — execute, resume, task, bug, corrections
@@ -105,9 +115,10 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Resume followed the recovery order, started no TODO unit named by ID and
       no work outside the saved scope, kept scope/§3/roster unchanged and each
       resumed unit's recorded settings, and recorded results under that unit's
-      mode. Task/Bug/Verify left the saved execution scope, §3 settings, and
-      roster unchanged; their explicit options were recorded with the invocation
-      only.
+      mode; with full autonomy it continued after a named unit, an interrupted
+      Verify correction pass, and every resumable 000_adhoc entry. Task/Bug/Verify
+      left the saved execution scope, §3 settings, and roster unchanged; their
+      explicit options were recorded with the invocation only.
 - [ ] Task/bug attached to a named or clearly affected plan, otherwise 000_adhoc;
       the attachment reason is recorded.
 - [ ] Task/bug mini-plan written or validated by agent-1 (a Bug's with its root
@@ -166,6 +177,13 @@ An unresolved required item prevents READY or implementation DONE.
       additional stop is after each phase closure (Task/Bug: once, for approval
       of the validated mini-plan). A natural-language autonomy request was
       honored as explicit.
+- [ ] With full autonomy no question was asked: each user choice or decision
+      became an autonomous decision by agent-1, recorded before acting
+      (execution-contract §4) and listed in the final report; none granted a
+      push, deployment, unauthorized network access, credentials, external
+      mutation, dependency upgrade, destructive change, weakened test or gate,
+      or ACCEPTED finding. Only blockers, safety stops, the stop latch, or the
+      host ended the run early.
 - [ ] Commit subjects follow the mandatory table (execution-contract §6): plan,
       phase, and unit numbers visible; one `phase(<plan>/P<N>)` commit per
       closed phase and one `plan(<plan>): PLAN … COMPLETE` commit for the
@@ -182,12 +200,13 @@ An unresolved required item prevents READY or implementation DONE.
       settings; no fake STATE.md/phases created.
 - [ ] Handoff request or deadline (mode-handoff.md): stop latch set; nothing
       new started; the OPEN unit closed only if it fit about 10 minutes and no
-      unit opened after it; §6 checkpoint, HANDOFF result, and released
+      unit opened after it; under a deadline, H3–H6 with the report finished by
+      it, with every check, unit, and bounded command kept before the cutoff; §6 checkpoint, HANDOFF result, and released
       ownership recorded; no tool call after the handoff report. Code work sits in one handoff
       commit, never amended, holding the OPEN or pending-closure unit and every
       unit recorded uncommitted, staged one patch per unit without changes made
       between units; those units now reference handoff:<id>:<attempt> with their
-      trees, restored on a failed commit. Plan and Verify
+      trees, restored on a failed commit. Plan and an audit
       stayed uncommitted with a warning. The deadline was recorded for this run
       only, not carried into the exact resume command that was reported.
 - [ ] The run released the ownership it claimed, with time and reason
@@ -195,8 +214,10 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Final report distinguishes completed, skipped, blocked, and unverified
       work, and warns when changes or plan records remain uncommitted, with a
       suggested commit command.
-- [ ] Report ends with the Next block (next-step.md): one exact Continue
-      command, or why nothing follows, and the Stop option derived from state;
+- [ ] Report ends with the Next block (next-step.md): the Mode line with the
+      run's mode and every effective setting with its source, one exact
+      Continue command with the settings it runs with, or why nothing follows,
+      and the Stop option derived from state;
       nothing suggested was run.
 
 ## Verify
@@ -229,9 +250,15 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] Verdict follows the explicit FAIL/INCOMPLETE/PASS WITH FINDINGS/PASS rules.
 - [ ] Report and register saved with stable IDs; historical verdict preserved.
 - [ ] State corrected and audit closed without certifying failed implementation.
-- [ ] No production changes or automatic application of corrections.
+- [ ] The audit made no production changes. With false no correction followed;
+      with full autonomy V6 applied the READY corrections as Execute verify
+      (focused validation, reopened phase closures, commits) without a new
+      audit, kept BLOCKED corrections and user-only ACCEPTED findings OPEN, and
+      reported them.
 - [ ] Autonomous audit commit contains only owned audit/state artifacts; WIP alone
       does not authorize an audit commit.
-- [ ] Report ends with the Next block (next-step.md): one exact Continue
-      command, or why nothing follows, and the Stop option derived from state;
+- [ ] Report ends with the Next block (next-step.md): the Mode line with the
+      run's mode and every effective setting with its source, one exact
+      Continue command with the settings it runs with, or why nothing follows,
+      and the Stop option derived from state;
       nothing suggested was run.

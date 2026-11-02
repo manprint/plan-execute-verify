@@ -7,13 +7,16 @@ Thus `task add a --json flag` keeps `--json` in the description. When a
 description contains a token shaped like a leading option of this table or an
 agent prefix, such as a trailing `--deadline=…`, ask before starting whether it
 was meant as an option, which belongs before the mode. Only `handoff` accepts a
-deadline after it.
+deadline after it. When the autonomy the command resolves to is `true`, do not
+ask: a valid trailing `--deadline=…` is taken as the deadline, since stopping
+earlier never loses work; any other such token stays literal text; the report
+states the reading (execution-contract §4).
 
 | Leading option | Meaning | Default |
 |----------------|---------|---------|
-| `full-autonomous:true` | Continue selected scope; commit verified units locally | `false` |
-| `full-autonomous:false` | Continue through the current phase; stop after its closure (Task and Bug: once, for approval of the mini-plan); no completion commits by this option | — |
-| `--wip-commit` | Commit progress: completed code units, phase closures, and a rolling WIP commit at each checkpoint | off |
+| `full-autonomous:true` | Continue selected scope without stopping or asking (user decisions become autonomous decisions); commit verified units locally | `true` where no value is recorded |
+| `full-autonomous:false` | Continue through the current phase; stop after its closure (Task and Bug: once, for approval of the mini-plan); ask the user where a manual says so; no completion commits by this option | — |
+| `--wip-commit` | Commit progress: completed code units, phase closures, and a rolling WIP commit at each checkpoint | on where no value is recorded |
 | `--no-wip-commit` | Disable WIP behavior; autonomous commits still apply | — |
 | `executor-power:<level>` | Plan only: `low`, `medium`, or `high` executor capability; sets plan granularity, detail, and executor latitude | `low` |
 | `--deadline=dd-mm-yyyy_hh_mm` | Every mode: hand off gracefully by this local time ([mode-handoff](mode-handoff.md)); this invocation only | none |
@@ -36,8 +39,11 @@ it ignores, and treats an invalid deadline as an immediate handoff
 (mode-handoff.md H1). A rejection still ends with the Next block (next-step.md),
 suggesting the corrected command when the fix is unambiguous. Each setting
 resolves separately: explicit invocation > saved execution scope override (only
-while continuing that scope) > selected plan's STATE.md §3 > default. Plan
-stores explicit options in §3 as plan defaults. Execute and Execute verify store
+while continuing that scope) > selected plan's STATE.md §3 > default
+(`full-autonomous:true`, WIP on). Plan stores the resolved values in §3 as
+plan defaults, so every new plan records `true` and WIP on unless the
+invocation says otherwise; a value already recorded is never rewritten to the
+new default. Execute and Execute verify store
 them with the saved execution scope they set (execution-contract §1): they last
 through resume and handoff of that scope, lapse when a different selector
 replaces it, and never change §3. Task, Bug, Verify, and Resume use explicit
@@ -64,8 +70,8 @@ recalibrates the remaining units. Task and Bug follow the attached plan's level,
 zone of the machine running the agent. It belongs to its invocation only: it is
 recorded with that invocation, never saved as a scope override or in §3, and
 never inherited by a later Resume. A past deadline means an immediate handoff.
-The stop is best effort (mode-handoff.md), so choose a time before the real
-deadline.
+The deadline is binding under every autonomy setting and permission mode: the
+run finishes its handoff, report included, by that time (mode-handoff.md H2).
 
 Agent prefix is `agent:<name>` or a contiguous comma-separated roster
 `agent-1:<name>,agent-2:<name>,...`. Names are nonempty tokens without spaces or
@@ -89,7 +95,14 @@ remainder whose first word asks to continue recorded work (`continue`,
 `finish`, or the same in the user's language) is never a new plan: followed
 only by an existing plan or unit selector, such as `continue 003`, treat it as
 `resume` with that target; otherwise ask whether a resume or a new plan is
-meant.
+meant, or, when the resolved autonomy is `true`, decide (execution-contract §4):
+a resume when exactly one resumable target matches, else a new plan.
+
+Wherever this file says a user choice is required (several active plans,
+candidate plans, resume targets, or a scope replacement), that applies with
+`full-autonomous:false`; with `true` it is an autonomous decision
+(execution-contract §4). Handoff never chooses among targets: it hands off
+each one (mode-handoff.md H1).
 
 Plan selectors are a three-digit number, feature name, or folder path. Execute
 (not Execute verify, which takes only a report ID) and Verify also accept
@@ -135,8 +148,8 @@ that invocation only.
 given after it or as a leading option; it ignores other options, an agent
 prefix, or a selector, and says so. Sent during a run it applies to that run;
 sent to an idle session it applies to the plan or ledger that session last
-wrote, or the unique one with unfinished or uncommitted work that no other live
-session owns, and several candidates require a choice.
+wrote, else every one with unfinished or uncommitted work that no other live
+session owns, each handed off in turn.
 
 A selector limits scope even under full autonomy. Only Execute and Execute
 verify set the saved execution scope; Task, Bug, and Verify run their own unit
@@ -144,7 +157,8 @@ without replacing it (execution-contract §1). Resume continues the saved
 execution scope. A different explicit Execute selector replaces it and its
 overrides; the same selector on a RUNNING or BLOCKED scope continues it. When an
 explicit Execute or Execute verify selector would replace a RUNNING or BLOCKED
-saved execution scope with a different one, ask the user before replacing it.
+saved execution scope with a different one, ask the user before replacing it
+(with `true`, replace it as recorded in execution-contract §1).
 Completing one selected sub-phase does not start later sub-phases outside scope.
 A sub-phase scope ends at that sub-phase's closure and never includes its phase
 closure P<N>; P<N> runs under a phase or plan scope, for example
