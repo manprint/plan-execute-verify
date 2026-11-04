@@ -14,4 +14,5 @@ Markdown-only Claude skill. No build/tests; validation = read-through + consiste
 - STATE.md section numbers (§1–§12) are cited across files: never renumber.
 - A rule change touches: contract/mode manual, `output-template.md` PROTOCOL, `quality-checklist.md`, both READMEs.
 - Commit subjects for generated plans are fixed in execution-contract §6.
+- Handoff/deadline semantics: mode-handoff H1–H2. A session awaiting a worker is a run in progress, never idle; a deadline never stops work before its cutoff.
 - Changing STATE.md structure: bump `Format: pev-state <n>` in output-template.md and add one row to the migrations table (execution-contract §8); never edit earlier rows.

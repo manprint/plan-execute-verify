@@ -7,19 +7,22 @@ deadline: bound the work in flight, leave state that a later session can resume,
 make one handoff commit for code work, report the exact resume command, and
 stop. A handoff is terminal for the run: it overrides `full-autonomous:true`,
 the saved scope, and every permission mode (bypass, yolo, auto-approve), and it
-sets the stop latch (execution-contract §3). The leading option `--deadline=dd-mm-yyyy_hh_mm` on any other mode
+sets the stop latch (execution-contract §3): `handoff` alone at once,
+`handoff --deadline=…` only at the cutoff before that deadline (H2). The leading option `--deadline=dd-mm-yyyy_hh_mm` on any other mode
 schedules the same procedure from the start. Do not confuse this mode with the
 handoff execution style or a BLOCKED handoff (agent-roster.md): those describe
 how sessions pass work on, not a user stop.
 
 A handoff is always honored, under every autonomy setting, saved scope, and
-permission mode, and a deadline is binding: by the deadline time the work in
-flight is bounded, state saved, the handoff commit made, and the report
-written (H2). Because a request reaches the agent only between tool calls and
-the agent cannot interrupt its own running tool call except by stopping a
-process it started, it keeps every call short enough to meet the deadline. An
-idle session never wakes up by itself, so a deadline sent to an idle session
-means an immediate handoff.
+permission mode, and a deadline is binding both ways: by the deadline time the
+work in flight is bounded, state saved, the handoff commit made, and the report
+written (H2), and before its cutoff the run keeps working, so a deadline never
+stops it early, not even while it waits for a worker. Because a request reaches
+the agent only between tool calls and the agent cannot interrupt its own running
+tool call except by stopping a process it started, it keeps every call short
+enough to meet the deadline. Only a session with no run in progress (H1) hands
+off at once under a deadline: it has no work to continue, and a handoff never
+starts work.
 
 Read execution-contract.md §3 and §6, then the manual of the interrupted mode
 only for its checkpoint fields.
@@ -44,11 +47,20 @@ only for its checkpoint fields.
   Without Python, compare with `date +%d-%m-%Y_%H_%M` by hand. A deadline
   already past means an immediate handoff. As a leading option of another mode,
   an invalid value is an error before work starts.
-- Sent during a run: the target is the current invocation's plan or ledger and
+- Run in progress: this session's current invocation has not yet ended with its
+  final report (the Next block or a handoff report). That includes a session
+  whose host shows the turn ended while a worker, background command, or tool
+  call it started has not sent its completion notice: it is waiting, not idle.
+  An idle session has no run in progress; a RUNNING scope left in STATE.md by
+  an ended run, or a deadline wake-up still armed, does not make one.
+- Sent during a run in progress: the target is the current invocation's plan or ledger and
   unit. `handoff` alone starts the procedure now, sets the stop latch at once,
   and cancels any earlier deadline. `handoff --deadline=…` lets the run continue, replacing any earlier
   deadline, and starts the procedure at the cutoff before that deadline, so it
-  ends by the deadline (H2).
+  ends by the deadline (H2). Before the cutoff it sets no latch, stops or
+  recalls no worker, and writes no handoff report: it records the deadline,
+  prints one line with the deadline and cutoff, and continues the work or the
+  wait (H2).
 - Sent to an idle session: the target is the plan or ledger whose state this
   session last wrote, else every plan or ledger with OPEN work, a pending
   closure, or units recorded `uncommitted`, handed off one after another, each
@@ -56,11 +68,15 @@ only for its checkpoint fields.
   loses work. Work owned by another live session is never a target: report it as an
   ownership conflict (execution-contract §2) and leave it to that session. With
   no target, report that nothing needs a handoff, release ownership this session
-  still holds, end with the Next block (next-step.md), and stop. An idle session
-  has nothing to schedule, so a deadline there means an immediate handoff.
-- Record the trigger (`user` or `deadline`), the request time, and the deadline
-  in the invocation record (STATE.md §1, the ledger entry, or the audit report).
-  The deadline belongs to this run only; it is never a scope override, never
+  still holds, end with the Next block (next-step.md), and stop. With no run in
+  progress there is no work to continue until the deadline, and a handoff never
+  starts work, so a deadline there means an immediate handoff; the report says
+  so.
+- Record the deadline and the request time as soon as they arrive in the
+  invocation record (STATE.md §1 Settings `deadline`, the ledger entry, or the
+  audit report), so they survive a context reset or compaction while the run
+  works or waits; record the trigger (`user` or `deadline`) when the procedure
+  starts. The deadline belongs to this run only; it is never a scope override, never
   written to §3, and never carried into the resume command.
 
 ## H2 — Work under a deadline
@@ -80,11 +96,26 @@ handoff. Plan backwards from it:
   the minutes left before the cutoff; without `timeout`, do not start a command
   that might cross it. Give a delegated worker the cutoff as its return time,
   and stop it through the host when it passes.
+- Whenever the run waits for a worker or background command under a deadline,
+  also one received during that wait: leave it running, send the worker the
+  cutoff as its new return time when the host can message it, and arm a
+  wake-up at the cutoff with whatever the host provides (a scheduled wake-up, a
+  monitor, or a background timer command whose exit notifies the session), so
+  the clock is checked at the cutoff even if no notice arrives earlier. Without
+  such a mechanism the worker's return is the next check, and the report says
+  the cutoff could only be checked then. Arm one wake-up per deadline: a
+  replacing deadline, `handoff` alone, and every run end cancel it.
+- A completion notice that arrives before the cutoff is the run's own work, not
+  host automation: reconcile the result and continue the autonomy loop under
+  the deadline (execution-contract §3). A fired wake-up is a clock check: at
+  the cutoff start H3, before it keep waiting. A wake-up that fires after the
+  run ended or the latch was set gets one line and nothing else.
 - At the cutoff, or when the next action no longer fits, start H3 with trigger
   `deadline`. A deadline received when its cutoff has already passed means an
   immediate handoff with the shortest H3: stop at the current step boundary.
 
-A scope that completes before the cutoff ends normally, without a handoff.
+A scope that completes before the cutoff ends normally, without a handoff, and
+cancels any wake-up it armed.
 
 ## H3 — Bound the work in flight
 
@@ -104,8 +135,8 @@ A scope that completes before the cutoff ends normally, without a handoff.
   awaited when it should return within that window; otherwise the coordinator
   stops it through the host when possible and reconciles its partial diff as
   OPEN work. No worker keeps running after the handoff.
-- Stop background services and temporary resources this run started, or record
-  them in the checkpoint with their cleanup action.
+- Stop background services, temporary resources, and any deadline wake-up this
+  run started, or record them in the checkpoint with their cleanup action.
 
 ## H4 — Leave resumable state
 
@@ -194,5 +225,6 @@ option; the deadline does not carry over. This command is the Continue line of
 the Next block (next-step.md), whose Stop line says only that the session can be
 closed now. Then stop: the report is the last output of the run and no tool
 call follows it, under every autonomy setting and permission mode. Later host
-automation (auto-continue, loops, hooks, a worker's completion notice) does not
+automation (auto-continue, loops, hooks, a worker's completion notice, a
+deadline wake-up) does not
 restart work; only a new explicit user invocation clears the latch.

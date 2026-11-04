@@ -122,7 +122,10 @@ Send the same facts that a cold handoff would need:
 - Resolved full-autonomous/WIP settings; which agent owns state and commits.
 - The plan's executor power and the latitude it grants (execution-contract §4);
   at `high`, the return includes expanded steps and internal decisions.
-- Any deadline of this invocation; the worker returns before it.
+- Any deadline of this invocation, as its cutoff; the worker returns before it.
+  A deadline that arrives after dispatch is sent to the running worker as its
+  new return time when the host can message it; the worker is never stopped
+  for it before the cutoff (mode-handoff.md H2).
 - Explicit role: worker, reviewer, or coordinator; supervisor identity.
 - Return format: completed steps, actual paths/diff, test evidence and discovery,
   deviations, unresolved decisions, and the next action. Report what actually ran.

@@ -368,7 +368,13 @@ session with the skill does not read it. Fill in the plan ID.
 10. Handoff (`handoff`, or a `--deadline`): always honored, whatever the
     autonomy. A deadline is binding: the report is written by that time; keep
     a reserve of at least 10 minutes, start nothing that would cross the cutoff
-    (deadline minus reserve), bound long commands with `timeout`. At the cutoff
+    (deadline minus reserve), bound long commands with `timeout`. Before the
+    cutoff a deadline is no stop, also when it arrives while awaiting a worker:
+    record the §1 deadline, keep the worker running, send it the cutoff, arm a
+    host wake-up at the cutoff, and continue; a completion notice before the
+    cutoff continues the loop. Only a session with no run in progress (its
+    invocation already ended with its final report, nothing it started still
+    pending) hands off at once. At the cutoff
     or on `handoff`, set §1 `Stop latch: HANDOFF
     <trigger> <time>` and start nothing new; close the OPEN unit only if it takes
     about 10 minutes and still leaves time for the handoff before the
@@ -385,7 +391,7 @@ session with the skill does not read it. Fill in the plan ID.
 11. Task/Bug: agent-1 writes or validates the mini-plan (a Bug's with root
     cause) before code. With autonomy false stop once, entry PROPOSED, until a
     user reply or `resume <plan> <entry-id>` approves it.
-12. Run end only: release ownership, then end the report with
+12. Run end only: cancel any deadline wake-up, release ownership, then end the report with
     `Next` — Mode: the run's mode and every effective setting with its source
     (autonomy, WIP, executor power, deadline, roster, style); Continue: one
     exact `/plan-execute-verify` command and the settings it runs with; Stop:

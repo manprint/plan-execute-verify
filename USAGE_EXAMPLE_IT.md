@@ -146,7 +146,7 @@ Ogni cella riporta l'ID del caso e il suo effetto in poche parole.
 | 12 | `executor-power:high` | ON-12 rifiutato | PL-12 unità per risultato | EX-12 rifiutato | EV-12 rifiutato | TA-12 rifiutato | BU-12 rifiutato | VE-12 rifiutato | RE-12 rifiutato | HA-12 ignorata, stop subito |
 | 13 | `agent-1:opus,agent-2:sonnet,agent-3:haiku` | ON-13 questi ispettori | PL-13 elenco salvato | EX-13 sostituisce elenco | EV-13 sostituisce elenco | TA-13 solo questa run | BU-13 solo questa run | VE-13 audit e correzioni con questo elenco | RE-13 solo questa run | HA-13 ignorata, stop subito |
 | 14 | `agent:my-model` | ON-14 un solo modello | PL-14 un solo modello | EX-14 un solo modello | EV-14 un solo modello | TA-14 un solo modello | BU-14 un solo modello | VE-14 un solo modello | RE-14 un solo modello | HA-14 ignorata, stop subito |
-| 15 | `--deadline=31-10-2026_17_30` | ON-15 stop entro deadline | PL-15 bozza DRAFT salvata alla deadline | EX-15 handoff alla deadline, commit | EV-15 sostituisce lo scope, correzioni fino alla deadline, handoff | TA-15 chiude o handoff alla deadline | BU-15 chiude o handoff alla deadline | VE-15 audit chiuso, poi handoff alla deadline | RE-15 handoff alla deadline, commit | HA-15 handoff subito (sessione inattiva) |
+| 15 | `--deadline=31-10-2026_17_30` | ON-15 stop entro deadline | PL-15 bozza DRAFT salvata alla deadline | EX-15 handoff alla deadline, commit | EV-15 sostituisce lo scope, correzioni fino alla deadline, handoff | TA-15 chiude o handoff alla deadline | BU-15 chiude o handoff alla deadline | VE-15 audit chiuso, poi handoff alla deadline | RE-15 handoff alla deadline, commit | HA-15 continua fino al taglio, poi handoff; sessione inattiva: subito |
 
 ## Alla fine di ogni run
 
@@ -4101,8 +4101,9 @@ La deadline è vincolante con qualsiasi impostazione: l'agente calcola un orario
 di taglio (deadline meno una riserva di almeno 10 minuti), non avvia nulla che
 lo superi e chiude stato, commit e report entro la deadline. Lo stop non è più
 "al meglio delle possibilità": metti l'orario in cui devi davvero essere fermo e
-la riserva la tiene l'agente. Una sessione inattiva non si risveglia da sola,
-quindi lì la deadline significa handoff immediato.
+la riserva la tiene l'agente. Una sessione inattiva, senza run in corso, non ha
+lavoro da proseguire, quindi lì la deadline significa handoff immediato; una
+sessione che attende un subagente o un comando in background non è inattiva.
 
 Nei casi qui sotto la sessione è inattiva: il piano 003 non ha unità aperte né
 codice non committato (il suo scope resta RUNNING, prossima unità 2.1), mentre
@@ -4487,8 +4488,12 @@ commit solo se c'è codice non committato, report con
 
 **Cosa fa:** Le due forme sono equivalenti. Durante una run la lascerebbe
 continuare fino al taglio (17:30 meno la riserva di almeno 10 minuti) e poi
-farebbe handoff, report compreso, entro le 17:30. Qui la sessione è inattiva:
-nessuna run da lasciar continuare, quindi l'handoff è immediato.
+farebbe handoff, report compreso, entro le 17:30. Anche una sessione che attende
+un subagente o un comando in background ha una run in corso: il subagente non
+viene fermato, riceve il taglio come ora di ritorno se l'host lo permette,
+l'agente stampa una riga con deadline e taglio e la run continua fino al taglio.
+Qui la sessione è inattiva: nessuna run da lasciar continuare, quindi l'handoff
+è immediato.
 
 **Cosa aspettarsi:** Non c'è nulla da programmare: stop subito su B-A002, commit
 di handoff solo se c'è codice non committato, report con la deadline registrata

@@ -531,8 +531,12 @@ so, and an invalid deadline there means "now". This mode is unrelated to the
 successive-sessions execution style, which is also recorded as `handoff`.
 
 Sent during a run, `handoff` stops it now and cancels an earlier deadline, while
-`handoff --deadline=…` lets the run continue and replaces the earlier deadline.
-Sent to an idle session, it targets the plan or ledger that session last
+`handoff --deadline=…` lets the run continue and replaces the earlier deadline:
+until the cutoff the agent keeps working, never stops a running subagent, and
+writes no handoff report, only one line with the deadline and cutoff. A session
+waiting for a subagent or a background command still has a run in progress,
+even when the terminal shows it waiting. Sent to an idle session, one with no
+run in progress, it targets the plan or ledger that session last
 changed, or else every one with unfinished or uncommitted work that no other
 live session owns, handing them off one after another without asking.
 
@@ -571,10 +575,14 @@ at least 10 minutes (more when an open unit, a worker, or many units need it),
 and works only up to the cutoff, the deadline minus that reserve: it checks the
 clock before each unit, step, review, and command, starts nothing that would
 cross the cutoff, bounds every command that may run over a minute with
-`timeout`, and gives delegated workers the cutoff as their return time. At the
-cutoff it starts the handoff. Two limits remain: a message reaches the agent
-only between tool calls, and an idle session does not wake up by itself, so a
-deadline sent to an idle session means an immediate handoff.
+`timeout`, and gives delegated workers the cutoff as their return time, also a
+worker already running when the deadline arrives, when the host can message
+it. While it waits for a worker it arms a wake-up at the cutoff with what the
+host provides, so the clock is checked even if the worker is late; a worker
+finishing before the cutoff simply lets the run continue. At the cutoff it
+starts the handoff. Two limits remain: a message reaches the agent only between
+tool calls, and a session with no run in progress has no work to continue, so a
+deadline sent to it means an immediate handoff.
 
 ## After every run: Continue or Stop
 

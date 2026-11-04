@@ -146,8 +146,10 @@ that invocation only.
 
 `handoff [--deadline=dd-mm-yyyy_hh_mm]` (mode-handoff.md) uses only a deadline,
 given after it or as a leading option; it ignores other options, an agent
-prefix, or a selector, and says so. Sent during a run it applies to that run;
-sent to an idle session it applies to the plan or ledger that session last
+prefix, or a selector, and says so. Sent during a run in progress, including
+one waiting for a worker or background command, it applies to that run, which
+with a deadline continues until the cutoff; sent to an idle session (no run in
+progress, mode-handoff.md H1) it applies to the plan or ledger that session last
 wrote, else every one with unfinished or uncommitted work that no other live
 session owns, each handed off in turn.
 

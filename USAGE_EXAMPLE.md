@@ -142,7 +142,7 @@ Each cell gives the case ID and its effect in a few words.
 | 12 | `executor-power:high` | ON-12 rejected | PL-12 outcome units | EX-12 rejected | EV-12 rejected | TA-12 rejected | BU-12 rejected | VE-12 rejected | RE-12 rejected | HA-12 ignored, stop now |
 | 13 | `agent-1:opus,agent-2:sonnet,agent-3:haiku` | ON-13 these inspectors | PL-13 list saved | EX-13 saves list to plan, whole plan | EV-13 saves list to plan, corrections | TA-13 this run only | BU-13 this run only | VE-13 this run only | RE-13 this run only | HA-13 ignored, stop now |
 | 14 | `agent:my-model` | ON-14 one model | PL-14 one model | EX-14 one model, saved to plan, whole plan | EV-14 one model, saved to plan, corrections | TA-14 one model | BU-14 one model | VE-14 one model | RE-14 one model | HA-14 ignored, stop now |
-| 15 | `--deadline=31-10-2026_17_30` | ON-15 stops by deadline | PL-15 draft saved by deadline | EX-15 handoff by deadline | EV-15 handoff by deadline | TA-15 handoff by deadline | BU-15 handoff by deadline | VE-15 audit or corrections stop by deadline | RE-15 handoff by deadline | HA-15 stop by the deadline |
+| 15 | `--deadline=31-10-2026_17_30` | ON-15 stops by deadline | PL-15 draft saved by deadline | EX-15 handoff by deadline | EV-15 handoff by deadline | TA-15 handoff by deadline | BU-15 handoff by deadline | VE-15 audit or corrections stop by deadline | RE-15 handoff by deadline | HA-15 continues to the cutoff, then handoff; idle session: now |
 
 ## At the end of every run
 
@@ -3635,7 +3635,9 @@ need the machine free, for example 18:00 if you switch off at 18:00.
 **What to expect:** It starts nothing new and finishes the current unit only if
 that fits in about 10 minutes. It saves the state, makes one handoff commit for
 the code, shows the resume command, and stops. Sent during a run, it also cancels
-an earlier deadline. Sent to an idle session, it hands off each plan or ledger with unfinished
+an earlier deadline. A session waiting for a subagent or a background command
+still has a run in progress, so the run is stopped as above. Sent to an idle
+session, one with no run in progress, it hands off each plan or ledger with unfinished
 work that no other live session owns (here only B-A002), one after another,
 and never asks; work another live session owns is left to that session.
 
@@ -3993,8 +3995,11 @@ everything finished by 17:30. Both forms are the same.
 **What to expect:** It replaces any earlier deadline. The agent starts its stop at
 the cutoff, about ten minutes before 17:30 or earlier when a unit cannot finish,
 so the handoff commit and the report are done by 17:30. A past or invalid deadline
-means "stop now", and so does a deadline sent to an idle session, which never wakes
-up by itself.
+means "stop now", and so does a deadline sent to an idle session, which has no
+run to continue. A session waiting for a subagent or a background command is not
+idle: the subagent keeps running and gets the cutoff as its return time when the
+host allows it, the agent prints one line with the deadline and cutoff, and the
+run continues until the cutoff.
 
 **Settings for this run:**
 

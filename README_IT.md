@@ -577,7 +577,11 @@ stile di esecuzione a sessioni successive, che è anche registrato come
 
 Inviato durante una run, `handoff` la ferma subito e annulla una deadline
 precedente, mentre `handoff --deadline=…` lascia proseguire la run e sostituisce
-la deadline precedente. Inviato a una sessione inattiva, riguarda il piano o il
+la deadline precedente: fino al cutoff l'agente continua a lavorare, non ferma
+mai un subagente in esecuzione e non scrive alcun report di handoff, solo una
+riga con deadline e cutoff. Una sessione che attende un subagente o un comando
+in background ha ancora una run in corso, anche quando il terminale la mostra in
+attesa. Inviato a una sessione inattiva, cioè senza run in corso, riguarda il piano o il
 ledger che quella sessione ha modificato per ultimo, oppure ogni piano o
 ledger con lavoro non concluso o non committato che nessun'altra sessione attiva
 possiede, consegnandoli uno dopo l'altro senza chiedere.
@@ -620,10 +624,14 @@ aperta, un worker o molte unità), e lavora solo fino al cutoff, cioè la deadli
 meno quella riserva: controlla l'orologio prima di ogni unità, passo, revisione e
 comando, non avvia nulla che attraverserebbe il cutoff, limita con `timeout` ogni
 comando che potrebbe durare più di un minuto, e dà ai worker delegati il cutoff
-come ora di ritorno. Al cutoff avvia l'handoff. Restano due limiti: un messaggio
-raggiunge l'agente solo tra una chiamata di tool e l'altra, e una sessione
-inattiva non si risveglia da sola, quindi una deadline inviata a una sessione
-inattiva significa un handoff immediato.
+come ora di ritorno, anche a un worker già in esecuzione quando arriva la
+deadline, se l'host permette di inviargli messaggi. Mentre attende un worker
+arma un risveglio al cutoff con ciò che l'host offre, così l'orologio viene
+controllato anche se il worker è in ritardo; un worker che termina prima del
+cutoff lascia semplicemente proseguire la run. Al cutoff avvia l'handoff.
+Restano due limiti: un messaggio raggiunge l'agente solo tra una chiamata di
+tool e l'altra, e una sessione senza run in corso non ha lavoro da proseguire,
+quindi una deadline inviata a essa significa un handoff immediato.
 
 ## Dopo ogni run: Continua o Fermati
 

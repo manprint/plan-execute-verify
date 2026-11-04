@@ -63,7 +63,8 @@ into STATE.md.
   question, or a `resume` suggestion. A `handoff` request or a `--deadline`
   stops any run gracefully, with one handoff commit for code work
   ([mode-handoff](references/mode-handoff.md)); it is always honored, a
-  deadline is binding (everything, report included, finished by that time), it
+  deadline is binding (everything, report included, finished by that time, and
+  no stop before its cutoff, not even while a worker runs), it
   sets a stop latch that overrides autonomy and permission modes, and no tool
   call follows its report.
   Preserve the saved execution

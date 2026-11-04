@@ -198,6 +198,13 @@ An unresolved required item prevents READY or implementation DONE.
       PLAN run.
 - [ ] In 000_adhoc, the ledger itself holds the durable mini-plan/checkpoint and
       settings; no fake STATE.md/phases created.
+- [ ] `handoff --deadline` before its cutoff (mode-handoff.md H1–H2), also
+      received while awaiting a worker: no latch, no stopped or recalled
+      worker, no handoff report; deadline recorded in §1 at receipt, cutoff
+      sent to the running worker when the host allows, wake-up armed at the
+      cutoff, completion notices before it continued the loop. A session
+      waiting for a worker was treated as a run in progress, never as idle;
+      one wake-up per deadline, cancelled at every run end.
 - [ ] Handoff request or deadline (mode-handoff.md): stop latch set; nothing
       new started; the OPEN unit closed only if it fit about 10 minutes and no
       unit opened after it; under a deadline, H3–H6 with the report finished by

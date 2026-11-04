@@ -220,15 +220,19 @@ reset or compaction, never from memory or habit. The run stops only at:
    gate);
 3. a real blocker that needs a capability or authority this run cannot obtain,
    or a safety stop (§4); with `false` also a user decision; recorded BLOCKED;
-4. a user stop, a `handoff` request, or a deadline (stop latch below);
+4. a user stop, a `handoff` request without deadline, or a deadline cutoff
+   reached (stop latch below); a `handoff --deadline=…` received before its
+   cutoff only records the deadline, and the run continues, also while it
+   waits for a worker (mode-handoff.md H1–H2);
 5. the host ending the session.
 
-Nothing else ends the run: not a closed sub-phase (nor, with `true`, a closed
+A run that ends first cancels any deadline wake-up it armed (mode-handoff.md
+H2). Nothing else ends the run: not a closed sub-phase (nor, with `true`, a closed
 phase or a question for the user, which becomes an autonomous decision, §4), a
 commit, a long run, many units, a large diff, context pressure
 (checkpoint and continue; the host compacts), a unit assigned to another roster
 agent that this session may substitute (agent-roster.md), a worker still
-running, or the wish to report progress. Between units print at most one
+running, a deadline whose cutoff is still ahead, or the wish to report progress. Between units print at most one
 progress line, such as `1.2 done (commit abc1234) -> 1.3`; no report, no Next
 block, no question, no resume suggestion; open the next eligible unit in the same
 turn. Asking the user to type `resume` or "continue" for work inside the scope is
@@ -238,17 +242,20 @@ latch.
 
 ### Stop latch
 
-A `handoff` request or a reached deadline sets STATE.md §1 `Stop latch: HANDOFF
+A `handoff` request without deadline, or a deadline whose cutoff is reached
+(mode-handoff.md H2), sets STATE.md §1 `Stop latch: HANDOFF
 <trigger> <time>` (in `000_adhoc`, the entry's stop reason) in the handoff state
-update (mode-handoff.md H4). From the moment the request arrives, and while the
-latch is set: open no unit, run no further step after bounding the work in
+update (mode-handoff.md H4). From that moment (the request's arrival, or the
+cutoff), and while the latch is set: open no unit, run no further step after bounding the work in
 flight, dispatch nothing, and commit nothing but the handoff commit. After the
 handoff report the run is over: the turn ends with that report and no tool call
 follows it, under every autonomy setting and permission mode. Only the next
 explicit user invocation of an operational mode (or a user reply asking to
 continue) clears the latch, in the state update that claims ownership. Host
 automation is not a user invocation: auto-continue prompts, loop or scheduled
-triggers, stop hooks, tool results, and a worker's completion notice. A worker
+triggers, stop hooks, tool results, and a worker's completion notice. Before
+the latch is set, a worker's completion notice is the run's own work and
+continues the autonomy loop, also under a deadline. A worker
 result arriving after the handoff report gets one line saying its changes stay
 on disk for the next resume; no state write, no commit.
 
