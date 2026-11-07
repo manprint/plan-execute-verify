@@ -83,7 +83,7 @@ stessi argomenti.
 | `task <description>` | Una piccola modifica | La modifica richiesta e il relativo ledger |
 | `bug <description>` | Un singolo difetto | Riproduzione, test di regressione, fix e ledger |
 | `verify [plan] [phase, sub-phase, or entry]` | Fare l'audit dell'intero piano o di un ambito più ristretto, incluse le voci di `000_adhoc` | Report di audit e stato; con autonomia completa, poi le correzioni del report |
-| `execute verify [plan] [report ID]` | Applicare le correzioni dell'audit | Le correzioni selezionate e lo stato del piano interessato |
+| `execute verify [plan] [report ID]` | Applicare le correzioni dell'audit, accanto all'esecuzione salvata senza sostituirla | Le correzioni selezionate e lo stato del piano interessato |
 | `resume [plan] [unit ID]` | Riprendere il lavoro interrotto o salvato esattamente dal punto in cui si è fermato | Ciò che cambia l'unità o l'ambito ripreso; mai il suo ambito né le sue impostazioni |
 | `handoff [--deadline=dd-mm-yyyy_hh_mm]` | Fermare il lavoro in corso in modo ordinato, subito o entro una deadline | Checkpoint dello stato, un solo commit di handoff per il lavoro sul codice e il comando di ripresa |
 
@@ -110,7 +110,9 @@ un `--deadline=…` finale, con `full-autonomous:false` l'agente chiede prima di
 iniziare; con autonomia completa una deadline finale valida viene applicata,
 qualunque altro token di questo tipo resta testo, e il report dice come ha
 interpretato il comando. Solo `handoff`
-accetta anche la deadline dopo la modalità.
+accetta anche la deadline dopo la modalità, e un token
+`full-autonomous:true|false` che chiude la descrizione di un task o bug vale
+come opzione (sezione successiva).
 
 Task e Bug non accettano selettori. Si collegano a un piano solo quando la
 richiesta ne nomina uno (numero, nome della funzionalità o percorso) o cambia
@@ -231,15 +233,17 @@ valore già registrato, come `false` in un piano più vecchio, resta com'è. Pas
 letterali `true` o `false`; `full-autonomous:yes` viene rifiutato.
 
 L'autonomia completa si può chiedere anche come ultimo token di un comando
-`execute`, `execute verify`, `resume` o `verify`
-(`/plan-execute-verify execute 003 full-autonomous:true`) oppure a parole nel
-messaggio ("in piena autonomia", "full autonomous", "senza fermarti fino alla
-fine"): entrambe valgono come opzione esplicita. In autonomia completa l'agente
-chiude un'unità, stampa una riga di avanzamento e apre la successiva nello
-stesso turno. Si ferma solo quando l'ambito è completo, su un blocco reale, su
-tua richiesta o `handoff`, o quando l'host chiude la sessione; non si ferma mai
-dopo una sotto-fase per chiederti `resume` e non ti fa mai domande. Le modalità di permesso come bypass
-o yolo non cambiano questo comportamento.
+`execute`, `execute verify`, `verify`, `resume`, `task` o `bug`
+(`/plan-execute-verify execute 003 full-autonomous:true`, `/plan-execute-verify
+task correggi l'export full-autonomous:false`) oppure a parole nel messaggio
+("in piena autonomia", "full autonomous", "senza fermarti fino alla fine"):
+entrambe valgono come opzione esplicita. Scriverla sia prima della modalità sia
+in fondo è un duplicato e viene rifiutata. In autonomia completa l'agente chiude
+un'unità, stampa una riga di avanzamento e apre la successiva nello stesso
+turno. Si ferma solo quando l'ambito è completo, su un blocco reale, su tua
+richiesta o `handoff`, o quando l'host chiude la sessione; non si ferma mai dopo
+una sotto-fase per chiederti `resume` e non ti fa mai domande. Le modalità di
+permesso come bypass o yolo non cambiano questo comportamento.
 
 ### Cosa fa l'autonomia completa in ogni modalità
 
@@ -290,16 +294,17 @@ Le impostazioni si risolvono in modo indipendente:
 Plan lo accetta, viene salvato con il piano, e ogni altra modalità lo rifiuta
 ([sotto](#indica-al-pianificatore-quanto-sono-capaci-gli-esecutori)).
 
-Le opzioni date a Plan diventano default del piano. Le opzioni date a Execute o
-Execute verify appartengono all'ambito che avviano: sopravvivono a resume e alle
-nuove sessioni di quell'ambito, e decadono quando un selettore diverso lo
-sostituisce, quindi una run autonoma una tantum non cambia mai le esecuzioni
-successive. Per disattivare tutti i commit automatici, indica sia
-`full-autonomous:false --no-wip-commit`; solo un handoff fa ancora il suo
-commit. Task, Bug, Verify e Resume usano le opzioni esplicite solo per quella
-invocazione e le registrano nella loro voce del ledger, nel report di audit o
-nell'unità ripresa, anche quando sono collegati a un piano; non cambiano mai le
-sue impostazioni salvate. Onboard non salva mai opzioni né modifica la
+Le opzioni date a Plan diventano default del piano. Le opzioni date a Execute
+appartengono all'ambito che avvia: sopravvivono a resume e alle nuove sessioni
+di quell'ambito, e decadono quando un selettore diverso lo sostituisce, quindi
+una run autonoma una tantum non cambia mai le esecuzioni successive. Le opzioni
+date a Execute verify valgono solo per quel passaggio di correzioni, che gira
+accanto all'esecuzione salvata. Per disattivare tutti i commit automatici,
+indica sia `full-autonomous:false --no-wip-commit`; solo un handoff fa ancora il
+suo commit. Task, Bug, Verify e Resume usano le opzioni esplicite solo per
+quella invocazione e le registrano nella loro voce del ledger, nel report di
+audit o nell'unità ripresa, anche quando sono collegati a un piano; non cambiano
+mai le sue impostazioni salvate. Onboard non salva mai opzioni né modifica la
 configurazione salvata di un piano. Entrambi i valori booleani significano solo
 ispezione: né l'autonomia completa né il WIP committano il suo documento di
 contesto o avviano l'azione successiva consigliata.
@@ -319,9 +324,12 @@ tutte le sotto-fasi, i controlli di integrazione, la documentazione e la
 revisione dell'agente più capace, e il piano concluso riceve un proprio commit
 di completamento dopo l'ultima fase, quando passano i gate finali (chiusura
 `PLAN`). Plan e Onboard non committano mai. Quando il
-lavoro o i file del piano restano non committati, il report finale lo dice e
-suggerisce il comando di commit esatto senza eseguirlo: i file di piano non
-tracciati possono andare persi con `git clean` o con un cambio di branch.
+lavoro o i file del piano restano non committati, il report finale lo dice: per
+il lavoro sul codice rimanda a `handoff`, che committa ogni unità come patch a
+sé e lascia fuori le tue modifiche, e suggerisce un comando di commit solo per
+i file che un handoff non committa mai, come una bozza di piano o un report di
+audit, senza eseguirlo. I file di piano non tracciati possono andare persi con
+`git clean` o con un cambio di branch.
 
 Gli oggetti dei commit sono fissi, così `git log --oneline` mostra quale piano,
 fase e unità si è chiusa (qui il piano 003):
@@ -388,11 +396,13 @@ Un selettore di fase o sotto-fase è un limite, anche con l'autonomia completa.
 Selezionare 1.2 non autorizza l'esecutore a proseguire con 1.3 né a eseguire la
 chiusura di fase P1; esegui P1 con un selettore di fase o di piano. Le
 dipendenze restano valide. L'ambito selezionato viene salvato: `resume` lo
-continua, e le run di task, bug o audit nel frattempo non lo sostituiscono. Un
-`execute` o `execute verify` esplicito che sostituirebbe un ambito salvato in
+continua, e le run di task, bug, audit o `execute verify` nel frattempo non lo
+sostituiscono. Un `execute` esplicito che sostituirebbe un ambito salvato in
 esecuzione o bloccato con uno diverso ti chiede prima conferma con
 `full-autonomous:false`; con autonomia completa lo sostituisce e registra
-l'ambito sostituito e la sua prossima unità.
+l'ambito sostituito e la sua prossima unità. `execute verify` esegue le sue
+correzioni come passaggio a sé: `resume` finisce prima un passaggio interrotto
+e poi continua l'esecuzione salvata da dove si era fermata.
 
 I file di fase sono numerati da 01; le fasi logiche partono da 0. Quindi
 `phase_02.md` contiene la fase logica 1 e sotto-fasi come 1.1 e 1.2.
@@ -427,7 +437,10 @@ I nomi sono identificativi specifici dell'host, non modelli garantiti come
 disponibili. Le assegnazioni numerate devono partire da 1, senza salti né
 duplicati. Senza un prefisso esplicito riusa il roster salvato; un piano nuovo
 usa per default Opus/Sonnet/Haiku per compatibilità. Su altri host usa un roster
-esplicito. Una singola voce numerata (`agent-1:<name>`) equivale a
+esplicito, e anche quando il modello che esegue la sessione non è uno di quei
+tre: una sessione fuori dal roster coordina e delega ma non implementa né
+revisiona nulla in proprio, quindi in stile handoff si fermerebbe subito con un
+handoff bloccato. Una singola voce numerata (`agent-1:<name>`) equivale a
 `agent:<name>`.
 
 Aprire il piano con un altro modello non cambia in silenzio le sue assegnazioni.
@@ -650,19 +663,18 @@ Prossimo passo
 Modalità riporta sempre la modalità eseguita e ogni impostazione in vigore, con
 la sua provenienza: esplicito, esplicito (prompt), ambito, piano, ledger o
 default. Continua è un unico comando esatto, con ID reali e senza opzioni, e
-dichiara le impostazioni con cui verrà eseguito: le
-impostazioni registrate viaggiano con `resume`, mentre un nuovo ambito `execute`
-parte dai default del piano ed è indicato come nuovo.
-Dopo un comando rifiutato, quello corretto mantiene le tue opzioni
-valide. Quando manca una decisione il testo dice "rispondi a …, poi …"; quando non
-segue nulla, spiega perché. Fermati suggerisce `handoff` solo quando resta lavoro
-sul codice aperto o non committato, una chiusura in sospeso o la titolarità
-detenuta da questa sessione; altrimenti dice che non c'è nulla da salvare. I
-file che un handoff non committa mai, come una bozza di piano, un report di
-audit, un task proposto o docs/onboarding.md, sono elencati con un comando di
-commit suggerito. Entrambe le righe sono suggerimenti: l'agente non le esegue
-mai, nemmeno con `full-autonomous:true`. [next-step](references/next-step.md)
-elenca quale comando si applica in ogni situazione.
+dichiara le impostazioni con cui verrà eseguito: le impostazioni registrate
+viaggiano con `resume`, mentre un nuovo ambito `execute` parte dai default del
+piano ed è indicato come nuovo. Dopo un comando rifiutato, quello corretto
+mantiene le tue opzioni valide. Quando manca una decisione il testo dice
+"rispondi a …, poi …"; quando non segue nulla, spiega perché. Fermati suggerisce
+`handoff` solo quando resta lavoro sul codice aperto o non committato o una
+chiusura in sospeso; altrimenti dice che non c'è nulla da salvare. I file che un
+handoff non committa mai, come una bozza di piano, un report di audit, un task
+proposto o docs/onboarding.md, sono elencati con un comando di commit suggerito.
+Entrambe le righe sono suggerimenti: l'agente non le esegue mai, nemmeno con
+`full-autonomous:true`. [next-step](references/next-step.md) elenca quale
+comando si applica in ogni situazione.
 
 ## Quando un piano è pronto?
 
@@ -767,7 +779,8 @@ docs/plans/003_plan-RateLimit/
 ```
 
 Senza piano, il lavoro su task e bug usa `docs/plans/000_adhoc/` e conserva le
-informazioni di recupero nella voce del ledger stessa. Non ci sono file di fase
+informazioni di recupero nella voce del ledger stessa; un audit di quel ledger
+conserva le proprie in `000_adhoc/verify/index.md`. Non ci sono file di fase
 o di STATE fittizi.
 
 STATE.md resta piccolo: a ogni chiusura l'agente aggiunge le evidenze a

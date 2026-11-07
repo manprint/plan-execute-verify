@@ -65,19 +65,19 @@ only for its checkpoint fields.
   session last wrote, else every plan or ledger with OPEN work, a pending
   closure, or units recorded `uncommitted`, handed off one after another, each
   with its own state update and commit; never a question, since stopping never
-  loses work. Work owned by another live session is never a target: report it as an
-  ownership conflict (execution-contract §2) and leave it to that session. With
-  no target, report that nothing needs a handoff, release ownership this session
-  still holds, end with the Next block (next-step.md), and stop. With no run in
-  progress there is no work to continue until the deadline, and a handoff never
-  starts work, so a deadline there means an immediate handoff; the report says
-  so.
-- Record the deadline and the request time as soon as they arrive in the
-  invocation record (STATE.md §1 Settings `deadline`, the ledger entry, or the
-  audit report), so they survive a context reset or compaction while the run
-  works or waits; record the trigger (`user` or `deadline`) when the procedure
-  starts. The deadline belongs to this run only; it is never a scope override, never
-  written to §3, and never carried into the resume command.
+  loses work. Work owned by another live session is never a target: report it as
+  an ownership conflict (execution-contract §2) and leave it to that session.
+  With no target, report that nothing needs a handoff, release ownership this
+  session still holds, end with the Next block (next-step.md), and stop. With no
+  run in progress there is no work to continue until the deadline, and a handoff
+  never starts work, so a deadline there means an immediate handoff; the report
+  says so.
+- Record the deadline as soon as it arrives in the invocation record (STATE.md
+  §1 Settings `deadline`, the ledger entry, or the audit report), so it survives
+  a context reset or compaction while the run works or waits; record the trigger
+  (`user` or `deadline`) when the procedure starts. The deadline belongs to this
+  run only; it is never a scope override, never written to §3, and never carried
+  into the resume command.
 
 ## H2 — Work under a deadline
 
@@ -146,8 +146,10 @@ diff:
 - §6 checkpoint: last durable step, exact next action, owned diff, pending
   edits, commands recorded as not run, and resources to clean up.
 - The OPEN unit stays OPEN with its status and attempt; nothing is marked DONE
-  that is not closed. The saved execution scope keeps its result (RUNNING or
-  BLOCKED); a COMPLETE scope needs no handoff.
+  that is not closed. The saved execution scope keeps its result; an
+  interrupted Execute verify or Verify correction pass keeps result RUNNING or
+  BLOCKED in its §1 invocation record, since it owns no saved scope. A
+  COMPLETE scope needs no handoff.
 - The invocation result becomes `HANDOFF` with its trigger and time, and §1
   records `Stop latch: HANDOFF <trigger> <time>`.
 - Release the ownership this session holds with time and reason `handoff`, so
@@ -170,8 +172,9 @@ commit command without running it. Onboard commits nothing.
 
 - Content: the owned changes of the OPEN unit, of a unit with a pending
   closure, and of every unit of this plan or ledger recorded `uncommitted`, the
-  plan files required by execution-contract §6 step 2, and STATE.md and the
-  ledgers whole. Committing STATE.md without
+  plan files required by execution-contract §6 step 2, history.md, and STATE.md
+  and the ledgers whole; a PROPOSED entry inside a ledger committed whole is
+  carried along, not approved (next-step.md N2). Committing STATE.md without
   those units' code would claim work the commit does not contain.
 - Staging: execution-contract §6 steps 2–3 with current HEAD as the reset
   target, but one owned patch per included unit. Reset the owned paths to HEAD
@@ -214,7 +217,7 @@ files, and the exact command that continues the interrupted invocation:
 
 | Interrupted work | Resume command |
 |------------------|----------------|
-| Execute or Execute verify scope | `/plan-execute-verify resume <plan>` |
+| Execute scope, or an Execute verify correction pass | `/plan-execute-verify resume <plan>` |
 | Task, Bug, or Verify on a real plan | `/plan-execute-verify resume <plan> <unit-id>` |
 | Ad-hoc task, bug, or audit | `/plan-execute-verify resume 000_adhoc <unit-id>` (`T-A<NNN>`, `B-A<NNN>`, or `V<NNN>`) |
 | Plan draft | `/plan-execute-verify resume <plan>` |

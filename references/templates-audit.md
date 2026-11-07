@@ -105,6 +105,16 @@ snapshot in STATE.md §12, when applicable.>
 ````markdown
 # <Feature> — Audit register
 
+## Open audit
+none
+<!-- While an audit recorded here is OPEN (in 000_adhoc this is its only
+     recovery record): report <V<NNN>> · scope <ledger|entry ID> · attempt <n> ·
+     owner <writer> <active | released <time> <reason>> · settings autonomy
+     <true|false> (<source>) · WIP <on|off> (<source>) · deadline <…|none> ·
+     roster <…> · checkpoint <last durable step · next step · running
+     resources> · stop reason <none | HANDOFF user|deadline <time> | BLOCKED
+     <question, owner>>. Clear to `none` at audit closure. -->
+
 ## Historical reports
 | ID | File | Date | Original verdict | Original counts | Auditor |
 |----|------|------|------------------|-----------------|---------|

@@ -16,10 +16,11 @@ explicit user invocation (execution-contract §3). Name at the start any unit in
 scope that this session cannot run or review (agent-roster.md); everything
 before it runs without stopping.
 Read STATE.md first. Preserve the saved execution scope on a handoff or resume;
-a different explicit selector replaces it and its option overrides without
-abandoning OPEN work, after asking the user when the saved scope is RUNNING or
-BLOCKED and different, or under full autonomy as an autonomous decision
-(execution-contract §1, §4). Resume follows mode-resume.md and
+in ordinary execution a different explicit selector replaces it and its option
+overrides without abandoning OPEN work, after asking the user when the saved
+scope is RUNNING or BLOCKED and different, or under full autonomy as an
+autonomous decision (execution-contract §1, §4). `execute verify` never sets,
+replaces, or continues it (E5). Resume follows mode-resume.md and
 then this manual for the saved scope.
 
 Check ownership (stale ownership changes hands only under execution-contract
@@ -52,10 +53,12 @@ Require prerequisite sub-phases and artifacts, not just a phase's claimed DONE.
 A SKIPPED dependency requires an explicit supervisor waiver/replacement.
 Refuse inconsistent selectors with an actionable reason.
 
-Record the saved execution scope: the whole plan, one phase, one sub-phase, or a
-report, with this invocation's explicit options as its overrides
-(execution-contract §1); they never change §3. A sub-phase scope excludes its
-phase closure P<N>. Full autonomy does not expand that selection.
+In ordinary execution record the saved execution scope: the whole plan, one
+phase, or one sub-phase, with this invocation's explicit options as its
+overrides (execution-contract §1); they never change §3. `execute verify`
+records no saved scope: the report and this invocation's explicit options go in
+the §1 invocation record only (E5). A sub-phase scope excludes its phase
+closure P<N>. Full autonomy does not expand that selection.
 
 ## E3 — Execute the detailed contract
 
@@ -131,6 +134,16 @@ dispatch; an audit's completed status is not proof its corrections are
 executable. Under full autonomy, a correction awaiting a user decision gets an
 autonomous decision from agent-1 (execution-contract §4) instead.
 
+The correction pass is its own invocation: record it in §1 (`Run`, with the
+report ID, result, style, and effective settings with their sources) and leave
+the saved execution scope, its result, and its overrides exactly as they were,
+like a Verify correction pass (mode-verify.md V6). A legacy STATE.md whose
+saved scope is `report V<NNN>` is continued as this pass and set to `none`
+when the pass completes (execution-contract §1). Its result (RUNNING, BLOCKED,
+COMPLETE, or HANDOFF) lives in that invocation record, and `resume <plan>`
+finishes an interrupted pass before continuing the saved scope
+(mode-resume.md R3).
+
 Each correction is a unit V<NNN>-C<n>, with the same detailed contract as a
 sub-phase and focused validation. Recheck its finding against the current tree before editing. If it is
 already resolved, record current evidence and avoid duplicate code or commits.
@@ -151,8 +164,10 @@ the historical audit verdict. Update pending plan contracts invalidated by fixes
 Run the Coherence checklist before reporting completion. Summarize scope
 results, gates/reviews, deviations, autonomous decisions, local completion
 commits/branch, and the next action. With commits disabled, warn that the changes and plan records
-remain uncommitted, and untracked plan files can be lost to `git clean`; suggest
-the exact commit command without running it. State failed, blocked, skipped, or
+remain uncommitted, and untracked plan files can be lost to `git clean`; the
+Stop line of the Next block offers `handoff`, which commits them one patch per
+unit (next-step.md N2), and a plain commit command is suggested only for files
+a handoff would not commit, never run. State failed, blocked, skipped, or
 unverified work plainly. End with the Next block (next-step.md).
 
 When full autonomy is true, continue until the selected scope is verified

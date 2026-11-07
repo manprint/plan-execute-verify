@@ -97,12 +97,11 @@ Ogni caso parte da questa stessa situazione; nessun caso la modifica per il succ
 Dove vengono conservate le opzioni:
 
 - **Plan** le salva come default del piano per le run successive, con i valori
-  risolti: anche quelli di default (autonomia `true`, WIP on) vengono scritti nel
-  piano.
-- **Execute** ed **Execute verify** le conservano per quello scope: `resume` le
-  riusa, e non cambiano mai i default del piano. Execute verify sostituisce lo
-  scope in corso solo come decisione autonoma (con `true`) o dopo la tua
-  conferma (con `false`).
+  risolti: anche quelli di default (autonomia `true`, WIP on) vengono scritti
+  nel piano.
+- **Execute** le conserva per quello scope: `resume` le riusa, e non cambiano
+  mai i default del piano. **Execute verify** le conserva per il suo passaggio
+  di correzioni, che gira accanto allo scope salvato senza sostituirlo.
 - **Task**, **Bug**, **Verify** e **Resume** le usano solo per quella run.
 - **Onboard** non salva mai nulla; **Handoff** ignora tutto tranne la deadline.
 - Una **deadline** vale sempre solo per la propria run.
@@ -132,21 +131,21 @@ Ogni cella riporta l'ID del caso e il suo effetto in poche parole.
 
 | # | Opzioni | Onboard | Plan | Execute | Execute verify | Task | Bug | Verify | Resume | Handoff |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 01 | nessuna opzione | ON-01 solo ispezione | PL-01 nessuna domanda, default salvati | EX-01 continua fino alla fine, commit + WIP | EV-01 sostituisce lo scope, correzioni, commit + WIP | TA-01 nessuno stop, commit + WIP | BU-01 nessuno stop, commit + WIP | VE-01 audit committato, poi correzioni | RE-01 recupera e continua fino alla fine, commit + WIP | HA-01 stop subito, handoff di B-A002 |
-| 02 | `full-autonomous:true` | ON-02 nessun effetto | PL-02 nessuna domanda, default salvati | EX-02 tutto, commit + WIP | EV-02 sostituisce lo scope, correzioni, commit + WIP | TA-02 nessuno stop, commit + WIP | BU-02 nessuno stop, commit + WIP | VE-02 audit committato, poi correzioni | RE-02 tutto, commit + WIP | HA-02 ignorata, stop subito |
-| 03 | `full-autonomous:false` | ON-03 nessun effetto | PL-03 chiede le domande | EX-03 stop dopo P2, commit WIP | EV-03 chiede prima di sostituire lo scope, poi stop per fase, commit WIP | TA-03 approvazione, poi commit WIP | BU-03 approvazione, poi commit WIP | VE-03 audit senza commit, nessuna correzione | RE-03 stop dopo P2, commit WIP | HA-03 ignorata, stop subito |
-| 04 | `--wip-commit` | ON-04 nessun effetto | PL-04 nessuna domanda, default salvati | EX-04 tutto, commit + WIP | EV-04 sostituisce lo scope, correzioni, commit + WIP | TA-04 nessuno stop, commit + WIP | BU-04 nessuno stop, commit + WIP | VE-04 audit committato, poi correzioni con WIP | RE-04 tutto, commit + WIP | HA-04 ignorata, stop subito |
-| 05 | `--no-wip-commit` | ON-05 nessun effetto | PL-05 nessuna domanda, WIP off | EX-05 tutto, commit senza WIP | EV-05 sostituisce lo scope, correzioni, commit senza WIP | TA-05 nessuno stop, commit senza WIP | BU-05 nessuno stop, commit senza WIP | VE-05 audit committato, poi correzioni senza WIP | RE-05 tutto, commit senza WIP | HA-05 ignorata, stop subito |
-| 06 | `full-autonomous:true --wip-commit` | ON-06 nessun effetto | PL-06 nessuna domanda, default salvati | EX-06 tutto, commit + WIP | EV-06 sostituisce lo scope, correzioni, commit + WIP | TA-06 nessuno stop, commit + WIP | BU-06 nessuno stop, commit + WIP | VE-06 audit committato, poi correzioni con WIP | RE-06 tutto, commit + WIP | HA-06 ignorata, stop subito |
-| 07 | `full-autonomous:false --wip-commit` | ON-07 nessun effetto | PL-07 chiede le domande | EX-07 stop dopo P2, commit + WIP | EV-07 chiede prima di sostituire lo scope, poi stop per fase, commit + WIP | TA-07 approvazione, poi commit + WIP | BU-07 approvazione, poi commit + WIP | VE-07 audit senza commit, nessuna correzione | RE-07 stop dopo P2, commit + WIP | HA-07 ignorata, stop subito |
-| 08 | `full-autonomous:true --no-wip-commit` | ON-08 nessun effetto | PL-08 nessuna domanda, WIP off | EX-08 tutto, commit senza WIP | EV-08 sostituisce lo scope, correzioni, commit senza WIP | TA-08 nessuno stop, commit senza WIP | BU-08 nessuno stop, commit senza WIP | VE-08 audit committato, poi correzioni senza WIP | RE-08 tutto, commit senza WIP | HA-08 ignorata, stop subito |
-| 09 | `full-autonomous:false --no-wip-commit` | ON-09 nessun effetto | PL-09 chiede le domande, WIP off | EX-09 stop dopo P2, nessun commit | EV-09 chiede prima di sostituire lo scope, poi stop per fase, nessun commit | TA-09 approvazione, nessun commit | BU-09 approvazione, nessun commit | VE-09 nessun commit, nessuna correzione | RE-09 solo B-A002, nessun commit | HA-09 ignorata, stop subito |
+| 01 | nessuna opzione | ON-01 solo ispezione | PL-01 nessuna domanda, default salvati | EX-01 continua fino alla fine, commit + WIP | EV-01 correzioni accanto allo scope, commit + WIP | TA-01 nessuno stop, commit + WIP | BU-01 nessuno stop, commit + WIP | VE-01 audit committato, poi correzioni | RE-01 recupera e continua fino alla fine, commit + WIP | HA-01 stop subito, handoff di B-A002 |
+| 02 | `full-autonomous:true` | ON-02 nessun effetto | PL-02 nessuna domanda, default salvati | EX-02 tutto, commit + WIP | EV-02 correzioni accanto allo scope, commit + WIP | TA-02 nessuno stop, commit + WIP | BU-02 nessuno stop, commit + WIP | VE-02 audit committato, poi correzioni | RE-02 tutto, commit + WIP | HA-02 ignorata, stop subito |
+| 03 | `full-autonomous:false` | ON-03 nessun effetto | PL-03 chiede le domande | EX-03 stop dopo P2, commit WIP | EV-03 stop per fase riaperta, commit WIP | TA-03 approvazione, poi commit WIP | BU-03 approvazione, poi commit WIP | VE-03 audit senza commit, nessuna correzione | RE-03 stop dopo P2, commit WIP | HA-03 ignorata, stop subito |
+| 04 | `--wip-commit` | ON-04 nessun effetto | PL-04 nessuna domanda, default salvati | EX-04 tutto, commit + WIP | EV-04 correzioni accanto allo scope, commit + WIP | TA-04 nessuno stop, commit + WIP | BU-04 nessuno stop, commit + WIP | VE-04 audit committato, poi correzioni con WIP | RE-04 tutto, commit + WIP | HA-04 ignorata, stop subito |
+| 05 | `--no-wip-commit` | ON-05 nessun effetto | PL-05 nessuna domanda, WIP off | EX-05 tutto, commit senza WIP | EV-05 correzioni accanto allo scope, commit senza WIP | TA-05 nessuno stop, commit senza WIP | BU-05 nessuno stop, commit senza WIP | VE-05 audit committato, poi correzioni senza WIP | RE-05 tutto, commit senza WIP | HA-05 ignorata, stop subito |
+| 06 | `full-autonomous:true --wip-commit` | ON-06 nessun effetto | PL-06 nessuna domanda, default salvati | EX-06 tutto, commit + WIP | EV-06 correzioni accanto allo scope, commit + WIP | TA-06 nessuno stop, commit + WIP | BU-06 nessuno stop, commit + WIP | VE-06 audit committato, poi correzioni con WIP | RE-06 tutto, commit + WIP | HA-06 ignorata, stop subito |
+| 07 | `full-autonomous:false --wip-commit` | ON-07 nessun effetto | PL-07 chiede le domande | EX-07 stop dopo P2, commit + WIP | EV-07 stop per fase riaperta, commit + WIP | TA-07 approvazione, poi commit + WIP | BU-07 approvazione, poi commit + WIP | VE-07 audit senza commit, nessuna correzione | RE-07 stop dopo P2, commit + WIP | HA-07 ignorata, stop subito |
+| 08 | `full-autonomous:true --no-wip-commit` | ON-08 nessun effetto | PL-08 nessuna domanda, WIP off | EX-08 tutto, commit senza WIP | EV-08 correzioni accanto allo scope, commit senza WIP | TA-08 nessuno stop, commit senza WIP | BU-08 nessuno stop, commit senza WIP | VE-08 audit committato, poi correzioni senza WIP | RE-08 tutto, commit senza WIP | HA-08 ignorata, stop subito |
+| 09 | `full-autonomous:false --no-wip-commit` | ON-09 nessun effetto | PL-09 chiede le domande, WIP off | EX-09 stop dopo P2, nessun commit | EV-09 stop per fase riaperta, nessun commit | TA-09 approvazione, nessun commit | BU-09 approvazione, nessun commit | VE-09 nessun commit, nessuna correzione | RE-09 stop dopo P2, nessun commit | HA-09 ignorata, stop subito |
 | 10 | `executor-power:low` | ON-10 rifiutato | PL-10 unità piccole e dettagliate | EX-10 rifiutato | EV-10 rifiutato | TA-10 rifiutato | BU-10 rifiutato | VE-10 rifiutato | RE-10 rifiutato | HA-10 ignorata, stop subito |
 | 11 | `executor-power:medium` | ON-11 rifiutato | PL-11 unità medie | EX-11 rifiutato | EV-11 rifiutato | TA-11 rifiutato | BU-11 rifiutato | VE-11 rifiutato | RE-11 rifiutato | HA-11 ignorata, stop subito |
 | 12 | `executor-power:high` | ON-12 rifiutato | PL-12 unità per risultato | EX-12 rifiutato | EV-12 rifiutato | TA-12 rifiutato | BU-12 rifiutato | VE-12 rifiutato | RE-12 rifiutato | HA-12 ignorata, stop subito |
 | 13 | `agent-1:opus,agent-2:sonnet,agent-3:haiku` | ON-13 questi ispettori | PL-13 elenco salvato | EX-13 sostituisce elenco | EV-13 sostituisce elenco | TA-13 solo questa run | BU-13 solo questa run | VE-13 audit e correzioni con questo elenco | RE-13 solo questa run | HA-13 ignorata, stop subito |
 | 14 | `agent:my-model` | ON-14 un solo modello | PL-14 un solo modello | EX-14 un solo modello | EV-14 un solo modello | TA-14 un solo modello | BU-14 un solo modello | VE-14 un solo modello | RE-14 un solo modello | HA-14 ignorata, stop subito |
-| 15 | `--deadline=31-10-2026_17_30` | ON-15 stop entro deadline | PL-15 bozza DRAFT salvata alla deadline | EX-15 handoff alla deadline, commit | EV-15 sostituisce lo scope, correzioni fino alla deadline, handoff | TA-15 chiude o handoff alla deadline | BU-15 chiude o handoff alla deadline | VE-15 audit chiuso, poi handoff alla deadline | RE-15 handoff alla deadline, commit | HA-15 continua fino al taglio, poi handoff; sessione inattiva: subito |
+| 15 | `--deadline=31-10-2026_17_30` | ON-15 stop entro deadline | PL-15 bozza DRAFT salvata alla deadline | EX-15 handoff alla deadline, commit | EV-15 correzioni fino alla deadline, handoff | TA-15 chiude o handoff alla deadline | BU-15 chiude o handoff alla deadline | VE-15 audit chiuso, poi handoff alla deadline | RE-15 handoff alla deadline, commit | HA-15 continua fino al taglio, poi handoff; sessione inattiva: subito |
 
 ## Alla fine di ogni run
 
@@ -208,7 +207,10 @@ non chiede nulla. Una deadline valida in fondo alla descrizione viene presa come
 deadline della run, perché fermarsi prima non fa perdere lavoro; gli altri
 token restano testo; il report dice come li ha letti. Con
 `full-autonomous:false` l'agente chiede prima di iniziare se la intendevi come
-opzione, che va prima della modalità.
+opzione, che va prima della modalità. Due token vengono letti anche lì: una
+deadline dopo `handoff` e un token `full-autonomous:true|false` che chiude il
+comando, descrizione di task o bug compresa, che vale come opzione; scriverlo
+sia prima della modalità sia in fondo è un duplicato e viene rifiutato.
 
 Un comando che chiede solo di continuare, come `/plan-execute-verify continue
 003`, non crea mai un piano: viene eseguito come `resume 003`. Senza selettore,
@@ -1422,8 +1424,8 @@ chiusura della fase 2 (P2), senza committare nulla: committi tu quando vuoi.
 **Cosa aspettarsi:** Le sotto-fasi della fase 2 vanno senza pause, poi la
 chiusura P2, il checkpoint e il report, e si ferma. Con l'autonomia `false` e
 il WIP off nessun commit è autorizzato: le modifiche e i file del piano restano
-non committati, e il report suggerisce il comando di commit senza eseguirlo.
-Solo un handoff farebbe comunque il suo commit. Se serve una decisione che solo
+non committati, e la riga Fermati del report rimanda a `handoff`, l'unico che
+farebbe comunque il suo commit, unità per unità. Se serve una decisione che solo
 tu puoi prendere, si ferma e te la chiede. `resume` mantiene queste opzioni per
 questa esecuzione; i default del piano non cambiano.
 
@@ -1644,12 +1646,12 @@ correzioni, non nuovo lavoro del piano. Indica un ID di report, per esempio
 `execute verify 003 V002`, per sceglierne un altro. In questo esempio il piano
 003 ha un'esecuzione ancora in corso: un `execute 003` fermato con `handoff`
 dopo la fase 1, con prossima unità 2.1, nessuna unità aperta e nessun codice non
-committato. Le correzioni sono un altro selettore, quindi sostituirebbero
-quell'esecuzione. Con `false` l'agente chiede prima se sostituirla; con `true`
-(il default) la sostituisce da solo, come decisione autonoma annotata in
-`history.md` con l'esecuzione sostituita e la sua prossima unità, e il report
-finale la elenca. Non c'è nulla da chiudere prima. La prossima unità del piano,
-2.1, resta registrata a parte, fuori dalle correzioni.
+committato. Le correzioni non sostituiscono mai quell'esecuzione: girano come
+passaggio a sé accanto a essa, le opzioni date qui restano solo su quel
+passaggio, e l'esecuzione del piano 003 resta registrata con prossima unità
+2.1. Non c'è nulla da chiudere prima. Finite le correzioni, `resume 003` la
+continua da lì; un passaggio interrotto da uno stop o da una deadline viene
+prima finito da `resume 003`.
 
 ### EV-01 · nessuna opzione
 
@@ -1660,9 +1662,8 @@ finale la elenca. Non c'è nulla da chiudere prima. La prossima unità del piano
 **Cosa fa:** Applica le correzioni pronte del report di audit più recente con
 le impostazioni salvate del piano 003, senza chiederti nulla.
 
-**Cosa aspettarsi:** L'agente sostituisce da solo l'esecuzione in corso del
-piano 003 (ferma a 2.1): è una decisione autonoma, annotata in `history.md` ed
-elencata nel report finale. Poi applica le correzioni READY di V001, ognuna con
+**Cosa aspettarsi:** L'agente lascia com'è l'esecuzione salvata del piano 003
+(prossima unità 2.1) e applica le correzioni READY di V001, ognuna con
 la sua validazione mirata; una correzione che tocca una fase già chiusa la
 riapre, e alla chiusura rifà i controlli completi e la revisione. Commit
 locali, mai pushati: uno per ogni correzione completata e per ogni chiusura di
@@ -1680,9 +1681,7 @@ solo quando le correzioni pronte sono finite o per un blocco reale.
 - Deadline: nessuna (default)
 - Obiettivo: le correzioni pronte (READY) di V001, il report di audit più
   recente del piano 003 (nessun report indicato)
-- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale;
-  la sostituzione dell'esecuzione in corso è una decisione autonoma, senza
-  domande
+- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale
 - Commit fatti da questa run: ogni correzione completata e fase ricontrollata,
   più un commit WIP a rotazione a ogni checkpoint
 
@@ -1692,16 +1691,15 @@ solo quando le correzioni pronte sono finite o per un blocco reale.
 /plan-execute-verify full-autonomous:true execute verify 003
 ```
 
-**Cosa fa:** Come EV-01, ma con l'autonomia scritta nel comando: sostituisce da
-solo l'esecuzione in corso e applica le correzioni pronte senza pause tra le
-fasi.
+**Cosa fa:** Come EV-01, ma con l'autonomia scritta nel comando: applica le
+correzioni pronte senza pause tra le fasi, accanto all'esecuzione salvata.
 
-**Cosa aspettarsi:** La sostituzione è una decisione autonoma, annotata in
-`history.md` ed elencata nel report finale. I commit sono locali e mai
-pushati: uno per ogni correzione completata e fase ricontrollata, più commit
-WIP ai checkpoint (WIP è on nel piano 003). Si ferma prima solo per un blocco
-reale, una richiesta di stop o una deadline. Queste opzioni restano valide
-finché proseguono queste correzioni; i default del piano non cambiano.
+**Cosa aspettarsi:** L'esecuzione salvata del piano 003 resta com'è. I commit
+sono locali e mai pushati: uno per ogni correzione completata e fase
+ricontrollata, più commit WIP ai checkpoint (WIP è on nel piano 003). Si ferma
+prima solo per un blocco reale, una richiesta di stop o una deadline. Queste
+opzioni restano valide finché proseguono queste correzioni; i default del piano
+non cambiano.
 
 **Impostazioni di questa run:**
 
@@ -1713,9 +1711,7 @@ finché proseguono queste correzioni; i default del piano non cambiano.
 - Deadline: nessuna (default)
 - Obiettivo: le correzioni pronte (READY) di V001, il report di audit più
   recente del piano 003 (nessun report indicato)
-- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale;
-  la sostituzione dell'esecuzione in corso è una decisione autonoma, senza
-  domande
+- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale
 - Commit fatti da questa run: ogni correzione completata e fase ricontrollata,
   più un commit WIP a rotazione a ogni checkpoint
 
@@ -1725,18 +1721,16 @@ finché proseguono queste correzioni; i default del piano non cambiano.
 /plan-execute-verify full-autonomous:false execute verify 003
 ```
 
-**Cosa fa:** Applica le correzioni del report di audit più recente solo dopo
-averti chiesto conferma per sostituire l'esecuzione in corso, e si ferma dopo
-la chiusura di ogni fase riaperta.
+**Cosa fa:** Applica le correzioni del report di audit più recente accanto
+all'esecuzione salvata, e si ferma dopo la chiusura di ogni fase riaperta.
 
-**Cosa aspettarsi:** Prima di toccare qualcosa l'agente chiede, per esempio:
-"Il piano 003 ha un'esecuzione in corso (prossima unità 2.1). La sostituisco
-con le correzioni di V001?". Se rispondi sì, applica le correzioni e si ferma
-dopo la chiusura di ogni fase riaperta, con un checkpoint e un report;
-`resume 003` continua da lì. Il WIP è on nel piano 003, quindi ogni correzione
-completata e ogni chiusura di fase riaperta vengono committate, più commit WIP
-ai checkpoint. I commit sono locali e mai pushati. Queste opzioni restano
-valide finché proseguono queste correzioni; i default del piano non cambiano.
+**Cosa aspettarsi:** L'esecuzione salvata del piano 003 (prossima unità 2.1)
+resta com'è: l'agente applica le correzioni e si ferma dopo la chiusura di ogni
+fase riaperta, con un checkpoint e un report; `resume 003` continua da lì. Il
+WIP è on nel piano 003, quindi ogni correzione completata e ogni chiusura di
+fase riaperta vengono committate, più commit WIP ai checkpoint. I commit sono
+locali e mai pushati. Queste opzioni restano valide finché proseguono queste
+correzioni; i default del piano non cambiano.
 
 **Impostazioni di questa run:**
 
@@ -1748,8 +1742,7 @@ valide finché proseguono queste correzioni; i default del piano non cambiano.
 - Deadline: nessuna (default)
 - Obiettivo: le correzioni di V001, il report di audit più recente del piano 003
   (nessun report indicato)
-- Dove si ferma: prima chiede conferma per sostituire l'esecuzione in corso del
-  piano 003; poi dopo la chiusura di ogni fase riaperta
+- Dove si ferma: dopo la chiusura di ogni fase riaperta
 - Commit fatti da questa run: ogni correzione completata e fase ricontrollata,
   più un commit WIP a rotazione a ogni checkpoint
 
@@ -1763,11 +1756,10 @@ valide finché proseguono queste correzioni; i default del piano non cambiano.
 pause tra le fasi, con i commit WIP scritti nel comando.
 
 **Cosa aspettarsi:** Il piano 003 ha già WIP on, quindi il comportamento è
-quello di EV-01. La sostituzione dell'esecuzione in corso è una decisione
-autonoma, annotata in `history.md` ed elencata nel report finale. I commit sono
-locali e mai pushati: uno per ogni correzione completata e fase ricontrollata,
-più commit WIP ai checkpoint. Queste opzioni restano valide finché proseguono
-queste correzioni; i default del piano non cambiano.
+quello di EV-01, e l'esecuzione salvata del piano 003 resta com'è. I commit
+sono locali e mai pushati: uno per ogni correzione completata e fase
+ricontrollata, più commit WIP ai checkpoint. Queste opzioni restano valide
+finché proseguono queste correzioni; i default del piano non cambiano.
 
 **Impostazioni di questa run:**
 
@@ -1779,9 +1771,7 @@ queste correzioni; i default del piano non cambiano.
 - Deadline: nessuna (default)
 - Obiettivo: le correzioni pronte (READY) di V001, il report di audit più
   recente del piano 003 (nessun report indicato)
-- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale;
-  la sostituzione dell'esecuzione in corso è una decisione autonoma, senza
-  domande
+- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale
 - Commit fatti da questa run: ogni correzione completata e fase ricontrollata,
   più un commit WIP a rotazione a ogni checkpoint
 
@@ -1794,9 +1784,8 @@ queste correzioni; i default del piano non cambiano.
 **Cosa fa:** Applica le correzioni pronte del report di audit più recente senza
 pause tra le fasi, committando solo ciò che è finito, senza commit WIP.
 
-**Cosa aspettarsi:** L'autonomia resta `true` dal piano 003, quindi la
-sostituzione dell'esecuzione in corso è una decisione autonoma, annotata in
-`history.md` ed elencata nel report finale. I commit sono locali e mai
+**Cosa aspettarsi:** L'autonomia resta `true` dal piano 003, e
+l'esecuzione salvata del piano 003 resta com'è. I commit sono locali e mai
 pushati: uno per ogni correzione completata e fase ricontrollata, nessuno ai
 checkpoint. Queste opzioni restano valide finché proseguono queste correzioni;
 i default del piano non cambiano.
@@ -1811,9 +1800,7 @@ i default del piano non cambiano.
 - Deadline: nessuna (default)
 - Obiettivo: le correzioni pronte (READY) di V001, il report di audit più
   recente del piano 003 (nessun report indicato)
-- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale;
-  la sostituzione dell'esecuzione in corso è una decisione autonoma, senza
-  domande
+- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale
 - Commit fatti da questa run: ogni correzione completata e fase ricontrollata;
   nessun commit WIP
 
@@ -1827,9 +1814,8 @@ i default del piano non cambiano.
 pause tra le fasi, con autonomia e commit WIP scritti nel comando.
 
 **Cosa aspettarsi:** Come EV-04: sia l'autonomia sia il WIP coincidono con il
-piano 003, ma qui li hai scritti tu. La sostituzione dell'esecuzione in corso è
-una decisione autonoma, annotata in `history.md` ed elencata nel report
-finale. I commit sono locali e mai pushati: uno per ogni correzione completata
+piano 003, ma qui li hai scritti tu. L'esecuzione salvata del piano 003 resta
+com'è. I commit sono locali e mai pushati: uno per ogni correzione completata
 e fase ricontrollata, più commit WIP ai checkpoint. Si ferma prima solo per un
 blocco reale, una richiesta di stop o una deadline. Queste opzioni restano
 valide finché proseguono queste correzioni; i default del piano non cambiano.
@@ -1844,9 +1830,7 @@ valide finché proseguono queste correzioni; i default del piano non cambiano.
 - Deadline: nessuna (default)
 - Obiettivo: le correzioni pronte (READY) di V001, il report di audit più
   recente del piano 003 (nessun report indicato)
-- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale;
-  la sostituzione dell'esecuzione in corso è una decisione autonoma, senza
-  domande
+- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale
 - Commit fatti da questa run: ogni correzione completata e fase ricontrollata,
   più un commit WIP a rotazione a ogni checkpoint
 
@@ -1856,16 +1840,15 @@ valide finché proseguono queste correzioni; i default del piano non cambiano.
 /plan-execute-verify full-autonomous:false --wip-commit execute verify 003
 ```
 
-**Cosa fa:** Applica le correzioni del report di audit più recente solo dopo
-averti chiesto conferma per sostituire l'esecuzione in corso, e si ferma dopo
-la chiusura di ogni fase riaperta, con commit WIP.
+**Cosa fa:** Applica le correzioni del report di audit più recente accanto
+all'esecuzione salvata, e si ferma dopo la chiusura di ogni fase riaperta, con
+commit WIP.
 
-**Cosa aspettarsi:** Prima di toccare qualcosa l'agente chiede se sostituire
-l'esecuzione in corso del piano 003 (prossima unità 2.1) con le correzioni di
-V001. Se rispondi sì, applica le correzioni e si ferma dopo la chiusura di ogni
-fase riaperta; `resume 003` continua da lì. I commit sono locali e mai
-pushati: uno per ogni correzione completata e fase ricontrollata, più commit
-WIP ai checkpoint. Queste opzioni restano valide finché proseguono queste
+**Cosa aspettarsi:** L'esecuzione salvata del piano 003 (prossima unità 2.1)
+resta com'è: l'agente applica le correzioni di V001 e si ferma dopo la chiusura
+di ogni fase riaperta; `resume 003` continua da lì. I commit sono locali e mai
+pushati: uno per ogni correzione completata e fase ricontrollata, più commit WIP
+ai checkpoint. Queste opzioni restano valide finché proseguono queste
 correzioni; i default del piano non cambiano.
 
 **Impostazioni di questa run:**
@@ -1878,8 +1861,7 @@ correzioni; i default del piano non cambiano.
 - Deadline: nessuna (default)
 - Obiettivo: le correzioni di V001, il report di audit più recente del piano 003
   (nessun report indicato)
-- Dove si ferma: prima chiede conferma per sostituire l'esecuzione in corso del
-  piano 003; poi dopo la chiusura di ogni fase riaperta
+- Dove si ferma: dopo la chiusura di ogni fase riaperta
 - Commit fatti da questa run: ogni correzione completata e fase ricontrollata,
   più un commit WIP a rotazione a ogni checkpoint
 
@@ -1892,9 +1874,8 @@ correzioni; i default del piano non cambiano.
 **Cosa fa:** Applica le correzioni pronte del report di audit più recente senza
 pause tra le fasi, committando solo ciò che è finito, senza commit WIP.
 
-**Cosa aspettarsi:** Come EV-05, con l'autonomia scritta nel comando. La
-sostituzione dell'esecuzione in corso è una decisione autonoma, annotata in
-`history.md` ed elencata nel report finale. I commit sono locali e mai
+**Cosa aspettarsi:** Come EV-05, con l'autonomia scritta nel comando.
+L'esecuzione salvata del piano 003 resta com'è. I commit sono locali e mai
 pushati: uno per ogni correzione completata e fase ricontrollata, nessuno ai
 checkpoint. Si ferma prima solo per un blocco reale, una richiesta di stop o
 una deadline. Queste opzioni restano valide finché proseguono queste
@@ -1910,9 +1891,7 @@ correzioni; i default del piano non cambiano.
 - Deadline: nessuna (default)
 - Obiettivo: le correzioni pronte (READY) di V001, il report di audit più
   recente del piano 003 (nessun report indicato)
-- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale;
-  la sostituzione dell'esecuzione in corso è una decisione autonoma, senza
-  domande
+- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale
 - Commit fatti da questa run: ogni correzione completata e fase ricontrollata;
   nessun commit WIP
 
@@ -1922,17 +1901,16 @@ correzioni; i default del piano non cambiano.
 /plan-execute-verify full-autonomous:false --no-wip-commit execute verify 003
 ```
 
-**Cosa fa:** Applica le correzioni del report di audit più recente solo dopo
-averti chiesto conferma per sostituire l'esecuzione in corso, si ferma dopo la
-chiusura di ogni fase riaperta e non committa nulla: committi tu quando vuoi.
+**Cosa fa:** Applica le correzioni del report di audit più recente accanto
+all'esecuzione salvata, si ferma dopo la chiusura di ogni fase riaperta e non
+committa nulla: committi tu quando vuoi.
 
-**Cosa aspettarsi:** Prima di toccare qualcosa l'agente chiede se sostituire
-l'esecuzione in corso del piano 003 (prossima unità 2.1) con le correzioni di
-V001. Se rispondi sì, applica le correzioni e si ferma dopo la chiusura di ogni
-fase riaperta; `resume 003` continua da lì. Con autonomia `false` e WIP off non
-c'è nessun commit; solo un handoff fa comunque il suo commit. Queste opzioni
-restano valide finché proseguono queste correzioni; i default del piano non
-cambiano.
+**Cosa aspettarsi:** L'esecuzione salvata del piano 003 (prossima unità 2.1)
+resta com'è: l'agente applica le correzioni di V001 e si ferma dopo la chiusura
+di ogni fase riaperta; `resume 003` continua da lì. Con autonomia `false` e WIP
+off non c'è nessun commit; solo un handoff fa comunque il suo commit. Queste
+opzioni restano valide finché proseguono queste correzioni; i default del piano
+non cambiano.
 
 **Impostazioni di questa run:**
 
@@ -1944,8 +1922,7 @@ cambiano.
 - Deadline: nessuna (default)
 - Obiettivo: le correzioni di V001, il report di audit più recente del piano 003
   (nessun report indicato)
-- Dove si ferma: prima chiede conferma per sostituire l'esecuzione in corso del
-  piano 003; poi dopo la chiusura di ogni fase riaperta
+- Dove si ferma: dopo la chiusura di ogni fase riaperta
 - Commit fatti da questa run: nessuno: le modifiche restano non committate
 
 ### EV-10 · `executor-power:low`
@@ -1973,9 +1950,7 @@ Senza quell'opzione, lo stesso comando usa:
 - Deadline: nessuna (default)
 - Obiettivo: le correzioni pronte (READY) di V001, il report di audit più
   recente del piano 003 (nessun report indicato)
-- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale;
-  la sostituzione dell'esecuzione in corso è una decisione autonoma, senza
-  domande
+- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale
 - Commit fatti da questa run: ogni correzione completata e fase ricontrollata,
   più un commit WIP a rotazione a ogni checkpoint
 
@@ -2004,9 +1979,7 @@ Senza quell'opzione, lo stesso comando usa:
 - Deadline: nessuna (default)
 - Obiettivo: le correzioni pronte (READY) di V001, il report di audit più
   recente del piano 003 (nessun report indicato)
-- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale;
-  la sostituzione dell'esecuzione in corso è una decisione autonoma, senza
-  domande
+- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale
 - Commit fatti da questa run: ogni correzione completata e fase ricontrollata,
   più un commit WIP a rotazione a ogni checkpoint
 
@@ -2035,9 +2008,7 @@ Senza quell'opzione, lo stesso comando usa:
 - Deadline: nessuna (default)
 - Obiettivo: le correzioni pronte (READY) di V001, il report di audit più
   recente del piano 003 (nessun report indicato)
-- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale;
-  la sostituzione dell'esecuzione in corso è una decisione autonoma, senza
-  domande
+- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale
 - Commit fatti da questa run: ogni correzione completata e fase ricontrollata,
   più un commit WIP a rotazione a ogni checkpoint
 
@@ -2052,11 +2023,9 @@ gli agenti che indichi, senza chiederti nulla.
 
 **Cosa aspettarsi:** agent-1 (opus) rivede e approva; gli altri agenti
 implementano le unità assegnate. Questo elenco sostituisce quello salvato nel
-piano 003. L'autonomia resta `true` dal piano 003:
-la sostituzione dell'esecuzione in corso è una decisione autonoma, annotata in
-`history.md` ed elencata nel report finale, e le correzioni girano senza pause
-tra le fasi. Commit per ogni correzione completata e fase ricontrollata, più
-commit WIP ai checkpoint.
+piano 003. L'autonomia resta `true` dal piano 003: le correzioni girano senza
+pause tra le fasi, accanto all'esecuzione salvata. Commit per ogni correzione
+completata e fase ricontrollata, più commit WIP ai checkpoint.
 
 **Impostazioni di questa run:**
 
@@ -2068,9 +2037,7 @@ commit WIP ai checkpoint.
 - Deadline: nessuna (default)
 - Obiettivo: le correzioni pronte (READY) di V001, il report di audit più
   recente del piano 003 (nessun report indicato)
-- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale;
-  la sostituzione dell'esecuzione in corso è una decisione autonoma, senza
-  domande
+- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale
 - Commit fatti da questa run: ogni correzione completata e fase ricontrollata,
   più un commit WIP a rotazione a ogni checkpoint
 
@@ -2086,9 +2053,8 @@ solo modello per tutto, senza chiederti nulla.
 **Cosa aspettarsi:** my-model implementa e rivede il proprio lavoro; le
 revisioni sono segnate come self-review. Sostituisce l'elenco salvato nel
 piano 003. L'autonomia resta `true`
-dal piano 003: la sostituzione dell'esecuzione in corso è una decisione
-autonoma, annotata in `history.md` ed elencata nel report finale, e le
-correzioni girano senza pause tra le fasi. Commit per ogni correzione
+dal piano 003: le correzioni girano senza pause tra le fasi, accanto
+all'esecuzione salvata. Commit per ogni correzione
 completata e fase ricontrollata, più commit WIP ai checkpoint.
 
 **Impostazioni di questa run:**
@@ -2101,9 +2067,7 @@ completata e fase ricontrollata, più commit WIP ai checkpoint.
 - Deadline: nessuna (default)
 - Obiettivo: le correzioni pronte (READY) di V001, il report di audit più
   recente del piano 003 (nessun report indicato)
-- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale;
-  la sostituzione dell'esecuzione in corso è una decisione autonoma, senza
-  domande
+- Dove si ferma: quando le correzioni pronte sono finite, o a un blocco reale
 - Commit fatti da questa run: ogni correzione completata e fase ricontrollata,
   più un commit WIP a rotazione a ogni checkpoint
 
@@ -2121,8 +2085,7 @@ superi le 17:30 meno un margine di almeno 10 minuti, chiude l'unità in corso
 solo se ci sta, altrimenti si ferma al primo punto sicuro. Salva lo stato, fa un
 commit di handoff per il codice non finito, e il report con il comando di
 ripresa `resume 003` è pronto entro le 17:30. L'autonomia resta `true` dal
-piano 003: la sostituzione dell'esecuzione in corso è una decisione autonoma,
-annotata in `history.md` ed elencata nel report. Le correzioni di V001 non
+piano 003 e l'esecuzione salvata resta com'è. Le correzioni di V001 non
 finite restano aperte con il loro checkpoint. Se il lavoro finisce prima,
 termina normalmente. Il `resume` non ripete la deadline.
 
@@ -2164,7 +2127,8 @@ perché tu lo legga: approvi rispondendo nella stessa sessione o con `resume
 000_adhoc T-A004`; rifiuti dicendolo o segnando la voce `WITHDRAWN`. Tutto ciò
 che segue `task` è la descrizione, anche testo come `--json`; solo un testo con
 la forma di un'opzione di questa skill, come `--deadline=…`, fa chiedere
-conferma all'agente.
+conferma all'agente. Un token `full-autonomous:true|false` che chiude la
+descrizione vale come opzione.
 
 ### TA-01 · nessuna opzione
 
@@ -2421,8 +2385,9 @@ lo implementa con i test.
 **Cosa aspettarsi:** Si ferma una volta, con la voce T-A004 in stato `PROPOSED`
 e non committata. Per approvare rispondi nella stessa sessione o lancia `resume
 000_adhoc T-A004`. Con autonomia e WIP entrambi disattivati non c'è alcun
-commit, né ora né dopo l'approvazione: la modifica resta non committata e il
-report suggerisce il comando di commit. Le opzioni valgono solo per questa run.
+commit, né ora né dopo l'approvazione: la modifica resta non committata e la
+riga Fermati del report offre `handoff`, che la committa come patch a sé. Le
+opzioni valgono solo per questa run.
 
 **Impostazioni di questa run:**
 
@@ -2906,8 +2871,8 @@ mini-piano e prima del test di regressione, con la voce B-A003 `PROPOSED` non
 committata. Per approvare rispondi nella stessa sessione o lancia
 `/plan-execute-verify resume 000_adhoc B-A003` (l'ID serve). Dopo
 l'approvazione scrive test e fix, ma con `false` e WIP off non committa mai: la
-modifica resta non committata e il report suggerisce il comando di commit. Le
-opzioni valgono solo per questa run.
+modifica resta non committata e la riga Fermati del report offre `handoff`, che
+la committa come patch a sé. Le opzioni valgono solo per questa run.
 
 **Impostazioni di questa run:**
 
@@ -3868,28 +3833,31 @@ opzioni valgono solo per questa run.
 ### RE-09 · `full-autonomous:false --no-wip-commit`
 
 ```text
-/plan-execute-verify full-autonomous:false --no-wip-commit resume 000_adhoc B-A002
+/plan-execute-verify full-autonomous:false --no-wip-commit resume 003
 ```
 
-**Cosa fa:** Continua solo il bug ad-hoc B-A002, senza commit, e si ferma dopo
-di esso.
+**Cosa fa:** Continua il piano 003 dalla sotto-fase 2.1, si ferma dopo la
+chiusura della fase 2 (P2) e non committa nulla: committi tu quando vuoi.
 
-**Cosa aspettarsi:** Le opzioni valgono solo per questa run, anche se la voce
-aveva i commit attivi; la volta successiva tornano le impostazioni registrate.
-Con `false` non continua con altre voci del ledger né con il piano 003, il cui
-lavoro salvato aspetta `resume 003`. Con autonomia `false` e WIP off non fa
-nessun commit; solo un eventuale handoff ne farebbe uno.
+**Cosa aspettarsi:** Le opzioni valgono solo per questa run, anche se il lavoro
+ripreso era registrato con autonomia `true` e WIP on; la volta successiva
+tornano le impostazioni registrate. Lo stop dopo P2 non è un handoff:
+l'esecuzione salvata resta in corso e si continua con `resume 003`. Con
+autonomia `false` e WIP off non c'è nessun commit; ogni unità chiusa viene
+registrata come non committata con i suoi tree, così un `handoff` successivo
+la committa come patch a sé. Le stesse opzioni su una sola voce del ledger
+(`resume 000_adhoc B-A002`) sono mostrate in "Combinare le opzioni".
 
 **Impostazioni di questa run:**
 
 - Autonomia (`full-autonomous`): `false` (dal tuo comando; solo per questa run)
 - Commit WIP: off (dal tuo comando; solo per questa run)
-- Potenza degli esecutori: `low` (default per 000_adhoc; un task o bug su un
-  piano segue quel piano)
-- Agenti: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Potenza degli esecutori: `low` (livello del piano 003; lo imposta solo Plan)
+- Agenti: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (dal lavoro ripreso)
 - Deadline: nessuna (default)
-- Obiettivo: solo la voce di bug ad-hoc B-A002
-- Dove si ferma: dopo la voce B-A002
+- Obiettivo: piano 003: prima il lavoro registrato (qui niente da recuperare),
+  poi l'esecuzione salvata da 2.1 fino alla chiusura della fase 2
+- Dove si ferma: dopo la chiusura della fase 2 (P2)
 - Commit fatti da questa run: nessuno: le modifiche restano non committate
 
 ### RE-10 · `executor-power:low`
@@ -4559,3 +4527,12 @@ RE-02 + RE-13: tutto vale solo per questa run.
 EX-15 + EX-02 + EX-13: tutto il piano, in autonomia, con questo elenco di
 agenti, e un handoff che finisce entro le 17:30, con la riserva di almeno 10
 minuti.
+
+```text
+/plan-execute-verify full-autonomous:false --no-wip-commit resume 000_adhoc B-A002
+```
+
+RE-09 su una sola voce del ledger: continua solo il bug ad-hoc B-A002, senza
+commit, e si ferma dopo di esso; la volta successiva tornano le impostazioni
+registrate sulla voce. Con il default `true` lo stesso comando recupererebbe
+anche le altre voci riprendibili del ledger, in ordine di ledger.

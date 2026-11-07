@@ -116,16 +116,18 @@ An unresolved required item prevents READY or implementation DONE.
       no work outside the saved scope, kept scope/§3/roster unchanged and each
       resumed unit's recorded settings, and recorded results under that unit's
       mode; with full autonomy it continued after a named unit, an interrupted
-      Verify correction pass, and every resumable 000_adhoc entry. Task/Bug/Verify
-      left the saved execution scope, §3 settings, and roster unchanged; their
+      Verify correction pass, and every resumable 000_adhoc entry. Execute
+      verify, Task, Bug, and Verify left the saved execution scope, its result,
+      and §3 settings unchanged (Task, Bug, and Verify also the roster); their
       explicit options were recorded with the invocation only.
 - [ ] Task/bug attached to a named or clearly affected plan, otherwise 000_adhoc;
       the attachment reason is recorded.
 - [ ] Task/bug mini-plan written or validated by agent-1 (a Bug's with its root
       cause) before code. With false it stopped PROPOSED, with no edits besides
-      the ledger entry and no ownership, until an approval naming it, which ran
-      only that entry; changed paths or edits were revalidated; a rejected
-      proposal is WITHDRAWN, never erased.
+      the ledger entry and the §1 record, written under an ownership claimed,
+      migrated if needed, and released at that stop, until an approval naming
+      it, which with false ran only that entry; changed paths or edits were
+      revalidated; a rejected proposal is WITHDRAWN, never erased.
 - [ ] Actual unit revision/contracts/prerequisites checked before editing.
 - [ ] Unit opened before edits with HEAD plus working-tree snapshot tree as base;
       owner and pre-existing changes identified. Stale ownership was taken over
@@ -170,13 +172,16 @@ An unresolved required item prevents READY or implementation DONE.
       checkpoint of an OPEN code unit updated one rolling WIP commit.
 - [ ] Execute options were recorded as §1 scope overrides, never in §3; they
       lapsed when a different selector replaced the scope. Only Plan set §3.
+      Execute verify set no saved scope: its report and options stayed in the
+      §1 invocation record, and the saved scope kept its result and overrides.
 - [ ] Autonomy loop (execution-contract §3): with full autonomy, eligible work
       continued in the same turn until scoped completion or one of the
       exhaustive stops; between units at most a progress line, never a report,
       Next block, question, or resume suggestion. With false, the only
       additional stop is after each phase closure (Task/Bug: once, for approval
-      of the validated mini-plan). A natural-language autonomy request was
-      honored as explicit.
+      of the validated mini-plan). A natural-language autonomy request, or a
+      trailing `full-autonomous:` token (also on task/bug), was honored as
+      explicit; combined with a leading option it was rejected as a duplicate.
 - [ ] With full autonomy no question was asked: each user choice or decision
       became an autonomous decision by agent-1, recorded before acting
       (execution-contract §4) and listed in the final report; none granted a
@@ -189,8 +194,10 @@ An unresolved required item prevents READY or implementation DONE.
       closed phase and one `plan(<plan>): PLAN … COMPLETE` commit for the
       finished plan when commits are enabled.
 - [ ] STATE.md compacted (execution-contract §8): §4 unsettled rows only, §5/§6
-      only the OPEN unit, §7 latest per gate, closed phases collapsed, settled
-      detail appended to history.md; no protocol text beyond the §0 pointer.
+      only the OPEN unit, §7 latest per gate, closed phases collapsed and a
+      phase reopened by a correction re-expanded from its phase file with
+      trailer-backed references, settled detail appended to history.md; no
+      protocol text beyond the §0 pointer.
       Pending format migrations (execution-contract §8) ran in order when
       ownership was claimed, before any unit, and the header shows the latest
       format; a newer format than the skill was rejected, never written; a
@@ -219,8 +226,9 @@ An unresolved required item prevents READY or implementation DONE.
 - [ ] The run released the ownership it claimed, with time and reason
       (execution-contract §2).
 - [ ] Final report distinguishes completed, skipped, blocked, and unverified
-      work, and warns when changes or plan records remain uncommitted, with a
-      suggested commit command.
+      work, and warns when changes or plan records remain uncommitted, pointing
+      to `handoff` for code work and to a commit command only for files a
+      handoff would not commit.
 - [ ] Report ends with the Next block (next-step.md): the Mode line with the
       run's mode and every effective setting with its source, one exact
       Continue command with the settings it runs with, or why nothing follows,

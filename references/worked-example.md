@@ -185,7 +185,7 @@ Initial board (§11), with phase 0 expanded because it is the open phase:
 
 | ID | Depends | Status | Attempt | Assigned | Ref / note |
 |----|---------|--------|---------|----------|------------|
-| 0.1 | none | TODO | 1 | agent-2 | — |
+| 0.1 | none | TODO | 1 | agent-3 | — |
 
 P0 additionally requires G-P0 and agent-1's phase review. When full autonomy or
 WIP is enabled, the commits read, in order:
@@ -216,7 +216,7 @@ Suppose S1 and S2 were written but the process ended before S3:
 
 At verified completion, §1 `Last closure` and the board row use unit:0.1:1 (no
 §4 row, since it is committed) and the commit carries:
-PEV-Plan: 003_plan-RateLimit; PEV-Unit: 0.1; PEV-Attempt: 1;
+PEV-Plan: 003 (the folder number, never the full folder name); PEV-Unit: 0.1; PEV-Attempt: 1;
 PEV-Result: complete. These are separate trailer lines in the actual message.
 A crash before that commit leaves an unresolved reference to finalize; a crash
 after it is resolved from Git and must not create a duplicate commit.

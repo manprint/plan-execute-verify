@@ -96,9 +96,11 @@ Where your options are kept:
 - **Plan** saves the resolved values as the plan's defaults for later runs: your
   options, or `true` and WIP on where you gave none. A value the plan already
   records stays as it is, including `false` or off.
-- **Execute** and **Execute verify** keep them for that execution: `resume`
-  reuses them, and they never change the plan's defaults. The one exception is
-  an explicit agent list: they save it to the plan as its roster, for later runs.
+- **Execute** keeps them for that execution: `resume` reuses them, and they
+  never change the plan's defaults. **Execute verify** keeps them for its
+  correction pass, which runs beside the saved execution without replacing it.
+  The one exception for both is an explicit agent list: they save it to the
+  plan as its roster, for later runs.
 - **Task**, **Bug**, **Verify**, and **Resume** use them for that run only.
 - **Onboard** never saves anything; **Handoff** ignores everything except a
   deadline.
@@ -128,15 +130,15 @@ Each cell gives the case ID and its effect in a few words.
 
 | # | Options | Onboard | Plan | Execute | Execute verify | Task | Bug | Verify | Resume | Handoff |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 01 | no option | ON-01 inspect only | PL-01 defaults saved; no questions | EX-01 whole plan, commit + WIP | EV-01 replaces running scope, commit + WIP | TA-01 no approval stop, commit + WIP | BU-01 no approval stop, commit + WIP | VE-01 audit commit, then corrections, WIP | RE-01 whole plan, commit + WIP | HA-01 stop now |
-| 02 | `full-autonomous:true` | ON-02 no effect | PL-02 defaults saved; no questions | EX-02 whole plan, commit + WIP | EV-02 replaces running scope, commit + WIP | TA-02 no approval stop, commit + WIP | BU-02 no approval stop, commit + WIP | VE-02 audit commit, then corrections | RE-02 whole plan, commit + WIP | HA-02 ignored, stop now |
-| 03 | `full-autonomous:false` | ON-03 no effect | PL-03 defaults saved; may ask | EX-03 stop per phase, commit + WIP | EV-03 asks first, then stop per phase, commit + WIP | TA-03 approval, then commit + WIP | BU-03 approval, then commit + WIP | VE-03 audit, no commit, no corrections | RE-03 stop per phase, commit + WIP | HA-03 ignored, stop now |
-| 04 | `--wip-commit` | ON-04 no effect | PL-04 defaults saved; no questions | EX-04 whole plan, commit + WIP | EV-04 replaces running scope, commit + WIP | TA-04 no approval stop, commit + WIP | BU-04 no approval stop, commit + WIP | VE-04 audit commit, then corrections with WIP | RE-04 whole plan, commit + WIP | HA-04 ignored, stop now |
-| 05 | `--no-wip-commit` | ON-05 no effect | PL-05 defaults saved; no questions | EX-05 whole plan, commit, no WIP | EV-05 replaces running scope, commit, no WIP | TA-05 no approval stop, commit, no WIP | BU-05 no approval stop, commit, no WIP | VE-05 audit commit, then corrections, no WIP | RE-05 whole plan, commit, no WIP | HA-05 ignored, stop now |
-| 06 | `full-autonomous:true --wip-commit` | ON-06 no effect | PL-06 defaults saved; no questions | EX-06 whole plan, commit + WIP | EV-06 replaces running scope, commit + WIP | TA-06 no approval stop, commit + WIP | BU-06 no approval stop, commit + WIP | VE-06 audit commit, then corrections with WIP | RE-06 whole plan, commit + WIP | HA-06 ignored, stop now |
-| 07 | `full-autonomous:false --wip-commit` | ON-07 no effect | PL-07 defaults saved; may ask | EX-07 stop per phase, commit + WIP | EV-07 asks first, then stop per phase, commit + WIP | TA-07 approval, then commit + WIP | BU-07 approval, then commit + WIP | VE-07 audit, no commit, no corrections | RE-07 stop per phase, commit + WIP | HA-07 ignored, stop now |
-| 08 | `full-autonomous:true --no-wip-commit` | ON-08 no effect | PL-08 defaults saved; no questions | EX-08 whole plan, commit, no WIP | EV-08 replaces running scope, commit, no WIP | TA-08 no approval stop, commit, no WIP | BU-08 no approval stop, commit, no WIP | VE-08 audit commit, then corrections, no WIP | RE-08 whole plan, commit, no WIP | HA-08 ignored, stop now |
-| 09 | `full-autonomous:false --no-wip-commit` | ON-09 no effect | PL-09 defaults saved; may ask | EX-09 stop per phase, no commit | EV-09 asks first, then stop per phase, no commit | TA-09 approval, no commit | BU-09 approval, no commit | VE-09 audit, no commit, no corrections | RE-09 B-A002 only, no commit | HA-09 ignored, stop now |
+| 01 | no option | ON-01 inspect only | PL-01 defaults saved; no questions | EX-01 whole plan, commit + WIP | EV-01 corrections beside saved scope, commit + WIP | TA-01 no approval stop, commit + WIP | BU-01 no approval stop, commit + WIP | VE-01 audit commit, then corrections, WIP | RE-01 whole plan, commit + WIP | HA-01 stop now |
+| 02 | `full-autonomous:true` | ON-02 no effect | PL-02 defaults saved; no questions | EX-02 whole plan, commit + WIP | EV-02 corrections beside saved scope, commit + WIP | TA-02 no approval stop, commit + WIP | BU-02 no approval stop, commit + WIP | VE-02 audit commit, then corrections | RE-02 whole plan, commit + WIP | HA-02 ignored, stop now |
+| 03 | `full-autonomous:false` | ON-03 no effect | PL-03 defaults saved; may ask | EX-03 stop per phase, commit + WIP | EV-03 stop per reopened phase, commit + WIP | TA-03 approval, then commit + WIP | BU-03 approval, then commit + WIP | VE-03 audit, no commit, no corrections | RE-03 stop per phase, commit + WIP | HA-03 ignored, stop now |
+| 04 | `--wip-commit` | ON-04 no effect | PL-04 defaults saved; no questions | EX-04 whole plan, commit + WIP | EV-04 corrections beside saved scope, commit + WIP | TA-04 no approval stop, commit + WIP | BU-04 no approval stop, commit + WIP | VE-04 audit commit, then corrections with WIP | RE-04 whole plan, commit + WIP | HA-04 ignored, stop now |
+| 05 | `--no-wip-commit` | ON-05 no effect | PL-05 defaults saved; no questions | EX-05 whole plan, commit, no WIP | EV-05 corrections beside saved scope, commit, no WIP | TA-05 no approval stop, commit, no WIP | BU-05 no approval stop, commit, no WIP | VE-05 audit commit, then corrections, no WIP | RE-05 whole plan, commit, no WIP | HA-05 ignored, stop now |
+| 06 | `full-autonomous:true --wip-commit` | ON-06 no effect | PL-06 defaults saved; no questions | EX-06 whole plan, commit + WIP | EV-06 corrections beside saved scope, commit + WIP | TA-06 no approval stop, commit + WIP | BU-06 no approval stop, commit + WIP | VE-06 audit commit, then corrections with WIP | RE-06 whole plan, commit + WIP | HA-06 ignored, stop now |
+| 07 | `full-autonomous:false --wip-commit` | ON-07 no effect | PL-07 defaults saved; may ask | EX-07 stop per phase, commit + WIP | EV-07 stop per reopened phase, commit + WIP | TA-07 approval, then commit + WIP | BU-07 approval, then commit + WIP | VE-07 audit, no commit, no corrections | RE-07 stop per phase, commit + WIP | HA-07 ignored, stop now |
+| 08 | `full-autonomous:true --no-wip-commit` | ON-08 no effect | PL-08 defaults saved; no questions | EX-08 whole plan, commit, no WIP | EV-08 corrections beside saved scope, commit, no WIP | TA-08 no approval stop, commit, no WIP | BU-08 no approval stop, commit, no WIP | VE-08 audit commit, then corrections, no WIP | RE-08 whole plan, commit, no WIP | HA-08 ignored, stop now |
+| 09 | `full-autonomous:false --no-wip-commit` | ON-09 no effect | PL-09 defaults saved; may ask | EX-09 stop per phase, no commit | EV-09 stop per reopened phase, no commit | TA-09 approval, no commit | BU-09 approval, no commit | VE-09 audit, no commit, no corrections | RE-09 stop per phase, no commit | HA-09 ignored, stop now |
 | 10 | `executor-power:low` | ON-10 rejected | PL-10 small detailed units | EX-10 rejected | EV-10 rejected | TA-10 rejected | BU-10 rejected | VE-10 rejected | RE-10 rejected | HA-10 ignored, stop now |
 | 11 | `executor-power:medium` | ON-11 rejected | PL-11 medium units | EX-11 rejected | EV-11 rejected | TA-11 rejected | BU-11 rejected | VE-11 rejected | RE-11 rejected | HA-11 ignored, stop now |
 | 12 | `executor-power:high` | ON-12 rejected | PL-12 outcome units | EX-12 rejected | EV-12 rejected | TA-12 rejected | BU-12 rejected | VE-12 rejected | RE-12 rejected | HA-12 ignored, stop now |
@@ -202,7 +204,11 @@ mode, inside a description, such as `task fix the export
 deadline, since stopping earlier never loses work; the report states that
 reading, and any other option-like text stays part of the description. With
 `full-autonomous:false`, the agent asks before starting whether you meant it as
-an option, which belongs before the mode. A command that only asks to continue,
+an option, which belongs before the mode. Two tokens are read even there: a
+deadline after `handoff`, and a `full-autonomous:true|false` token that ends
+the command, a task or bug description included, which counts as the option;
+writing it both before the mode and at the end is a duplicate and is rejected.
+A command that only asks to continue,
 such as `/plan-execute-verify continue 003`, never creates a plan: it runs as
 `resume 003`. A `continue` with no selector resumes when exactly one resumable
 target matches; otherwise, under the default autonomy, the rest of its words
@@ -1433,13 +1439,11 @@ Execute verify applies the corrections listed in an audit report (by default the
 plan's newest report) and rechecks the phases they touch. It applies only those
 corrections, not new plan work. Give a report ID, such as `execute verify 003
 V002`, to pick another report. In this example plan 003 is still being executed,
-stopped by the handoff, so the corrections would replace that saved execution.
-Under the default `full-autonomous:true` the agent does that without asking: it
-records the replaced run (plan 003 from sub-phase 2.1) in `history.md`. After the
-corrections, `resume 003` reports the next eligible unit and the command to start
-it, without starting it. With `full-autonomous:false` the agent asks first; the
-cases below assume you answer yes, and then `resume 003` continues the
-corrections.
+stopped by the handoff before sub-phase 2.1. The corrections never replace that
+saved execution: they run as their own pass beside it, the options you give
+here stay on that pass only, and plan 003's execution stays recorded with next
+unit 2.1. After the corrections, `resume 003` continues it from there; a pass
+interrupted by a stop or a deadline is finished by `resume 003` first.
 
 ### EV-01 · no option
 
@@ -1447,14 +1451,14 @@ corrections.
 /plan-execute-verify execute verify 003
 ```
 
-**What it does:** Replaces plan 003's running execution with the corrections of
-the newest audit report (V001), using plan 003's saved settings, and applies
-them.
+**What it does:** Applies the corrections of the newest audit report (V001),
+using plan 003's saved settings, as its own pass beside plan 003's saved
+execution.
 
-**What to expect:** It asks nothing. The replaced run (plan 003 from sub-phase
-2.1) is recorded in `history.md`. It reopens and closes the affected phases with
-their gates and reviews, and commits each finished correction and reopened phase
-closure, with a WIP commit at each checkpoint.
+**What to expect:** It asks nothing. Plan 003's saved execution stays as it was,
+with next unit 2.1, for a later `resume 003`. It reopens and closes the affected
+phases with their gates and reviews, and commits each finished correction and
+reopened phase closure, with a WIP commit at each checkpoint.
 
 **Settings for this run:**
 
@@ -1477,12 +1481,12 @@ closure, with a WIP commit at each checkpoint.
 /plan-execute-verify full-autonomous:true execute verify 003
 ```
 
-**What it does:** Replaces the running execution with the corrections of the
-newest audit report, and applies them without pausing between phases. It commits
-each finished piece and a WIP commit at checkpoints.
+**What it does:** Applies the corrections of the newest audit report without
+pausing between phases, beside plan 003's saved execution. It commits each
+finished piece and a WIP commit at checkpoints.
 
-**What to expect:** It asks nothing and records the replaced run in
-`history.md`. Commits are local and never pushed. It stops early only at a real
+**What to expect:** It asks nothing and leaves plan 003's saved execution as it
+was. Commits are local and never pushed. It stops early only at a real
 blocker, a stop request, or a deadline. These options are kept while these
 corrections continue; the plan defaults do not change.
 
@@ -1506,10 +1510,9 @@ corrections continue; the plan defaults do not change.
 /plan-execute-verify full-autonomous:false execute verify 003
 ```
 
-**What it does:** Asks you first whether to replace plan 003's running execution
-(the cases assume you answer yes). It then applies the corrections of the newest
-audit report, stopping after each reopened phase closes, and commits each one
-with a WIP commit at each checkpoint.
+**What it does:** Applies the corrections of the newest audit report beside plan
+003's saved execution, stopping after each reopened phase closes, and commits
+each one with a WIP commit at each checkpoint.
 
 **What to expect:** Commits are local and never pushed, because WIP is on in
 plan 003. To commit nothing until you do, add `--no-wip-commit` (EV-09). These
@@ -1526,8 +1529,7 @@ change.
 - Deadline: none (default)
 - Target: the corrections of V001, plan 003's newest audit report (no report
   given)
-- Where it stops: first it asks before replacing the running execution of plan
-  003; then after each reopened phase is closed
+- Where it stops: after each reopened phase is closed
 - Commits made by this run: each finished correction and reopened phase closure,
   plus a WIP commit at each checkpoint
 
@@ -1537,9 +1539,9 @@ change.
 /plan-execute-verify --wip-commit execute verify 003
 ```
 
-**What it does:** Replaces the running execution with the corrections of the
-newest audit report without asking, applies them without pausing between phases,
-and commits each finished piece and a WIP commit at checkpoints.
+**What it does:** Applies the corrections of the newest audit report without
+asking or pausing between phases, beside plan 003's saved execution, and commits
+each finished piece and a WIP commit at checkpoints.
 
 **What to expect:** Commits are local and never pushed. These options are kept
 while these corrections continue; the plan defaults do not change.
@@ -1564,9 +1566,9 @@ while these corrections continue; the plan defaults do not change.
 /plan-execute-verify --no-wip-commit execute verify 003
 ```
 
-**What it does:** Replaces the running execution with the corrections of the
-newest audit report without asking, applies them without pausing between phases,
-and commits each finished piece, with no WIP commits.
+**What it does:** Applies the corrections of the newest audit report without
+asking or pausing between phases, beside plan 003's saved execution, and commits
+each finished piece, with no WIP commits.
 
 **What to expect:** Commits are local and never pushed. The autonomous completion
 commits still apply; only the WIP checkpoints are off. These options are kept
@@ -1592,9 +1594,9 @@ while these corrections continue; the plan defaults do not change.
 /plan-execute-verify full-autonomous:true --wip-commit execute verify 003
 ```
 
-**What it does:** Replaces the running execution with the corrections of the
-newest audit report without asking, applies them without pausing between phases,
-and commits each finished piece and a WIP commit at checkpoints.
+**What it does:** Applies the corrections of the newest audit report without
+asking or pausing between phases, beside plan 003's saved execution, and commits
+each finished piece and a WIP commit at checkpoints.
 
 **What to expect:** Commits are local and never pushed. It stops early only at a
 real blocker, a stop request, or a deadline. These options are kept while these
@@ -1620,10 +1622,9 @@ corrections continue; the plan defaults do not change.
 /plan-execute-verify full-autonomous:false --wip-commit execute verify 003
 ```
 
-**What it does:** Asks you first whether to replace plan 003's running execution
-(the cases assume you answer yes). It then applies the corrections of the newest
-audit report, stopping after each reopened phase closes, and commits each one
-with a WIP commit at each checkpoint.
+**What it does:** Applies the corrections of the newest audit report beside plan
+003's saved execution, stopping after each reopened phase closes, and commits
+each one with a WIP commit at each checkpoint.
 
 **What to expect:** Commits are local and never pushed. These options are kept
 while these corrections continue; the plan defaults do not change.
@@ -1638,8 +1639,7 @@ while these corrections continue; the plan defaults do not change.
 - Deadline: none (default)
 - Target: the corrections of V001, plan 003's newest audit report (no report
   given)
-- Where it stops: first it asks before replacing the running execution of plan
-  003; then after each reopened phase is closed
+- Where it stops: after each reopened phase is closed
 - Commits made by this run: each finished correction and reopened phase closure,
   plus a WIP commit at each checkpoint
 
@@ -1649,9 +1649,9 @@ while these corrections continue; the plan defaults do not change.
 /plan-execute-verify full-autonomous:true --no-wip-commit execute verify 003
 ```
 
-**What it does:** Replaces the running execution with the corrections of the
-newest audit report without asking, applies them without pausing between phases,
-and commits each finished piece, with no WIP commits.
+**What it does:** Applies the corrections of the newest audit report without
+asking or pausing between phases, beside plan 003's saved execution, and commits
+each finished piece, with no WIP commits.
 
 **What to expect:** Commits are local and never pushed. It stops early only at a
 real blocker, a stop request, or a deadline. These options are kept while these
@@ -1677,10 +1677,9 @@ corrections continue; the plan defaults do not change.
 /plan-execute-verify full-autonomous:false --no-wip-commit execute verify 003
 ```
 
-**What it does:** Asks you first whether to replace plan 003's running execution
-(the cases assume you answer yes). It then applies the corrections of the newest
-audit report, stopping after each reopened phase closes, and commits nothing:
-you commit when you want.
+**What it does:** Applies the corrections of the newest audit report beside plan
+003's saved execution, stopping after each reopened phase closes, and commits
+nothing: you commit when you want.
 
 **What to expect:** Only a handoff still makes its one commit. These options are
 kept while these corrections continue; the plan defaults do not change.
@@ -1695,8 +1694,7 @@ kept while these corrections continue; the plan defaults do not change.
 - Deadline: none (default)
 - Target: the corrections of V001, plan 003's newest audit report (no report
   given)
-- Where it stops: first it asks before replacing the running execution of plan
-  003; then after each reopened phase is closed
+- Where it stops: after each reopened phase is closed
 - Commits made by this run: none: changes stay uncommitted
 
 ### EV-10 · `executor-power:low`
@@ -1793,7 +1791,7 @@ Without that option, the same command uses:
 ```
 
 **What it does:** Applies the corrections of the newest audit report with the
-agents you list, replacing plan 003's running execution without asking.
+agents you list, without asking, beside plan 003's saved execution.
 
 **What to expect:** agent-1 (opus) reviews and approves; the other agents
 implement the corrections assigned to them. This list replaces plan 003's saved
@@ -1820,7 +1818,7 @@ one and is saved to plan 003 for later runs. Commits are as in EV-01.
 ```
 
 **What it does:** Applies the corrections of the newest audit report with one
-model for everything, replacing plan 003's running execution without asking.
+model for everything, without asking, beside plan 003's saved execution.
 
 **What to expect:** my-model applies and reviews the corrections, and its reviews
 are marked as self-reviews. It replaces plan 003's saved list for these
@@ -1849,7 +1847,7 @@ corrections, and is saved to plan 003. Commits are as in EV-01.
 **What it does:** Applies the corrections of the newest audit report until 17:30
 at the latest, then stops gracefully, with everything finished by then.
 
-**What to expect:** It replaces plan 003's running execution without asking, as
+**What to expect:** It runs beside plan 003's saved execution without asking, as
 in EV-01. The agent keeps a reserve of at least ten minutes and starts no
 correction that would not finish before the reserve begins. It saves the state,
 makes one handoff commit for unfinished code, and shows the resume command. If
@@ -1889,7 +1887,9 @@ approve by replying in the same session or with `resume 000_adhoc T-A004`;
 reject by saying so or by marking the entry `WITHDRAWN`. Everything after `task`
 is the description, even text like `--json`. A valid trailing `--deadline=…` is
 read as the deadline under the default autonomy; with `false` the agent asks
-first whether option-shaped text was meant as an option.
+first whether option-shaped text was meant as an option. A
+`full-autonomous:true|false` token that ends the description counts as the
+option.
 
 ### TA-01 · no option
 
@@ -2123,9 +2123,10 @@ first. These options apply to this run only.
 check it, and stops for your approval. After approval it implements the change
 with tests.
 
-**What to expect:** No commits: the change stays uncommitted, and the report
-suggests the commit command. To approve, reply in the same session or run the
-`resume` command the report shows. These options apply to this run only.
+**What to expect:** No commits: the change stays uncommitted, and the report's
+Stop line offers `handoff`, which commits it as its own patch. To approve, reply
+in the same session or run the `resume` command the report shows. These options
+apply to this run only.
 
 **Settings for this run:**
 
@@ -2558,9 +2559,10 @@ These options apply to this run only.
 agent-1 check it, and stops for your approval. After approval it writes a failing
 test, fixes the code, and runs the tests again.
 
-**What to expect:** No commits: the fix stays uncommitted, and the report suggests
-the commit command. To approve, reply in the same session or run the `resume`
-command the report shows. These options apply to this run only.
+**What to expect:** No commits: the fix stays uncommitted, and the report's Stop
+line offers `handoff`, which commits it as its own patch. To approve, reply in
+the same session or run the `resume` command the report shows. These options
+apply to this run only.
 
 **Settings for this run:**
 
@@ -3269,8 +3271,8 @@ phase closes. It commits each finished unit and phase, and a WIP commit at each
 checkpoint, because WIP is on in the resumed work.
 
 **What to expect:** Only the options of this run change; the work keeps its
-recorded WIP setting. To commit nothing until you do, add `--no-wip-commit`,
-as RE-09 does for one ledger entry.
+recorded WIP setting. To commit nothing until you do, add `--no-wip-commit`
+(RE-09).
 
 **Settings for this run:**
 
@@ -3414,27 +3416,30 @@ real blocker, a stop request, or a deadline. These options apply to this run onl
 ### RE-09 · `full-autonomous:false --no-wip-commit`
 
 ```text
-/plan-execute-verify full-autonomous:false --no-wip-commit resume 000_adhoc B-A002
+/plan-execute-verify full-autonomous:false --no-wip-commit resume 003
 ```
 
-**What it does:** Continues only the ad-hoc bug B-A002, with no commits, and stops
-after it.
+**What it does:** Continues plan 003 from sub-phase 2.1, stops after phase 2
+closes, and commits nothing: you commit when you want.
 
-**What to expect:** These options apply to this run only, even if the entry was
-recorded with commits on; next time its recorded settings apply again. With
-`full-autonomous:false` the run stops after this entry. Under the default `true`,
-the same command would also recover the other resumable entries of the ledger.
+**What to expect:** These options apply to this run only, even though the
+resumed work was recorded with autonomy `true` and WIP on; next time its
+recorded settings apply again. The run stops after P2 with a checkpoint and
+report, and `resume 003` continues. With autonomy `false` and WIP off nothing
+is committed; each closed unit is recorded as uncommitted with its trees, so a
+later `handoff` commits it as its own patch. The same options on one ledger
+entry (`resume 000_adhoc B-A002`) are shown under Combining options.
 
 **Settings for this run:**
 
 - Autonomy (`full-autonomous`): `false` (from your command; this run only)
 - WIP commits: off (from your command; this run only)
-- Executor power: `low` (default for 000_adhoc; a task or bug on a plan follows
-  that plan)
-- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (default)
+- Executor power: `low` (plan 003's level; only Plan sets it)
+- Agents: agent-1 Opus, agent-2 Sonnet, agent-3 Haiku (from the resumed work)
 - Deadline: none (default)
-- Target: ad-hoc bug entry B-A002 only
-- Where it stops: after entry B-A002
+- Target: plan 003: first any interrupted work (none in this example), then the
+  execution it was running, from sub-phase 2.1
+- Where it stops: after phase 2 is closed (P2)
 - Commits made by this run: none: changes stay uncommitted
 
 ### RE-10 · `executor-power:low`
@@ -4056,3 +4061,12 @@ RE-02 + RE-13: everything applies to this run only.
 
 EX-15 + EX-02 + EX-13: the whole plan, autonomously, with this agent list, and a
 binding stop: everything, the report included, is finished by 17:30.
+
+```text
+/plan-execute-verify full-autonomous:false --no-wip-commit resume 000_adhoc B-A002
+```
+
+RE-09 on one ledger entry: continues only the ad-hoc bug B-A002, with no
+commits, and stops after it; its recorded settings apply again next time.
+Under the default `true` the same command would also recover the other
+resumable entries of the ledger, in ledger order.

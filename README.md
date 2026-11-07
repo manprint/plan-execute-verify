@@ -79,7 +79,7 @@ different interface, select this skill and pass the same options and arguments.
 | `task <description>` | One small change | Requested change and its ledger |
 | `bug <description>` | One defect | Reproduction, regression test, fix, and ledger |
 | `verify [plan] [phase, sub-phase, or entry]` | Audit the whole plan or a narrower scope, including `000_adhoc` entries | Audit reports and state; under full autonomy, then the report's corrections |
-| `execute verify [plan] [report ID]` | Apply audit corrections | Selected corrections and affected plan state |
+| `execute verify [plan] [report ID]` | Apply audit corrections, beside the saved execution without replacing it | Selected corrections and affected plan state |
 | `resume [plan] [unit ID]` | Continue interrupted or saved work exactly where it stopped | Whatever the resumed unit/scope changes; never its scope or settings |
 | `handoff [--deadline=dd-mm-yyyy_hh_mm]` | Stop the running work gracefully, now or by a deadline | State checkpoint, one handoff commit for code work, and the resume command |
 
@@ -101,7 +101,9 @@ one resumable target matches, otherwise a new plan. Options go before the mode;
 if a description contains an option, such as a trailing `--deadline=…`, the
 agent asks before starting with `false`; under full autonomy a valid trailing
 deadline is applied, any other such token stays text, and the report says how
-it read the command. Only `handoff` also accepts the deadline after it.
+it read the command. Only `handoff` also accepts the deadline after it, and a
+`full-autonomous:true|false` token that ends a task or bug description counts
+as the option (next section).
 
 Task and bug take no selector. They attach to a plan only when the request names
 it (number, feature name, or path) or clearly changes an active plan's scope,
@@ -209,16 +211,18 @@ already recorded, such as `false` in an older plan, stays as it is. Pass
 `full-autonomous:false` or `--no-wip-commit` to change them. Booleans are
 literal `true` or `false`; `full-autonomous:yes` is rejected.
 
-Full autonomy can also be requested as the last token of an `execute`,
-`execute verify`, `resume`, or `verify` command
-(`/plan-execute-verify execute 003 full-autonomous:true`) or in plain words in
-your message ("full autonomous", "in piena autonomia", "don't stop until
-done"): both count as the explicit option. Under full autonomy the agent closes
-a unit, prints one progress line, and opens the next one in the same turn. It
-stops only when the scope is complete, at a real blocker, at your stop or
-`handoff`, or when the host ends the session; it never stops after a sub-phase
-to ask you to type `resume`, and it never asks you a question. Permission modes
-such as bypass or yolo do not change this.
+Full autonomy can also be requested as the last token of an `execute`, `execute
+verify`, `verify`, `resume`, `task`, or `bug` command (`/plan-execute-verify
+execute 003 full-autonomous:true`, `/plan-execute-verify task fix the export
+full-autonomous:false`) or in plain words in your message ("full autonomous",
+"in piena autonomia", "don't stop until done"): both count as the explicit
+option. Writing it both before the mode and at the end is a duplicate and is
+rejected. Under full autonomy the agent closes a unit, prints one progress line,
+and opens the next one in the same turn. It stops only when the scope is
+complete, at a real blocker, at your stop or `handoff`, or when the host ends
+the session; it never stops after a sub-phase to ask you to type `resume`, and
+it never asks you a question. Permission modes such as bypass or yolo do not
+change this.
 
 ### What full autonomy does in each mode
 
@@ -265,18 +269,18 @@ Settings resolve independently:
 Plan accepts it, it is stored with the plan, and every other mode rejects it
 ([below](#tell-the-planner-how-capable-the-executors-are)).
 
-Options given to Plan become plan defaults. Options given to Execute or Execute
-verify belong to the scope they start: they survive resume and new sessions of
-that scope and lapse when a different selector replaces it, so a one-off
-autonomous run never changes later executions. To turn off all automatic
-commits, specify both `full-autonomous:false --no-wip-commit`; only a handoff
-still makes its one commit. Task, Bug,
-Verify, and Resume use explicit options for that invocation only and record them
-in their ledger entry, audit report, or resumed unit, even when attached to a
-plan; they never change its saved settings. Onboard never persists options or
-changes a plan's saved configuration. Both boolean values mean inspection only;
-neither full autonomy nor WIP commits its context document or starts the
-recommended next action.
+Options given to Plan become plan defaults. Options given to Execute belong to
+the scope it starts: they survive resume and new sessions of that scope and
+lapse when a different selector replaces it, so a one-off autonomous run never
+changes later executions. Options given to Execute verify apply to that
+correction pass only, which runs beside the saved execution. To turn off all
+automatic commits, specify both `full-autonomous:false --no-wip-commit`; only a
+handoff still makes its one commit. Task, Bug, Verify, and Resume use explicit
+options for that invocation only and record them in their ledger entry, audit
+report, or resumed unit, even when attached to a plan; they never change its
+saved settings. Onboard never persists options or changes a plan's saved
+configuration. Both boolean values mean inspection only; neither full autonomy
+nor WIP commits its context document or starts the recommended next action.
 
 ### Which commits are created?
 
@@ -290,10 +294,13 @@ recommended next action.
 A code unit is a sub-phase, task, bug fix, or audit correction. A phase gets its
 own completion commit after all sub-phases, integration checks, documentation,
 and strong-agent review, and the finished plan gets its own completion commit
-after the last phase, once the final gates pass (the `PLAN` closure). Planning and Onboard never commit. When work or plan
-files stay uncommitted, the final report says so and suggests the exact commit
-command without running it: untracked plan files can be lost to `git clean` or a
-branch switch.
+after the last phase, once the final gates pass (the `PLAN` closure). Planning
+and Onboard never commit. When work or plan files stay uncommitted, the final
+report says so: for code work it points to `handoff`, which commits each unit as
+its own patch and leaves your own edits out, and it suggests a commit command
+only for files a handoff never commits, such as a plan draft or an audit report,
+without running it. Untracked plan files can be lost to `git clean` or a branch
+switch.
 
 Commit subjects are fixed, so `git log --oneline` shows which plan, phase, and
 unit closed (plan 003 here):
@@ -355,11 +362,13 @@ lines.
 A phase/sub-phase selector is a limit, even with full autonomy. Selecting 1.2
 does not authorize the executor to continue into 1.3 or to run the phase closure
 P1; run P1 with a phase or plan selector. Dependencies still apply. The selected
-scope is saved: `resume` continues it, and task, bug, or audit runs in between do
-not replace it. An explicit `execute` or `execute verify` that would replace a
-running or blocked saved scope with a different one asks you first with
-`full-autonomous:false`; under full autonomy it replaces it and records the
-replaced scope and its next unit.
+scope is saved: `resume` continues it, and task, bug, audit, or `execute
+verify` runs in between do not replace it. An explicit `execute` that would
+replace a running or blocked saved scope with a different one asks you first
+with `full-autonomous:false`; under full autonomy it replaces it and records
+the replaced scope and its next unit. `execute verify` runs its corrections as
+its own pass: `resume` finishes an interrupted pass first and then continues
+the saved execution where it stopped.
 
 Phase files are numbered from 01; logical phases start at 0. Thus
 `phase_02.md` contains logical phase 1 and sub-phases such as 1.1 and 1.2.
@@ -392,7 +401,10 @@ report ID is provided. To disambiguate, use `execute verify 003 V002` or replace
 Names are host-specific identifiers, not guaranteed available models. Numbered
 assignments must start at 1 without gaps or duplicates. Without an explicit
 prefix, reuse the saved roster; a new plan defaults to Opus/Sonnet/Haiku for
-compatibility. Use an explicit roster on other hosts.
+compatibility. Use an explicit roster on other hosts, and whenever the model
+running the session is not one of those three: a session outside the roster
+coordinates and dispatches but implements and reviews nothing itself, so in
+handoff style it would stop at once with a blocked handoff.
 A single numbered entry (`agent-1:<name>`) is equivalent to `agent:<name>`.
 
 Opening the plan in another model does not silently change its assignments. In
@@ -605,9 +617,8 @@ with `resume`, while a new `execute` scope starts from the plan defaults and is
 labelled as new. After a rejected command,
 the corrected command keeps your valid options. When a decision is missing it
 reads "answer …, then …"; when nothing follows it says why. Stop suggests
-`handoff` only when open or uncommitted code work, a pending closure, or
-ownership held by this session remains; otherwise it says there is nothing to
-save.
+`handoff` only when open or uncommitted code work or a pending closure
+remains; otherwise it says there is nothing to save.
 Files a handoff never commits, such as a plan draft, an audit report, a proposed
 task, or docs/onboarding.md, are listed with a suggested commit command. Both
 lines are suggestions: the agent never runs them, even with
@@ -709,7 +720,8 @@ docs/plans/003_plan-RateLimit/
 ```
 
 With no plan, task/bug work uses `docs/plans/000_adhoc/` and keeps its recovery
-information in the ledger entry itself. There are no fake phase or STATE files.
+information in the ledger entry itself; an audit of that ledger keeps its own in
+`000_adhoc/verify/index.md`. There are no fake phase or STATE files.
 
 STATE.md stays small: at each closure the agent appends the evidence to
 history.md and removes it from STATE.md; at each phase closure the phase

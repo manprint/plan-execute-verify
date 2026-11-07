@@ -71,8 +71,11 @@ After recovery, without a unit ID, continue a set (not `none`) saved execution
 scope while its result is NOT_STARTED, RUNNING, or BLOCKED, exactly as Execute
 would under that selector, including its autonomy loop: under
 `full-autonomous:true` a resumed run does not stop at the next sub-phase or
-phase boundary. A Verify correction pass (mode-verify.md V6) interrupted with
-`true` first finishes that report's remaining READY corrections. With a unit
+phase boundary. An interrupted correction pass (`execute verify`, or
+mode-verify.md V6), recorded in §1 with result RUNNING or BLOCKED, first
+finishes that report's remaining READY corrections under its recorded
+settings; with `true` the run then continues the saved execution scope as
+above, with `false` it stops after that pass. With a unit
 ID and `false`, stop after that unit's recovery and closure; with `true`,
 continue after it as above. `000_adhoc` has no saved execution scope or §3:
 with `false`, stop after the recovered entry, using the settings recorded in

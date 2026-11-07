@@ -6,8 +6,10 @@ the first token that is neither; the remainder is the mode and its arguments.
 Thus `task add a --json flag` keeps `--json` in the description. When a
 description contains a token shaped like a leading option of this table or an
 agent prefix, such as a trailing `--deadline=…`, ask before starting whether it
-was meant as an option, which belongs before the mode. Only `handoff` accepts a
-deadline after it. When the autonomy the command resolves to is `true`, do not
+was meant as an option, which belongs before the mode. Two tokens are read even
+there: a deadline after `handoff`, which accepts it, and a
+`full-autonomous:true|false` token that ends the command (below). When the
+autonomy the command resolves to is `true`, do not
 ask: a valid trailing `--deadline=…` is taken as the deadline, since stopping
 earlier never loses work; any other such token stays literal text; the report
 states the reading (execution-contract §4).
@@ -24,14 +26,20 @@ states the reading (execution-contract §4).
 Full autonomy may also be requested explicitly in two more forms, recorded
 with source `explicit (prompt)` and treated exactly like the leading option:
 `full-autonomous:true|false` as the last token of an `execute`, `execute
-verify`, `resume`, or `verify` command (modes without free text), or a clear
-natural-language request in the user's message to run without stopping, such
-as "full autonomous", "in piena autonomia", "senza fermarti fino alla fine".
-Text that describes product behavior inside a task or bug description stays
-literal. Never ask whether such a request was meant: asking is itself a stop.
+verify`, `verify`, `resume`, `task`, or `bug` command (for a task or bug, the
+last token of its description, where that exact form is never meaningful
+product text), or a clear natural-language request in the user's message to
+run without stopping, such as "full autonomous", "in piena autonomia", "senza
+fermarti fino alla fine". Other text that describes product behavior inside a
+task or bug description stays literal. Never ask whether such a request was
+meant: asking is itself a stop. A leading autonomy option together with a
+trailing token, or with a natural-language request of the opposite value, is a
+duplicate autonomy option and is rejected (below), whatever the values.
 
 Reject unknown leading options, invalid boolean values (including
-`full-autonomous:yes`), duplicate autonomy options, an invalid or duplicate
+`full-autonomous:yes`), duplicate autonomy options (a leading option repeated,
+or combined with a trailing token or a contrary natural-language request), an
+invalid or duplicate
 `executor-power` value or that option outside Plan, an invalid or duplicate
 `--deadline`, conflicting WIP options, and invalid agent prefixes before work
 starts. Handoff is the exception: it never rejects a stop request, reports what
@@ -43,13 +51,14 @@ while continuing that scope) > selected plan's STATE.md §3 > default
 (`full-autonomous:true`, WIP on). Plan stores the resolved values in §3 as
 plan defaults, so every new plan records `true` and WIP on unless the
 invocation says otherwise; a value already recorded is never rewritten to the
-new default. Execute and Execute verify store
-them with the saved execution scope they set (execution-contract §1): they last
+new default. Execute stores
+them with the saved execution scope it sets (execution-contract §1): they last
 through resume and handoff of that scope, lapse when a different selector
-replaces it, and never change §3. Task, Bug, Verify, and Resume use explicit
-options for that invocation only and record the effective values in their ledger
-entry, audit report, or resumed unit, also when attached to a real plan; they
-never rewrite a plan's saved settings. A resumed unit keeps the effective
+replaces it, and never change §3. Execute verify, Task, Bug, Verify, and Resume
+use explicit options for that invocation only and record the effective values
+in the §1 invocation record and in their ledger entry, audit report, or resumed
+unit, also when attached to a real plan; they never rewrite a plan's saved
+settings or its saved execution scope. A resumed unit keeps the effective
 settings and roster recorded on it (ledger entry, audit report, or §1 invocation
 record); the scope overrides and §3 apply when Resume continues the saved
 execution scope, and explicit Resume options override either for that invocation
@@ -124,8 +133,9 @@ active real plan, ignoring `000_adhoc`; with no active plan, the highest
 numbered real plan. Several active plans require a user choice, never the
 highest number. An explicit path wins. `execute verify [<plan>] [V<NNN>]`
 applies corrections from the selected/active plan's newest report unless an ID
-is given. V-prefixed report IDs differ from three-digit plan IDs. A plan
-literally named `verify` needs its number/path.
+is given, as its own invocation that never sets or replaces the saved execution
+scope (execution-contract §1). V-prefixed report IDs differ from three-digit
+plan IDs. A plan literally named `verify` needs its number/path.
 
 Task/bug take no leading selector. They attach to a real plan only when the
 request names that plan (number, feature name, or path) or clearly changes an
@@ -153,12 +163,12 @@ progress, mode-handoff.md H1) it applies to the plan or ledger that session last
 wrote, else every one with unfinished or uncommitted work that no other live
 session owns, each handed off in turn.
 
-A selector limits scope even under full autonomy. Only Execute and Execute
-verify set the saved execution scope; Task, Bug, and Verify run their own unit
+A selector limits scope even under full autonomy. Only Execute sets the saved
+execution scope; Execute verify, Task, Bug, and Verify run their own units
 without replacing it (execution-contract §1). Resume continues the saved
 execution scope. A different explicit Execute selector replaces it and its
 overrides; the same selector on a RUNNING or BLOCKED scope continues it. When an
-explicit Execute or Execute verify selector would replace a RUNNING or BLOCKED
+explicit Execute selector would replace a RUNNING or BLOCKED
 saved execution scope with a different one, ask the user before replacing it
 (with `true`, replace it as recorded in execution-contract §1).
 Completing one selected sub-phase does not start later sub-phases outside scope.

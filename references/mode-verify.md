@@ -20,7 +20,8 @@ findings they touch; every dimension applies within that scope. Its verdict
 covers only that scope and never stands for the whole plan.
 
 `000_adhoc` is auditable as a whole ledger or by entry ID. It has no STATE.md:
-its verify/index.md records the open audit and its checkpoint, and corrections
+its verify/index.md records the open audit and its checkpoint in the Open audit
+section (templates-audit.md), and corrections
 become ready Task/Bug requests citing their finding IDs instead of correction
 units. The resulting ledger entry marks the finding FIXED with evidence;
 `execute verify` does not apply to `000_adhoc`. Read its ledgers and
@@ -118,7 +119,10 @@ the impact that justifies it.
 
 Verdict rules:
 - FAIL: at least one confirmed BLOCKER or MAJOR.
-- INCOMPLETE: no confirmed BLOCKER/MAJOR, but mandatory audit evidence is missing.
+- INCOMPLETE: no confirmed BLOCKER/MAJOR, but mandatory audit evidence is
+  missing; also when the audited scope holds no implemented unit and no changed
+  area, so there is nothing to audit yet, which the report states instead of a
+  PASS.
 - PASS WITH FINDINGS: required checks complete; MINOR findings only.
 - PASS: required checks complete; no unresolved findings in the audited scope.
 

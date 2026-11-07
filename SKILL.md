@@ -68,16 +68,16 @@ into STATE.md.
   sets a stop latch that overrides autonomy and permission modes, and no tool
   call follows its report.
   Preserve the saved execution
-  scope and its option overrides across resumes and Task/Bug/Verify runs;
-  Execute options never become plan defaults. Exact commit and handoff rules are
+  scope and its option overrides across resumes and Execute verify, Task, Bug,
+  and Verify runs; only Execute sets or replaces it, and Execute options never
+  become plan defaults. Exact commit and handoff rules are
   in [execution-contract](references/execution-contract.md).
 - Every run of every mode, however it ends, closes its report with the Next
   block (only at the run's end, never between units)
-  ([next-step](references/next-step.md)): the current mode with every
-  effective option and its source, one exact Continue command, or
-  why nothing follows, and the Stop option: `handoff` when OPEN or uncommitted
-  code work, a pending closure, or ownership this session holds remains, else
-  nothing to save. Both are suggestions; never run them.
+  ([next-step](references/next-step.md)): the current mode with every effective
+  option and its source, one exact Continue command, or why nothing follows, and
+  the Stop option: `handoff` when OPEN or uncommitted code work or a pending
+  closure remains, else nothing to save. Both are suggestions; never run them.
 - The plan's immutable baseline, revision, roster, settings, stable IDs, gate
   registry, and progress live in STATE.md. Phase files specify work; STATE.md
   alone tracks live implementation status and holds only the present: compact
@@ -107,10 +107,13 @@ into STATE.md.
 ## Plan shape and context cost
 
 Create plans under `docs/plans/<NNN>_plan-<FeatureName>/`, creating missing
-parent directories. Use the highest existing numeric prefix plus one, starting at
-001; never reuse gaps or renumber old plans. FeatureName is a short PascalCase or
-kebab-case name without spaces. Honor an explicit user path. `000_adhoc` is
-reserved for task/bug ledgers without fake phases or STATE.md.
+parent directories. Use the highest existing numeric prefix plus one, starting
+at 001; never reuse gaps or renumber old plans. FeatureName is a short
+PascalCase or kebab-case name without spaces. Honor an explicit user path,
+keeping the `<NNN>_` prefix on the plan folder's name and prepending the next
+number when the path lacks one: that number is the plan's identity in STATE.md
+and in every commit (execution-contract §6). `000_adhoc` is reserved for
+task/bug ledgers without fake phases or STATE.md.
 
 Size phases by observable integration results, calibrated by the Plan option
 `executor-power:low|medium|high` (default `low`;

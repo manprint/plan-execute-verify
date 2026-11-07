@@ -51,9 +51,14 @@ regression test. With true, the default where no value is recorded (also in
 `000_adhoc`), there is no stop, but the validation still applies.
 
 - Before approval edit nothing besides the ledger entry and, with a real plan,
-  the §1 invocation record with result `PROPOSED`. Ignored build or test
+  the §1 invocation record with result `PROPOSED`. That STATE.md write is a
+  state update like any other: it claims ownership (execution-contract §2),
+  applies pending format migrations first (§8), and releases ownership in the
+  same stop with reason `approval stop`; when another live writer holds the
+  state, report the ownership conflict (next-step.md row 4) and keep the
+  proposal in the ledger entry alone. Ignored build or test
   byproducts are allowed; reproduction probes stay outside the repository or are
-  removed. No unit is opened and no ownership is claimed.
+  removed. No unit is opened.
 - The entry records status `PROPOSED`, the validated mini-plan, a Bug's
   diagnosis, and a proposal snapshot tree (execution-contract §3). Until
   approval the ledger entry owns this status, also in a real plan.
@@ -63,9 +68,10 @@ regression test. With true, the default where no value is recorded (also in
 - Approval is an explicit user reply to that proposal in the same session, or a
   Resume naming the entry ID: `resume <plan or 000_adhoc> <entry-id>`. A Resume
   without the entry ID never approves a proposal. Approval does not trigger the
-  gate again; explicit options on that Resume apply as usual. Approving handles
-  only that entry: other recoverable work is reported with its resume command,
-  not run.
+  gate again; explicit options on that Resume apply as usual. With `false`,
+  approving handles only that entry: other recoverable work is reported with its
+  resume command, not run; with `true` that Resume recovers the plan's other
+  resumable work first (mode-resume.md R2).
 - On approval compare the proposal snapshot with a fresh one for the paths the
   mini-plan names. If they changed, the proposal tree is missing (pruned), or
   the user edited the mini-plan, agent-1 revalidates it; when the validated

@@ -10,7 +10,7 @@ element:
 
 ```text
 Next
-- Mode: <mode> <plan/unit or scope> · full-autonomous:<true|false> (<source>) · WIP <on|off> (<source>) · executor-power <low|medium|high> · deadline <dd-mm-yyyy_hh_mm|none> · roster <agent-1:<name>,…> · style <delegated|handoff>
+- Mode: <mode> <plan/unit or scope> · full-autonomous:<true|false> (<source>) · WIP <on|off> (<source>) · executor-power <low|medium|high> (<source>) · deadline <dd-mm-yyyy_hh_mm|none> · roster <agent-1:<name>,…> (<source>) · style <delegated|handoff>
 - Continue: `/plan-execute-verify <command>` — <what it will do>; runs with full-autonomous:<true|false> · WIP <on|off> <and any other setting that differs from Mode>
 - Stop: `/plan-execute-verify handoff` — <what it saves>; then close the session
 ```
@@ -66,8 +66,8 @@ falling back to §3, a deadline that does not carry over) is visible.
 | 8 | DRAFT or BLOCKED plan, or an underspecified/legacy contract | The supervisor decision or evidence needed, naming the folder and affected unit, then `resume <plan>`; never a new plan or a readiness claim |
 | 9 | Audit INCOMPLETE because required evidence is missing | Provide that evidence, then rerun this run's `verify` command with its selector |
 | 10 | Audit corrections BLOCKED or awaiting a user decision | The decision or design needed, then `execute verify <plan> V<NNN>`, or in `000_adhoc` the corrected Task/Bug command; an OPEN finding alone never authorizes a fix, and blocking findings are never bypassed by ordinary implementation |
-| 11 | READY audit corrections | `execute verify <plan> V<NNN>` with the actual report; in `000_adhoc` the first ready Task/Bug command |
-| 12 | READY work remaining inside the saved execution scope, including a stop after a phase closure | `resume <plan>`, naming the next unit and its prerequisites |
+| 11 | READY audit corrections | `execute verify <plan> V<NNN>` with the actual report, which runs beside the saved execution scope without replacing it; in `000_adhoc` the first ready Task/Bug command |
+| 12 | READY work remaining inside the saved execution scope, including a stop after a phase closure or an interrupted correction pass | `resume <plan>`, naming the next unit and its prerequisites |
 | 13 | READY plan with saved execution scope `none` | `execute <plan>`, or a narrower phase or sub-phase selector, as a new scope |
 | 14 | Saved scope complete while later plan work remains, including a pending P<N> after a sub-phase scope or a pending PLAN closure (never for a format-1 plan migrated as complete, execution-contract §8) | Say the scope is complete; propose the later command (for P<N>, the phase selector) as a new scope, not a resume |
 | 15 | Plan complete (PLAN closed) without an audit of its final state | `verify <plan>` |
@@ -82,16 +82,16 @@ Derive the Stop line from the recorded state, not from the settings:
 
 - Code work not yet committed (an open unit with changes, a pending closure, or
   units recorded `uncommitted`, including a `handoff:` reference that resolves
-  to no commit), or ownership this session still holds (read the ownership
-  field): suggest `/plan-execute-verify handoff`. Say that it saves the
-  checkpoint, makes one local handoff commit of those units even with commits
-  disabled (mode-handoff.md H5), and releases any ownership still held.
-  Ownership held by another live session is a conflict (row 4): never suggest
-  handing off its work.
+  to no commit): suggest `/plan-execute-verify handoff`. Say that it saves the
+  checkpoint and makes one local handoff commit of those units even with
+  commits disabled (mode-handoff.md H5). The run has already released its own
+  ownership (execution-contract §2); ownership held by another live session is
+  a conflict (row 4): never suggest handing off its work.
 - Otherwise: nothing to save; the session can be closed now and later
   continued with the Continue command.
-- A handoff never commits a PROPOSED entry, a plan draft, an audit, or
-  docs/onboarding.md, nor plan files beyond those execution-contract §6 step 2
+- A handoff never commits a PROPOSED entry by itself (one inside a ledger it
+  commits whole is carried along, not approved), nor a plan draft, an audit,
+  docs/onboarding.md, or plan files beyond those execution-contract §6 step 2
   requires for its units. Name such uncommitted files with the suggested
   commit command, never run it, and never claim `handoff` saves them.
 - After a handoff (row 2) say only that the session can be closed now, unless

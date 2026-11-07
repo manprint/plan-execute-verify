@@ -204,14 +204,14 @@ history.md, the static protocol to PROTOCOL.md. Target: under about 150 lines.
 # <Feature> — State
 
 Format: pev-state 2
-Plan <NNN> rev <n> · repo <absolute path> · baseline <commit> · updated <date time> by <agent-N:name>
+Plan <plan-id> rev <n> · repo <absolute path> · baseline <commit> · updated <date time> by <agent-N:name>
 §0 Protocol: without this skill read PROTOCOL.md once. History: history.md (append-only, never read to resume).
 
 ## 1. Now
 - Run: <mode, unit or scope> · result <RUNNING|BLOCKED|COMPLETE|HANDOFF|PROPOSED> · style <delegated|handoff> · acting as <agent-N:name>
 - Settings: autonomy <true|false> (<explicit|explicit (prompt)|scope|plan|default>) · WIP <on|off> (<source>) · deadline <dd-mm-yyyy_hh_mm|none>
 - Stop latch: <none | HANDOFF user|deadline <time>>
-- Scope: <plan|phase|sub-phase|report selector, or none> · <NOT_STARTED|RUNNING|BLOCKED|COMPLETE> · overrides <values|none>
+- Scope: <plan|phase|sub-phase selector set by Execute, or none> · <NOT_STARTED|RUNNING|BLOCKED|COMPLETE> · overrides <values|none>
 - Unit: <sub-phase|phase-close|plan-close|task|bug|verify|correction> <ID>/<attempt> · <OPEN|none> · step <S<n>|review|commit> · assigned <agent-N> → actual <agent-N:name>
 - Base: HEAD <sha> + tree <tree> · branch <branch> · last WIP tree <tree|none>
 - Last closure: <unit:ID:attempt|none>
@@ -223,7 +223,7 @@ Plan <NNN> rev <n> · repo <absolute path> · baseline <commit> · updated <date
 
 ## 3. Settings, roster, gates
 - Roster: agent-1:<name> (supervisor), agent-2:<name>, …
-- Plan defaults: autonomy <true|false> · WIP <on|off> · executor power <low|medium|high> — set by Plan <date> (unless explicit: autonomy true, WIP on, power low)
+- Plan defaults: autonomy <true|false> · WIP <on|off> · executor power <low|medium|high> — set by Plan <date>; where the Plan invocation gave no value it wrote autonomy true, WIP on, power low
 - Setup: <versions, services, credentials, cwd, ports, cleanup>
 - Supervisor access: <dispatch method or session-handoff procedure>
 
@@ -283,18 +283,23 @@ none
 
 Static; written once by Plan and rewritten only by a plan revision that changes
 the runtime contract. It lets an executor without this skill work safely; a
-session with the skill does not read it. Fill in the plan ID.
+session with the skill does not read it. Fill in the plan ID: `<plan-id>` is
+the three-digit folder prefix, `003`, written identically everywhere
+(execution-contract §6).
 
 ````markdown
-# Plan <NNN> — execution protocol (read once; live state is STATE.md)
+# Plan <plan-id> — execution protocol (read once; live state is STATE.md)
 
 1. Start: read STATE.md §1. If ownership is active and you are not its writer,
    an explicit user invocation counts as a resume request: take over only if
    STATE.md and a fresh snapshot (step 3) are unchanged between first read and
    takeover write; record previous/new writer, time, reason; otherwise ask.
-   Task, Bug, and Verify never replace the saved scope, §3 defaults, or roster.
-   Resume recovers OPEN or pending work first, then continues the saved scope,
-   never a TODO unit named by ID or work outside it.
+   The header's repo path is a locator: when the checkout moved, confirm the
+   branch and baseline exist here, update it, and go on. Only Execute sets or
+   replaces the saved scope; Execute verify, Task, Bug, and Verify run their
+   own units beside it and never change §3 defaults, and Task, Bug, and Verify
+   also keep the roster. Resume recovers OPEN or pending work first, then
+   continues the saved scope, never a TODO unit named by ID or work outside it.
 2. Recover: compare HEAD and a fresh snapshot with the unit base; preserve
    unrelated changes; an unresolved `Last closure` reference (step 7) is a
    pending closure to finish first. Resume OPEN work at its first unverified
@@ -341,13 +346,16 @@ session with the skill does not read it. Fill in the plan ID.
    only the unit's hunks: `git diff --binary <base-tree> <closure-tree> --
    <path>` → `git reset -q <base-HEAD> -- <path>` → `git apply --cached`, with
    `--3way` fallback, else restore and report a blocker), plus STATE.md and
-   history.md, and commit with the mandatory subject:
-   - `sub-phase(<NNN>/<N.M>): sub-phase <N.M> of phase <N> complete — <title>`
-   - `phase(<NNN>/P<N>): PHASE <N> COMPLETE — <title>; gates and review passed`
-   - `plan(<NNN>): PLAN <NNN> COMPLETE — <feature>; <K> phases, final gates passed`
-   - `task(<NNN>/T-A<n>)`, `bug(<NNN>/B-A<n>)`, `correction(<NNN>/V<n>-C<n>)`,
-     `verify(<NNN>/V<n>)`, `wip(<NNN>/<unit>)`, `handoff(request-by-user)`
-   and a final trailer block `PEV-Plan`, `PEV-Unit`, `PEV-Attempt`,
+   history.md, and commit with the mandatory subject (`<plan>` is the folder
+   number, `003` or `000_adhoc`, written identically in every subject, trailer,
+   and this file's header):
+   - `sub-phase(<plan>/<N.M>): sub-phase <N.M> of phase <N> complete — <title>`
+   - `phase(<plan>/P<N>): PHASE <N> COMPLETE — <title>; gates and review passed`
+   - `plan(<plan>): PLAN <plan> COMPLETE — <feature>; <K> phases, final gates passed`
+   - `task(<plan>/T-A<NNN>)`, `bug(<plan>/B-A<NNN>)`,
+     `correction(<plan>/V<NNN>-C<n>)`, `verify(<plan>/V<NNN>)`,
+     `wip(<plan>/<unit>)`, `handoff(request-by-user)`
+   and a final trailer block `PEV-Plan: <plan>`, `PEV-Unit`, `PEV-Attempt`,
    `PEV-Result: complete|wip` beside any Co-Authored-By. Hooks run; never
    `--no-verify`; never push or switch branches. Resolve the reference by exact
    trailer values in `git log --format='%H%x09%(trailers:key=PEV-Unit,valueonly)' HEAD`
@@ -362,8 +370,11 @@ session with the skill does not read it. Fill in the plan ID.
    the plan COMPLETE, and commits — no stop between them.
 9. Compaction: STATE.md holds only the present. §4 only unsettled rows; §5/§6
    only the OPEN unit; §7 latest result per gate of the open phase; §8–§10 only
-   what pending work needs; §11 expands only the open phase and collapses it to
-   one row at P<N> DONE. Detail goes to history.md first. This file belongs
+   what pending work needs; §11 expands a phase from its phase file when its
+   first unit opens and collapses it to one row at P<N> DONE; a correction that
+   reopens a DONE phase re-expands it, every sub-phase DONE with attempt and
+   reference from the Git trailers, plus the correction rows. Detail goes to
+   history.md first. This file belongs
    to `Format: pev-state 2`; never write a STATE.md of a newer format.
 10. Handoff (`handoff`, or a `--deadline`): always honored, whatever the
     autonomy. A deadline is binding: the report is written by that time; keep
@@ -382,7 +393,7 @@ session with the skill does not read it. Fill in the plan ID.
     run; result HANDOFF; release ownership. Code work: one local handoff commit
     even with commits disabled — owned changes of the OPEN or pending unit and
     every §4 `uncommitted` unit (one patch per unit), STATE.md, history.md;
-    subject `handoff(request-by-user): <NNN>/<unit> stopped <point>`; trailers
+    subject `handoff(request-by-user): <plan>/<unit> stopped <point>`; trailers
     as above with `PEV-Result: wip`, `PEV-Handoff: user|deadline`,
     `PEV-Includes: <id>:<attempt>, …`; those rows become
     `handoff:<id>:<attempt>` with their trees. Never amended. Report the resume
@@ -395,8 +406,8 @@ session with the skill does not read it. Fill in the plan ID.
     `Next` — Mode: the run's mode and every effective setting with its source
     (autonomy, WIP, executor power, deadline, roster, style); Continue: one
     exact `/plan-execute-verify` command and the settings it runs with; Stop:
-    `/plan-execute-verify handoff` when uncommitted work or held ownership
-    remain, else nothing to save. Suggest both; never run them.
+    `/plan-execute-verify handoff` when uncommitted code work or a pending
+    closure remains, else nothing to save. Suggest both; never run them.
 ````
 
 ## 5. history.md
@@ -404,7 +415,7 @@ session with the skill does not read it. Fill in the plan ID.
 Created empty by Plan; append-only, never read to resume (execution-contract §8):
 
 ````markdown
-# Plan <NNN> — history
+# Plan <plan-id> — history
 
 ## <date> <unit>/<attempt> <complete|failed> <commit ref or none>
 Gates: <gate result (count)>; review: <agent verdict>; changes: <paths>; notes: <decisions, deviations>

@@ -10,25 +10,27 @@ state-changing recovery or completion steps; mode-onboard.md governs that mode.
 ## 1. Resolve the invocation once
 
 `full-autonomous:true|false` is a leading option, accepted by every mode;
-Handoff ignores it.
-Precedence: explicit invocation > saved execution scope override (only while
-continuing that scope) > selected plan's STATE.md §3 > `true`. The WIP setting
-resolves the same way, with default `on`. The defaults apply wherever no value
-is recorded: a new plan, a `000_adhoc` entry, a legacy plan without the field.
-A recorded value, including `false` or `off`, stays as recorded. Reject other
-values and duplicate occurrences before making changes. Plan persists the
-resolved values in §3 as the plan defaults, explicit or default. Execute and Execute verify record it
-with the saved execution scope they set, as a scope override that lasts while
-that scope continues and never changes §3. Task, Bug, Verify, and Resume use it
-for that invocation only and record it in their ledger entry, audit report, or
+Handoff ignores it. Precedence: explicit invocation > saved execution scope
+override (only while continuing that scope) > selected plan's STATE.md §3 >
+`true`. The WIP setting resolves the same way, with default `on`. The defaults
+apply wherever no value is recorded: a new plan, a `000_adhoc` entry, a legacy
+plan without the field. A recorded value, including `false` or `off`, stays as
+recorded. Reject other values and duplicate occurrences before making changes.
+Plan persists the resolved values in §3 as the plan defaults, explicit or
+default. Execute records it with the saved execution scope it sets, as a scope
+override that lasts while that scope continues and never changes §3. Execute
+verify, Task, Bug, Verify, and Resume use it for that invocation only and record
+it in the §1 invocation record and in their ledger entry, audit report, or
 resumed unit, including when attached to a real plan. Parsing ends at the first
 non-option/non-agent token; occurrences in a task's description are literal
-text, except the explicit autonomy forms in invocation.md (a trailing option
-token on a mode without free text, or a clear natural-language request for full
-autonomy), which count as the explicit option with source `explicit (prompt)`.
-An explicit value overrides the persisted value. Exception: Onboard only
-observes saved configuration. Its options and agent prefix are invocation-local
-and never persist to a plan or an ad-hoc ledger.
+text, except the explicit autonomy forms in invocation.md (a trailing
+`full-autonomous:true|false` token on `execute`, `execute verify`, `verify`,
+`resume`, `task`, or `bug`, or a clear natural-language request for full
+autonomy), which count as the explicit option with source `explicit (prompt)`. A
+leading autonomy option together with such a trailing token is a duplicate and
+is rejected. An explicit value overrides the persisted value. Exception: Onboard
+only observes saved configuration. Its options and agent prefix are
+invocation-local and never persist to a plan or an ad-hoc ledger.
 
 | Mode | Scope when true | Completion commits, when the table below enables them |
 |------|-----------------|--------------------|
@@ -42,17 +44,17 @@ and never persist to a plan or an ad-hoc ledger.
 | Handoff | Not applicable: the option is ignored; bounds the work in flight, saves resumable state, and stops | One handoff commit for code work (including a Verify correction pass), whatever the settings; none for Plan, an audit, or Onboard |
 
 With `false`, execution continues through the eligible units of the current
-phase inside the selected scope and stops after that phase's closure P<N>, with
-a precise checkpoint and report that `resume` continues (not Handoff mode, so no
-handoff commit); Execute verify stops likewise after
-each reopened phase's closure. A sub-phase boundary inside a phase is not a
-stopping point, and this option adds no commit authorization. Task and Bug stop
-once instead, for the user's approval of the validated mini-plan
-(mode-taskbug.md approval gate). With `true`,
-neither a unit nor a phase boundary ends the selected scope, and no mode asks
-the user anything: each question becomes an autonomous decision (§4). Either way, work
-stops early only at the exhaustive stops of the autonomy loop (§3). The
-existing WIP option still applies independently:
+phase inside the selected scope and stops after that phase's closure P<N> (after
+the last P<N> the PLAN closure runs first, §3), with a precise checkpoint and
+report that `resume` continues (not Handoff mode, so no handoff commit); Execute
+verify stops likewise after each reopened phase's closure. A sub-phase boundary
+inside a phase is not a stopping point, and this option adds no commit
+authorization. Task and Bug stop once instead, for the user's approval of the
+validated mini-plan (mode-taskbug.md approval gate). With `true`, neither a unit
+nor a phase boundary ends the selected scope, and no mode asks the user
+anything: each question becomes an autonomous decision (§4). Either way, work
+stops early only at the exhaustive stops of the autonomy loop (§3). The existing
+WIP option still applies independently:
 
 | Full autonomous | WIP commits | Commit completed code units and phase closures | Rolling WIP commit at checkpoints |
 |-----------------|-------------|-----------------------------|-------------------------|
@@ -67,12 +69,17 @@ handoff commits code work even when both settings are off (mode-handoff.md H5).
 Neither setting authorizes pushes, deployments, destructive cleanup, or changes
 outside the requested scope.
 
-STATE.md §1 keeps two scopes. The saved execution scope (plan, phase, sub-phase,
-or report selector, with its result and option overrides) is set only by Execute
-or Execute verify. A different explicit Execute selector replaces it and its
+STATE.md §1 keeps two scopes. The saved execution scope (plan, phase, or
+sub-phase selector, with its result and option overrides) is set only by
+Execute. A different explicit Execute selector replaces it and its
 overrides, and the same selector on a RUNNING or BLOCKED scope continues it,
 with any new explicit options replacing its overrides; a context reset, a
-resume, or an intervening Task, Bug, or Verify unit never changes or expands it.
+resume, or an intervening Execute verify, Task, Bug, or Verify unit never
+changes or expands it. A legacy STATE.md whose saved scope is a report selector
+(`report V<NNN>`, written by an earlier version of this skill) is continued as
+the Execute verify correction pass of that report; when that pass completes,
+the saved execution scope becomes `none` and the plan's next eligible unit
+stays recorded.
 The invocation record (mode, exact unit or scope, and result) describes the
 current or last run of any operational mode. Persist the roster. Record with
 each invocation its execution style, chosen by the fixed rule in
@@ -82,11 +89,17 @@ with that invocation. Preserve the plan's next eligible unit separately; it may
 lie outside the saved execution scope. Resume (mode-resume.md) first recovers
 any OPEN or pending-closure unit in its own mode with its recorded settings,
 then continues a set (not `none`) saved execution scope while its result is
-NOT_STARTED, RUNNING, or BLOCKED. An explicit Execute or Execute verify selector
+NOT_STARTED, RUNNING, or BLOCKED. An explicit Execute selector
 that would replace a RUNNING or BLOCKED saved execution scope with a different
 one asks the user first with `false`; with `true` it replaces it as an
 autonomous decision (§4), noting the replaced scope and its next unit in
-history.md.
+history.md. Execute verify never replaces it: like a Verify correction pass
+(mode-verify.md V6), it runs the report's corrections as its own invocation,
+recorded in §1 with their settings, and leaves the saved execution scope, its
+result, and its overrides as they were. A correction that reopens a DONE phase
+is closed again by the correction pass itself, with a new P<N> attempt
+(mode-execute.md E5); a phase still open under the saved scope keeps its P<N>
+for that scope.
 
 ## 2. Ownership and cold starts
 
@@ -114,7 +127,11 @@ a delegated worker never claims it.
 At startup:
 1. Read STATE.md; identify plan ID/revision, saved execution scope, invocation,
    role, roster, current unit, step cursor, checkpoint, repository path, branch,
-   immutable plan baseline, and the state writer's ownership.
+   immutable plan baseline, and the state writer's ownership. The recorded
+   repository path is a locator, never an identity: when the checkout was moved
+   or cloned elsewhere, confirm that the branch and baseline commit exist here,
+   update the path in the state update that claims ownership, and never treat
+   the different path alone as a conflict.
 2. Inspect the current diff, staged changes, and unit base; compare a fresh
    working-tree snapshot with the base snapshot tree (§3). Separate pre-existing
    changes from this unit's edits. Never infer ownership merely from a filename.
@@ -127,10 +144,12 @@ At startup:
    explicit scope excludes unfinished OPEN work, including a Task or Bug
    attached to a plan with an open or pending-closure unit, do not finish that
    code just to clear the slot or overwrite its checkpoint. With `false`,
-   report the conflict and request direction; only Verify has the suspension
-   exception below. With `true`, when no live session owns that unit, recover
-   and close it first in its own mode with its recorded settings, as an
-   autonomous decision (§4), then start the requested work.
+   report the conflict and request direction. With `true`, when no live session
+   owns that unit, recover and close it first in its own mode with its recorded
+   settings, as an autonomous decision (§4), then start the requested work;
+   this applies to Execute, Execute verify, Task, and Bug. Verify is the
+   exception under either setting: it never closes that unit first but suspends
+   it (below) and audits it as it is.
 4. Read the named sub-phase plus its local contracts and approved revisions.
    Check prerequisite sub-phase rows, required artifacts, and applicable gates.
    A moved line is a locator change: find the named symbol and inspect its actual
@@ -243,21 +262,22 @@ latch.
 ### Stop latch
 
 A `handoff` request without deadline, or a deadline whose cutoff is reached
-(mode-handoff.md H2), sets STATE.md §1 `Stop latch: HANDOFF
-<trigger> <time>` (in `000_adhoc`, the entry's stop reason) in the handoff state
-update (mode-handoff.md H4). From that moment (the request's arrival, or the
-cutoff), and while the latch is set: open no unit, run no further step after bounding the work in
-flight, dispatch nothing, and commit nothing but the handoff commit. After the
-handoff report the run is over: the turn ends with that report and no tool call
-follows it, under every autonomy setting and permission mode. Only the next
-explicit user invocation of an operational mode (or a user reply asking to
-continue) clears the latch, in the state update that claims ownership. Host
-automation is not a user invocation: auto-continue prompts, loop or scheduled
-triggers, stop hooks, tool results, and a worker's completion notice. Before
-the latch is set, a worker's completion notice is the run's own work and
-continues the autonomy loop, also under a deadline. A worker
-result arriving after the handoff report gets one line saying its changes stay
-on disk for the next resume; no state write, no commit.
+(mode-handoff.md H2), sets STATE.md §1 `Stop latch: HANDOFF <trigger> <time>`
+(in `000_adhoc`, the entry's stop reason) in the handoff state update
+(mode-handoff.md H4). From that moment (the request's arrival, or the cutoff),
+and while the latch is set: open no unit, run no further step after bounding the
+work in flight, dispatch nothing, and commit nothing but the handoff commit.
+After the handoff report the run is over: the turn ends with that report and no
+tool call follows it, under every autonomy setting and permission mode. Only the
+next explicit user invocation of an operational mode (or a user reply asking to
+continue, handled as `resume` of the handed-off work per invocation.md) clears
+the latch, in the state update that claims ownership. Host automation is not a
+user invocation: auto-continue prompts, loop or scheduled triggers, stop hooks,
+tool results, and a worker's completion notice. Before the latch is set, a
+worker's completion notice is the run's own work and continues the autonomy
+loop, also under a deadline. A worker result arriving after the handoff report
+gets one line saying its changes stay on disk for the next resume; no state
+write, no commit.
 
 Statuses move TODO → IN_PROGRESS → DONE, with IN_REVIEW between the last two
 when focused checks pass and a required review is pending at a recovery boundary
@@ -318,16 +338,15 @@ Stop at the selected scope's verified completion, an explicit user stop, a
 handoff request or deadline, or a documented blocker requiring unavailable
 capability/authority. A deadline is binding under every autonomy setting and
 permission mode: the handoff, report included, is finished by that time; plan
-backwards from it at unit, step, and command boundaries (mode-handoff.md H2). A scope that
-includes the last phase also requires the PLAN closure. Only then
-record COMPLETE: for Execute and Execute verify in both the saved execution
-scope and the invocation, for Task, Bug, and Verify in the invocation alone;
-Resume records results as the mode of the work it resumed.
-Never label unverified work complete.
-If the host ends a session, save a handoff; this skill cannot start a new host
-session by itself.
-With full autonomy false, the stop after a phase closure leaves the saved
-execution scope RUNNING, not COMPLETE, while scope work remains.
+backwards from it at unit, step, and command boundaries (mode-handoff.md H2). A
+scope that includes the last phase also requires the PLAN closure. Only then
+record COMPLETE: for Execute in both the saved execution scope and the
+invocation, for Execute verify, Task, Bug, and Verify in the invocation alone;
+Resume records results as the mode of the work it resumed. Never label
+unverified work complete. If the host ends a session, save a handoff; this skill
+cannot start a new host session by itself. With full autonomy false, the stop
+after a phase closure leaves the saved execution scope RUNNING, not COMPLETE,
+while scope work remains.
 
 ## 4. Decisions, supervisor escalation, and retry limits
 
@@ -438,9 +457,9 @@ verdict is FAIL. This closes the audit, not the audited phases. Use
 
 ## 6. Completion transaction and Git identity
 
-Use a stable identity: plan folder ID (or `000_adhoc`), unit ID, and attempt
-number. Reopened work increments the attempt; a retry after interruption does
-not. Record these identity trailers on completion and WIP commits, in the
+Use a stable identity: plan ID (`<plan-id>`, defined below), unit ID, and
+attempt number. Reopened work increments the attempt; a retry after interruption
+does not. Record these identity trailers on completion and WIP commits, in the
 message's final paragraph (Git's trailer block) together with any required
 `Co-Authored-By:` or `Signed-off-by:` lines; nothing may follow that block.
 `git commit --trailer` places them correctly:
@@ -452,9 +471,18 @@ PEV-Attempt: <n>
 PEV-Result: complete | wip
 ```
 
+`<plan-id>` is the plan's three-digit folder prefix (`003` for
+`003_plan-RateLimit`) or `000_adhoc`; a plan created under an explicit user
+path keeps that prefix in its folder name (SKILL.md), so every plan has one.
+Write it the same way in every trailer, subject, STATE.md header, and
+`PEV-Includes` entry: step 4 and a handoff resolve references by exact trailer
+values, so a differently spelled identity reads as a missing commit and
+produces a duplicate.
+
 Subjects are mandatory, never free-form: the reader of `git log --oneline` must
-see which plan, phase, and unit closed. `<plan>` is the folder number (`003`,
-or `000_adhoc`), `<N>` the logical phase number, titles come from the plan:
+see which plan, phase, and unit closed. `<plan>` is that same `<plan-id>`
+(`003`, or `000_adhoc`), `<N>` the logical phase number, titles come from the
+plan:
 
 | Commit | Subject |
 |--------|---------|
@@ -486,7 +514,10 @@ most six lines before the trailer block: `Plan: <id> <feature> rev <n>`,
    unit's changes. Do not try to embed a commit's own SHA inside itself.
    If completion commits are disabled, closure ends here; do not run steps 2–4.
    The final report then warns that the work and plan records are uncommitted
-   and suggests a commit command, never run. A failed P<N> or PLAN attempt records
+   and offers `handoff` as the Stop line of the Next block (next-step.md N2),
+   which commits them one patch per unit; it suggests no plain commit command
+   for code work, since one commit of the working tree would also capture
+   edits the user made between units. A failed P<N> or PLAN attempt records
    commit `none` and also ends here under every commit policy; it is never a
    pending closure.
 2. Stage only owned changes and their plan records. Include required plan files
@@ -649,10 +680,16 @@ never a history. Its cost is paid at every read, so keep it lean:
 - §8 keeps revisions and internal decisions that pending units or the next
   P<N> review still need; §9 open blockers; §10 entries relevant to pending
   units.
-- §11 expands only open phases. At P<N> DONE collapse the phase into one
-  Phases row (`DONE`, attempt, sub-phase range, closure reference) and drop its
-  sub-phase, test, and documentation rows, §7 rows, reviewed §8 decisions, and
-  stale §10 entries.
+- §11 expands only open phases: a phase expands from its phase file when its
+  first unit opens (Plan expands the first phase at planning). At P<N> DONE
+  collapse the phase into one Phases row (`DONE`, attempt, sub-phase range,
+  closure reference) and drop its sub-phase, test, and documentation rows, §7
+  rows, reviewed §8 decisions, and stale §10 entries. A correction that
+  reopens a DONE phase re-expands it from its phase file: every sub-phase
+  `DONE` with its attempt and closure reference read from the Git trailers
+  (`PEV-Unit`, `PEV-Attempt`), `legacy` when no commit records it, plus the
+  correction rows that reopen the phase; only a sub-phase the correction itself
+  reopens returns to IN_PROGRESS with attempt + 1 (mode-execute.md E5).
 - PLAN COMPLETE leaves the header, §1, §3, the collapsed board, and open audits
   or corrections; every other section reads `none`.
 
@@ -682,12 +719,15 @@ plan records.
 
 | From → to | Migration |
 |-----------|-----------|
-| 1 → 2 | Move the §0 protocol text to `PROTOCOL.md` (output-template.md §4) and leave the §0 pointer line. Create `history.md` and move settled detail there per the rules above. Add the §1 fields `acting as`, `Stop latch: none`, and `Last closure`. Add the PLAN board row: when every phase is DONE or SKIPPED the plan completed under format 1, which ran the final gates at the last P<N>, so write `PLAN \| DONE \| 1 \| — \| legacy: final gates at P<N>` and treat the plan as complete, with no PLAN run and no commit unless the user explicitly asks for one; otherwise write `PLAN \| TODO`. |
+| 1 → 2 | Every step applies only where its result is missing, so a lean STATE.md written before the `Format:` header existed gets the header and nothing else. Move the §0 protocol text to `PROTOCOL.md` (output-template.md §4) and leave the §0 pointer line. Create `history.md` if missing and move settled detail there per the rules above. Rewrite §1 in the format 2 layout: `Saved execution scope` → `Scope` (selector, result, overrides); `Invocation` → `Run` (mode, unit or scope, result, style) and `Settings` (effective autonomy and WIP with their sources, deadline); `Type`, `ID / attempt`, `Status`, `Current step`, and `Assigned` → `Unit`; `Unit base` → `Base`; `Next action` and `Next eligible plan unit` → `Next`; the ownership record → `Owner`; add `acting as` (the writer), `Stop latch: none`, and `Last closure: none`; drop `Intent`, `File / unit heading`, and `Repo state`, which the open unit's phase file and a fresh snapshot (§3) give back. Rewrite §3: `Full autonomous (plan default)`, `WIP commits (plan default)`, and `Executor power` → the `Plan defaults` line (a value whose source is Execute counts as a plan default); keep the roster, setup, supervisor access, and gate table; drop the policy prose, which PROTOCOL.md holds. Reduce §2 to the `Readiness` line and append its goal, decisions, research, and unverified-claim text to `history.md` as one dated `migration 1 → 2` entry, so nothing is lost while overview.md and the phase files stay the source. Add the PLAN board row: when every phase is DONE or SKIPPED the plan completed under format 1, which ran the final gates at the last P<N>, so write `PLAN \| DONE \| 1 \| — \| legacy: final gates at P<N>` and treat the plan as complete, with no PLAN run and no commit unless the user explicitly asks for one; otherwise write `PLAN \| TODO`. |
 
 A STATE.md whose format is newer than this skill's latest is never written:
 reject the invocation before work starts and ask the user to update the skill
 (next-step.md row 1). A later skill version adds one row to this table and
-raises the latest format; it never edits an earlier row.
+raises the latest format. A format number's layout never changes once written;
+an existing row changes only to migrate more completely into that same layout,
+never into a different one, because migrations run in order and a later row
+cannot repair what an earlier one dropped.
 
 Oversized state: when a STATE.md of the current format exceeds about 150 lines,
 the state writer compacts it by the rules above at the same moment.
